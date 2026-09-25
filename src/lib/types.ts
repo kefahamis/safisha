@@ -61,6 +61,8 @@ export interface Truck {
   status: TruckStatus;
   sharing: boolean;
   lastSeen?: string;
+  /** Real GPS from the collector's phone, when recent enough to trust. */
+  gps?: { lat: number; lng: number; at: string };
 }
 
 export type TxnKind = "charge" | "payment";
@@ -80,9 +82,12 @@ export type TicketStatus = "Open" | "Pending" | "Resolved";
 export type TicketAuthor = "client" | "agent" | "sys";
 
 export interface TicketMessage {
+  id?: number;
   from: TicketAuthor;
   text: string;
   at: string;
+  /** A photo attached to the message, e.g. proof from the crew. */
+  photo?: string;
 }
 
 export interface Ticket {
@@ -95,11 +100,82 @@ export interface Ticket {
   msgs: TicketMessage[];
 }
 
+export type WasteStream = "mixed" | "recyclable" | "organic" | "residual";
+
 export interface Pickup {
   client: string;
   when: string;
   truck: string;
   status: string;
+  weightKg?: number;
+  stream?: WasteStream;
+  photo?: string;
+}
+
+/** Evidence captured at a stop: photo, where and when, and what was collected. */
+export interface StopProof {
+  status: StopStatus;
+  at: string;
+  photo?: string;
+  lat?: number;
+  lng?: number;
+  weightKg?: number;
+  stream?: WasteStream;
+  note?: string;
+}
+
+export type PickupRequestStatus = "Requested" | "Scheduled" | "Completed" | "Cancelled";
+
+export interface PickupRequest {
+  id: string;
+  client: string;
+  company: string;
+  kind: string;
+  notes: string;
+  preferredDate: string;
+  price: number;
+  status: PickupRequestStatus;
+  paid: boolean;
+  truck?: string;
+  scheduledFor?: string;
+  photo?: string;
+  createdAt: string;
+}
+
+export type DumpStatus = "New" | "Assigned" | "Cleared";
+
+export interface DumpReport {
+  id: string;
+  reporter: string;
+  company?: string;
+  estate?: string;
+  lat: number;
+  lng: number;
+  description: string;
+  size: "small" | "medium" | "large";
+  photo?: string;
+  status: DumpStatus;
+  createdAt: string;
+  clearedAt?: string;
+}
+
+export interface RouteOrder {
+  order: string[];
+  distanceM: number;
+  baselineM: number;
+}
+
+export interface PriceItem {
+  kind: string;
+  price: number;
+}
+
+/** What each integration is doing right now, as the UI needs to know it. */
+export interface IntegrationStatus {
+  /** Per company: live Daraja, or the built-in simulator. */
+  mpesa: Record<string, { mode: "live" | "simulated"; environment?: string; shortcode?: string }>;
+  sms: "live" | "simulated";
+  translate: boolean;
 }
 
 export interface SuspenseItem {
@@ -121,12 +197,39 @@ export interface StkSession {
   client: string;
   phone: string;
   amount: number;
+  /** What the payment is for: the account, or an on-demand pickup. */
+  purpose: string;
+  /** Set once the prompt is sent; the server's id for the request. */
+  requestId?: string;
+  mode?: "live" | "simulated";
+  error?: string;
   txn?: Txn;
 }
 
 export type StatementPeriod = "all" | "2026-07" | "2026-08" | "2026-09";
 
-export interface AppState {
+/** Everything the server persists, narrowed to what this session may see. */
+export interface AppData {
+  clients: Client[];
+  trucks: Truck[];
+  txns: Txn[];
+  tickets: Ticket[];
+  pickups: Pickup[];
+  suspense: SuspenseItem[];
+  /** truckId -> clientId -> status, for today's route sheet. */
+  stops: Record<string, Record<string, StopStatus>>;
+  /** "truckId|clientId" -> evidence for today's stops. */
+  proofs: Record<string, StopProof>;
+  routeOrders: Record<string, RouteOrder>;
+  pickupRequests: PickupRequest[];
+  dumpReports: DumpReport[];
+  pricing: Record<string, PriceItem[]>;
+  integrations: IntegrationStatus;
+  /** Server time when this snapshot was taken (epoch ms). */
+  serverNow: number;
+}
+
+export interface AppState extends AppData {
   /** Selected identity per role. The active role itself comes from the URL. */
   companyId: string;
   clientId: string;
@@ -139,20 +242,11 @@ export interface AppState {
   stmtClient: string | null;
   selTicket: string | null;
 
-  /** Next sequence number per company+estate pair, for issuing client numbers. */
-  seq: Record<string, number>;
-
-  clients: Client[];
-  trucks: Truck[];
-  txns: Txn[];
-  tickets: Ticket[];
-  pickups: Pickup[];
-  suspense: SuspenseItem[];
-  /** truckId -> clientId -> status, for today's route sheet. */
-  stops: Record<string, Record<string, StopStatus>>;
-
   stk: StkSession | null;
 
-  /** Milliseconds advanced by the ticker since the demo clock started. */
+  /** Milliseconds the ticker has advanced since `serverNow`. */
   elapsedMs: number;
+  /** Commands waiting to reach the server (the collector app works offline). */
+  pending: number;
+  online: boolean;
 }

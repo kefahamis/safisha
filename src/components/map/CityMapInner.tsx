@@ -44,21 +44,36 @@ const TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
-/** A truck: coloured body plus its number plate, drawn as HTML. */
+/*
+ * Leaflet markers take an HTML string, so the glyphs are inlined here rather
+ * than rendered from lucide-react. The paths are Lucide's Truck and House.
+ */
+const glyph = (paths: string) =>
+  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+
+const TRUCK_GLYPH = glyph(
+  '<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>',
+);
+
+const HOME_GLYPH = glyph(
+  '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+);
+
+/** A truck: coloured badge with a truck glyph, plus its number plate. */
 function truckIcon(color: string, plate: string, offline: boolean, focused: boolean) {
   return L.divIcon({
     className: "truck-icon",
-    html: `<span class="truck-dot${focused ? " focused" : ""}${offline ? " offline" : ""}" style="--truck:${color}"></span><span class="truck-plate">${plate}</span>`,
-    iconSize: [64, 34],
-    iconAnchor: [32, 12],
+    html: `<span class="truck-dot${focused ? " focused" : ""}${offline ? " offline" : ""}" style="--truck:${color}">${TRUCK_GLYPH}</span><span class="truck-plate">${plate}</span>`,
+    iconSize: [64, 44],
+    iconAnchor: [32, 13],
   });
 }
 
 const homeIcon = L.divIcon({
   className: "home-icon",
-  html: '<span class="home-pin"></span><span class="home-label">Your gate</span>',
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
+  html: `<span class="home-pin">${HOME_GLYPH}</span><span class="home-label">Your gate</span>`,
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
 });
 
 /** Frames the map on whatever is being shown, once, on first render. */
@@ -74,9 +89,7 @@ function FitBounds({ points, fallbackZoom }: { points: LatLng[]; fallbackZoom: n
       map.setView([points[0].lat, points[0].lng], 14);
       return;
     }
-    map.fitBounds(
-      L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number])).pad(0.18),
-    );
+    map.fitBounds(L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number])).pad(0.18));
     // Deliberately first-render only: refitting on every tick would fight the
     // user's own panning as the trucks move.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -130,7 +143,7 @@ export default function CityMapInner({
         {Object.entries(ESTATES).map(([code, e]) => {
           const served = !companyId || covered.includes(code);
           const owner = companyForEstate(code);
-          const color = served && owner ? owner.color : "#8A94A6";
+          const color = served && owner ? owner.color : "#8AA39B";
           return (
             <Circle
               key={code}
@@ -175,9 +188,7 @@ export default function CityMapInner({
           })}
 
         {/* Lifted above the trucks — the client's own gate should never be hidden. */}
-        {home && (
-          <Marker position={[home.lat, home.lng]} icon={homeIcon} zIndexOffset={1000} />
-        )}
+        {home && <Marker position={[home.lat, home.lng]} icon={homeIcon} zIndexOffset={1000} />}
 
         {trucks.map((t) => {
           const p = truckPos(t);
@@ -187,7 +198,7 @@ export default function CityMapInner({
               key={t.id}
               position={[p.lat, p.lng]}
               icon={truckIcon(
-                offline ? "#8A94A6" : companyById(t.company).color,
+                offline ? "#8AA39B" : companyById(t.company).color,
                 t.id,
                 offline,
                 focusTruckId === t.id,
@@ -203,4 +214,3 @@ export default function CityMapInner({
     </div>
   );
 }
-

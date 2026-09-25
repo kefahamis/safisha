@@ -6,13 +6,13 @@ import type { SessionClaims, Workspace } from "@/lib/auth/types";
  * middleware verifies the token on the Edge runtime.
  */
 
-export const SESSION_COOKIE = "safisha_session";
+export const SESSION_COOKIE = "zoa_session";
 export const SESSION_TTL_SECONDS = 8 * 60 * 60;
 
-const ISSUER = "safisha";
-const AUDIENCE = "safisha-app";
+const ISSUER = "zoa";
+const AUDIENCE = "zoa-app";
 
-const DEV_SECRET = "safisha-dev-secret-not-for-production-use-only";
+const DEV_SECRET = "zoa-dev-secret-not-for-production-use-only";
 
 function secretKey(): Uint8Array {
   const raw = process.env.SESSION_SECRET;

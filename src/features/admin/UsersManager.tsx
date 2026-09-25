@@ -1,12 +1,27 @@
 "use client";
 
+import {
+  Ban,
+  CircleCheck,
+  CircleSlash,
+  LockKeyhole,
+  Minus,
+  Plus,
+  RotateCcw,
+  Save,
+  SlidersHorizontal,
+  Users,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import { Chip } from "@/components/ui/Chip";
 import { PageHead, Panel } from "@/components/ui/Panel";
 import { useToast } from "@/components/ui/ToastProvider";
+import { useAppState } from "@/store/StoreProvider";
+import { InviteForm } from "./InviteForm";
 import { permissionsByGroup } from "@/lib/auth/permissions";
 import type { PublicUser, RoleDef } from "@/lib/auth/types";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, initials } from "@/lib/format";
 import { companyById } from "@/lib/reference/companies";
 
 const GROUPS = permissionsByGroup();
@@ -24,6 +39,7 @@ export function UsersManager({
   currentUserId: string;
 }) {
   const toast = useToast();
+  const s = useAppState();
   const [users, setUsers] = useState(initialUsers);
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -47,10 +63,12 @@ export function UsersManager({
 
   return (
     <>
-      <PageHead title="Users">
+      <PageHead title="Users" icon={Users}>
         Every account, the role it holds, and any permission granted or withheld for that person
         alone. A deny always beats the role.
       </PageHead>
+
+      <InviteForm roles={roles} trucks={s.trucks} />
 
       <Panel>
         <div className="tablewrap">
@@ -74,9 +92,16 @@ export function UsersManager({
                 return (
                   <tr key={u.id}>
                     <td>
-                      {u.name}
-                      {self && <span className="hint"> · you</span>}
-                      <div className="hint mono">{u.email}</div>
+                      <span className="li-main">
+                        <span className="avatar sm" aria-hidden="true">
+                          {initials(u.name)}
+                        </span>
+                        <span>
+                          {u.name}
+                          {self && <span className="hint"> · you</span>}
+                          <div className="hint mono">{u.email}</div>
+                        </span>
+                      </span>
                     </td>
                     <td>
                       <select
@@ -84,7 +109,11 @@ export function UsersManager({
                         value={u.roleId}
                         disabled={self}
                         onChange={(e) =>
-                          patch(u.id, { roleId: e.target.value }, `${u.name} is now a ${roleOf(e.target.value)?.name}`)
+                          patch(
+                            u.id,
+                            { roleId: e.target.value },
+                            `${u.name} is now a ${roleOf(e.target.value)?.name}`,
+                          )
                         }
                       >
                         {roles.map((r) => (
@@ -108,17 +137,31 @@ export function UsersManager({
                         <span className="hint">None</span>
                       ) : (
                         <span className="row" style={{ gap: 6 }}>
-                          {u.grants.length > 0 && <Chip tone="ok">+{u.grants.length}</Chip>}
-                          {u.denies.length > 0 && <Chip tone="bad">−{u.denies.length}</Chip>}
+                          {u.grants.length > 0 && (
+                            <Chip tone="ok" icon={Plus}>
+                              {u.grants.length}
+                            </Chip>
+                          )}
+                          {u.denies.length > 0 && (
+                            <Chip tone="bad" icon={Minus}>
+                              {u.denies.length}
+                            </Chip>
+                          )}
                         </span>
                       )}
                     </td>
                     <td>
-                      {u.suspended ? <Chip tone="bad">Suspended</Chip> : <Chip tone="ok">Active</Chip>}
+                      {u.suspended ? (
+                        <Chip tone="bad" icon={Ban}>
+                          Suspended
+                        </Chip>
+                      ) : (
+                        <Chip tone="ok" icon={CircleCheck}>
+                          Active
+                        </Chip>
+                      )}
                     </td>
-                    <td className="hint num">
-                      {u.lastLoginAt ? fmtDate(u.lastLoginAt) : "Never"}
-                    </td>
+                    <td className="hint num">{u.lastLoginAt ? fmtDate(u.lastLoginAt) : "Never"}</td>
                     <td>
                       <div className="row" style={{ gap: 6, justifyContent: "flex-end" }}>
                         <button
@@ -126,6 +169,11 @@ export function UsersManager({
                           className="btn small"
                           onClick={() => setOpenId(openId === u.id ? null : u.id)}
                         >
+                          {openId === u.id ? (
+                            <X size={14} strokeWidth={2.2} aria-hidden="true" />
+                          ) : (
+                            <SlidersHorizontal size={14} strokeWidth={2.2} aria-hidden="true" />
+                          )}
                           {openId === u.id ? "Close" : "Overrides"}
                         </button>
                         <button
@@ -140,6 +188,11 @@ export function UsersManager({
                             )
                           }
                         >
+                          {u.suspended ? (
+                            <RotateCcw size={14} strokeWidth={2.2} aria-hidden="true" />
+                          ) : (
+                            <Ban size={14} strokeWidth={2.2} aria-hidden="true" />
+                          )}
                           {u.suspended ? "Restore" : "Suspend"}
                         </button>
                       </div>
@@ -204,20 +257,25 @@ function OverrideEditor({
     <Panel>
       <div className="row between" style={{ marginBottom: 12 }}>
         <div>
-          <h3>Overrides · {user.name}</h3>
+          <h3 className="with-ico">
+            <SlidersHorizontal size={17} strokeWidth={2.2} aria-hidden="true" />
+            Overrides · {user.name}
+          </h3>
           <div className="hint">
             Inherit follows the {role?.name ?? user.roleId} role. Allow adds a permission for this
             person; deny takes it away even if the role carries it.
           </div>
         </div>
         <button type="button" className="btn primary small" onClick={save} disabled={busy}>
+          <Save size={14} strokeWidth={2.2} aria-hidden="true" />
           {busy ? "Saving…" : "Save overrides"}
         </button>
       </div>
 
       {GROUPS.map(({ group, items }) => (
         <div key={group} style={{ marginBottom: 14 }}>
-          <div className="label" style={{ marginBottom: 6 }}>
+          <div className="label with-ico" style={{ marginBottom: 6 }}>
+            <LockKeyhole size={13} strokeWidth={2.2} aria-hidden="true" />
             {group}
           </div>
           <div className="list">
@@ -231,7 +289,10 @@ function OverrideEditor({
                   </div>
                 </div>
                 <div className="row" style={{ gap: 8 }}>
-                  <Chip tone={effective(p.id) ? "ok" : "neutral"}>
+                  <Chip
+                    tone={effective(p.id) ? "ok" : "neutral"}
+                    icon={effective(p.id) ? CircleCheck : CircleSlash}
+                  >
                     {effective(p.id) ? "Allowed" : "Blocked"}
                   </Chip>
                   <select

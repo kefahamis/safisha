@@ -1,28 +1,35 @@
-/* Sign-in page: two cards centred on the canvas. */
+/*
+ * Sign-in: form on the left, a hero panel on the right with floating glass
+ * cards. Elements rise in from a blur on a short stagger (.signin-in + d1–d7).
+ */
 
-.authpage {
-  min-height: 100vh;
-  display: grid;
-  grid-template-columns: minmax(0, 380px) minmax(0, 340px);
-  gap: 20px;
-  align-content: center;
-  justify-content: center;
-  align-items: start;
-  padding: 40px 20px;
+.signin {
+  min-height: 100dvh;
+  display: flex;
+  background: var(--bg);
 }
 
-.authcard {
-  background: var(--panel);
-  border-radius: var(--r-card);
-  padding: 28px;
-  box-shadow: var(--shadow);
+.signin-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 32px;
+  min-width: 0;
+}
+
+.signin-inner {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
 }
 
 .authbrand {
   display: flex;
   align-items: center;
-  gap: 11px;
-  margin-bottom: 22px;
+  gap: 12px;
 }
 
 .authbrand b {
@@ -39,29 +46,509 @@
   font-size: 0.72rem;
 }
 
-.authcard.demo {
-  background: var(--panel);
+.signin-title {
+  font-size: clamp(2.25rem, 4vw, 3rem);
+  font-weight: 650;
+  line-height: 1.08;
+  letter-spacing: -0.045em;
 }
 
-.authcard.demo h2 {
-  font-size: 1rem;
+.signin-title .light {
+  font-weight: 300;
 }
 
-/* Each demo account is a button that fills the form. */
-.demo-row {
+.signin-desc {
+  margin: -8px 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  max-width: 40ch;
+}
+
+.signin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.signin-label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* Frosted field: the wrapper carries the border and the focus tint. */
+.glass-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  backdrop-filter: blur(6px);
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.glass-field:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.glass-field > svg {
+  position: absolute;
+  left: 16px;
+  color: var(--muted);
+  pointer-events: none;
+  transition: color 0.15s;
+}
+
+.glass-field:focus-within > svg {
+  color: var(--accent);
+}
+
+.glass-field input,
+.glass-field input:focus,
+.glass-field input:hover {
   width: 100%;
+  padding: 15px 16px 15px 46px;
   border: 0;
+  border-radius: 16px;
   background: transparent;
+  box-shadow: none;
+  outline: none;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.glass-field input[type="password"],
+.glass-field input[name="password"] {
+  padding-right: 50px;
+}
+
+.glass-eye {
+  position: absolute;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
   cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.glass-eye:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.signin-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 15px 18px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--accent-grad);
+  color: var(--accent-ink);
+  font-weight: 650;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transition: filter 0.15s, transform 0.1s;
+}
+
+.signin-submit:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.signin-submit:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.signin-submit:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.signin-divider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.signin-divider::before {
+  content: "";
+  position: absolute;
+  inset: 50% 0 auto;
+  border-top: 1px solid var(--line);
+}
+
+.signin-divider span {
+  position: relative;
+  padding: 0 14px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+/* Demo accounts: a two-up grid of small buttons that fill the form. */
+.demo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.demo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
   text-align: left;
   font: inherit;
   color: inherit;
-  border-radius: 8px;
-  padding: 12px 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  padding: 9px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
 }
 
 .demo-row:hover {
-  background: var(--panel2);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+}
+
+.demo-row[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 0.5px var(--accent);
+}
+
+.demo-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.demo-text .t,
+.demo-text .sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.demo-text .t {
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.demo-text .sub {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.avatar.ws-client {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.avatar.ws-company {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.avatar.ws-collector {
+  background: var(--sky-soft);
+  color: var(--sky);
+}
+
+.avatar.ws-admin {
+  background: var(--violet-soft);
+  color: var(--violet);
+}
+
+/* ---- hero ---- */
+/* Pinned at one screen tall, so a long form scrolls past a whole panel. */
+.signin-hero {
+  flex: 1;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100dvh;
+  padding: 16px;
+  min-width: 0;
+}
+
+/* The drawn brand panel: deep rail navy lit by the brand blue. */
+.signin-hero-art {
+  position: absolute;
+  inset: 16px;
+  border-radius: 28px;
+  overflow: hidden;
+  background:
+    radial-gradient(90% 70% at 85% 10%, rgba(71, 212, 128, 0.42), transparent 60%),
+    radial-gradient(70% 60% at 0% 100%, rgba(116, 176, 158, 0.35), transparent 60%),
+    linear-gradient(160deg, #0c6955 0%, #093c3d 55%, #052929 100%);
+  animation: signin-slide 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s backwards;
+}
+
+.signin-hero-art.photo {
+  background-size: cover;
+  background-position: center;
+}
+
+/*
+ * Halftone dot field over the gradient (public/login-pattern.svg). The dots are
+ * off-white, so the layer is softened to sit behind the headline and cards.
+ */
+.signin-hero-art:not(.photo)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("/login-pattern.svg") center / cover no-repeat;
+  opacity: 0.55;
+  pointer-events: none;
+  /* Fade out under the headline (top) and the cards (bottom) so text stays legible. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 8%, #000 34%, #000 62%, transparent 88%);
+  mask-image: linear-gradient(to bottom, transparent 8%, #000 34%, #000 62%, transparent 88%);
+}
+
+/* The route and its two trucks, drawn over the dots. */
+.signin-track {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.signin-track .route {
+  fill: none;
+  stroke: rgba(71, 212, 128, 0.3);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.signin-track .route-live {
+  fill: none;
+  stroke: #8ff0b8;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 2 12;
+  animation: signin-route 1.2s linear infinite;
+}
+
+.signin-track .truck circle {
+  fill: #fff;
+  stroke: #47d480;
+  stroke-width: 4;
+}
+
+.signin-track .truck.alt circle {
+  fill: #f07a45;
+  stroke: #fff;
+  stroke-width: 3;
+}
+
+@keyframes signin-route {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+
+.signin-hero-copy {
+  position: absolute;
+  top: 40px;
+  left: 40px;
+  right: 40px;
+  color: #fff;
+  max-width: 440px;
+}
+
+.signin-hero-copy h2 {
+  font-size: clamp(1.6rem, 2.4vw, 2.2rem);
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+}
+
+.signin-hero-copy p {
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.95rem;
+  max-width: 38ch;
+}
+
+.signin-cards {
+  position: absolute;
+  left: 40px;
+  right: 40px;
+  bottom: 40px;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+}
+
+.glass-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 256px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  color: #fff;
+  /* Forest-tinted glass: reads over the dots as well as the gradient. */
+  background: rgba(9, 60, 61, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.5);
+  animation: signin-card 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+.glass-card.c1 {
+  animation-delay: 1s;
+}
+
+.glass-card.c2 {
+  animation-delay: 1.2s;
+}
+
+.glass-card.c3 {
+  animation-delay: 1.4s;
+}
+
+.glass-card-ico {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.glass-card b {
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.glass-card p {
+  margin: 3px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* ---- entrance ---- */
+.signin-in {
+  animation: signin-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+.signin-in.d1 {
+  animation-delay: 0.1s;
+}
+
+.signin-in.d2 {
+  animation-delay: 0.2s;
+}
+
+.signin-in.d3 {
+  animation-delay: 0.3s;
+}
+
+.signin-in.d4 {
+  animation-delay: 0.4s;
+}
+
+.signin-in.d5 {
+  animation-delay: 0.5s;
+}
+
+.signin-in.d6 {
+  animation-delay: 0.6s;
+}
+
+.signin-in.d7 {
+  animation-delay: 0.7s;
+}
+
+@keyframes signin-rise {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(10px);
+  }
+}
+
+@keyframes signin-slide {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateX(28px);
+  }
+}
+
+@keyframes signin-card {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(18px) scale(0.96);
+  }
+}
+
+/* The three cards only fit side by side on wide screens. */
+@media (max-width: 1500px) {
+  .glass-card.c3 {
+    display: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .glass-card.c2 {
+    display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .signin-hero {
+    display: none;
+  }
+
+  .signin-main {
+    padding: 32px 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .demo-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signin-in,
+  .signin-hero-art,
+  .glass-card,
+  .signin-track .route-live {
+    animation: none;
+  }
+
+  /* The trucks drive by SMIL, which CSS can't pause; hide them instead. */
+  .signin-track .truck {
+    display: none;
+  }
 }
 
 /* ---------- access control ---------- */
@@ -89,6 +576,22 @@
   cursor: pointer;
   font: inherit;
   color: inherit;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.rolerow:hover {
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* Multi-line hint: the workspace glyph flows inline with the first line. */
+.rolerow .hint.with-ico {
+  display: block;
+  margin-top: 4px;
+}
+
+.rolerow .hint > svg {
+  vertical-align: -2px;
+  margin-right: 5px;
 }
 
 .rolerow[aria-current="true"] {
@@ -110,6 +613,12 @@
   border-radius: 12px;
   background: var(--panel2);
   cursor: pointer;
+  transition: box-shadow 0.15s, background 0.15s;
+}
+
+.perm:has(input:checked) {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .perm input {
@@ -140,12 +649,5 @@
 @media (max-width: 980px) {
   .access {
     grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 800px) {
-  .authpage {
-    grid-template-columns: minmax(0, 420px);
-    align-content: start;
   }
 }

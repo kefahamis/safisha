@@ -1,21 +1,25 @@
 "use client";
 
+import { FileText } from "lucide-react";
 import { PeriodSelect, StatementTable } from "@/components/billing/StatementTable";
 import { BalanceChip } from "@/components/ui/Chip";
 import { PageHead, Panel } from "@/components/ui/Panel";
+import { useT } from "@/lib/i18n";
 import { companyById } from "@/lib/reference/companies";
 import { balance, clientById } from "@/lib/selectors";
 import { useAppState } from "@/store/StoreProvider";
 
 export function ClientStatement() {
   const s = useAppState();
+  const { t } = useT();
   const client = clientById(s, s.clientId);
   if (!client) return null;
 
   return (
     <>
       <PageHead
-        title="Statement"
+        title={t("Statement")}
+        icon={FileText}
         actions={
           <div className="row">
             <PeriodSelect />

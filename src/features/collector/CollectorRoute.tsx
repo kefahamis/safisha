@@ -1,5 +1,6 @@
 "use client";
 
+import { Route, WifiOff } from "lucide-react";
 import { RouteSheet } from "@/components/collector/RouteSheet";
 import { ShareToggle } from "@/components/collector/ShareToggle";
 import { CityMap } from "@/components/map/CityMap";
@@ -17,12 +18,13 @@ export function CollectorRoute() {
 
   return (
     <>
-      <PageHead title="Today’s route" actions={<ShareToggle truck={truck} />}>
+      <PageHead title="Today’s route" icon={Route} actions={<ShareToggle truck={truck} />}>
         <span className="mono">{truck.id}</span> · {truck.driver} · {co.name}
       </PageHead>
 
       {truck.status === "offline" && (
         <div className="banner">
+          <WifiOff size={17} strokeWidth={2.2} aria-hidden="true" />
           This truck is marked offline. Turning on location sharing puts it back on route.
         </div>
       )}

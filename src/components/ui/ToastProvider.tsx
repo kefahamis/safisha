@@ -1,5 +1,6 @@
 "use client";
 
+import { BellRing } from "lucide-react";
 import {
   createContext,
   useCallback,
@@ -28,7 +29,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={toast}>
       {children}
       {message !== null && (
-        <div className="toast" role="status">
+        <div className="toast" role="status" key={message}>
+          <BellRing size={16} strokeWidth={2.2} aria-hidden="true" />
           {message}
         </div>
       )}

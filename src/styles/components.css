@@ -15,6 +15,29 @@
   margin-bottom: 14px;
 }
 
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.panel-head h3,
+h3.with-ico,
+h2.with-ico {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.panel-head h3 > svg,
+h3.with-ico > svg,
+h2.with-ico > svg {
+  color: var(--accent);
+  flex: none;
+}
+
 .grid {
   display: grid;
   gap: 20px;
@@ -48,6 +71,20 @@
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow), 0 18px 36px -18px rgba(6, 41, 41, 0.25);
+}
+
+.kpi-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 30px;
 }
 
 .kpi .v {
@@ -77,11 +114,12 @@
   display: block;
   height: 100%;
   border-radius: var(--r-pill);
-  background: var(--accent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--leaf) 55%, transparent), var(--leaf));
+  transition: width 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 .kpi .bar.alt > i {
-  background: var(--accent-2);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent-2) 55%, transparent), var(--accent-2));
 }
 
 .kpi .foot {
@@ -100,10 +138,10 @@
 .trend {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   font-size: 0.72rem;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 2px 8px 2px 6px;
   border-radius: var(--r-pill);
 }
 
@@ -148,7 +186,16 @@
   gap: 8px;
   text-decoration: none;
   color: inherit;
-  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+.btn > svg {
+  flex: none;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .btn:hover {
@@ -157,15 +204,15 @@
 }
 
 .btn.primary {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-grad);
+  border-color: transparent;
   color: var(--accent-ink);
-  box-shadow: 0 6px 16px -4px rgba(59, 111, 246, 0.5);
+  box-shadow: var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .btn.primary:hover {
-  background: var(--accent);
-  filter: brightness(1.07);
+  background: var(--accent-grad);
+  filter: brightness(1.08);
 }
 
 .btn.small {
@@ -176,6 +223,30 @@
 .btn.ghost {
   background: transparent;
   border-color: transparent;
+}
+
+.btn.ghost:hover {
+  background: var(--panel2);
+}
+
+/* Square-ish button carrying only a glyph; always paired with aria-label. */
+.btn.icon-only {
+  padding: 0;
+  width: 38px;
+  height: 38px;
+  justify-content: center;
+  flex: none;
+}
+
+.btn.small.icon-only {
+  width: 34px;
+  height: 34px;
+}
+
+.btn.block {
+  width: 100%;
+  justify-content: center;
+  padding-block: 11px;
 }
 
 .btn:disabled {
@@ -203,7 +274,75 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--accent);
-  background: var(--panel);
+  background-color: var(--panel);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+  outline: none;
+}
+
+input:hover:not(:focus),
+select:hover:not(:focus),
+textarea:hover:not(:focus) {
+  border-color: var(--line);
+}
+
+/* One chevron for every select, drawn in the muted ink so it suits both themes. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 36px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23858ba0' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+input[type="search"]::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+/*
+ * A control with a leading glyph: .field / .search wrap an input, .select-ico a
+ * select. The glyph sits over the control's left padding.
+ */
+.field,
+.search,
+.select-ico {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.field > svg,
+.search > svg,
+.select-ico > svg {
+  position: absolute;
+  left: 13px;
+  color: var(--muted);
+  pointer-events: none;
+  transition: color 0.15s;
+}
+
+.field:focus-within > svg,
+.search:focus-within > svg,
+.select-ico:focus-within > svg {
+  color: var(--accent);
+}
+
+.field > input,
+.search > input {
+  width: 100%;
+  padding-left: 40px;
+}
+
+.select-ico > select {
+  padding-left: 38px;
+}
+
+label.f > .field > input {
+  color: var(--ink);
+  font-weight: 500;
+  font-size: 0.9rem;
 }
 
 textarea {
@@ -244,14 +383,33 @@ label.f > select {
   color: var(--bad);
   font-size: 0.82rem;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Inline glyph + text, for hints, labels and table cells. */
+.with-ico {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.with-ico > svg {
+  flex: none;
+}
+
+p.with-ico,
+div.with-ico {
+  display: flex;
 }
 
 /* ---------- chips ---------- */
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
+  gap: 5px;
+  padding: 4px 11px;
   border-radius: var(--r-pill);
   font-size: 0.76rem;
   font-weight: 700;
@@ -276,6 +434,11 @@ label.f > select {
 .chip.neutral {
   background: var(--panel2);
   color: var(--muted);
+}
+
+.chip > svg {
+  flex: none;
+  margin-left: -2px;
 }
 
 .dot {
@@ -337,8 +500,16 @@ tbody tr.click {
   cursor: pointer;
 }
 
+tbody tr {
+  transition: background 0.12s;
+}
+
 tbody tr.click:hover {
   background: var(--panel2);
+}
+
+tbody tr.click:hover td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 tr.open td {
@@ -365,7 +536,7 @@ tr.open td {
   width: 230px;
   height: 230px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(59, 111, 246, 0.75) 0%, rgba(59, 111, 246, 0) 68%);
+  background: radial-gradient(circle, rgba(71, 212, 128, 0.55) 0%, rgba(71, 212, 128, 0) 68%);
 }
 
 .idcard > * {
@@ -496,65 +667,6 @@ tr.open td {
   box-shadow: inset 0 0 0 1.5px var(--accent), var(--shadow);
 }
 
-.thread {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: 420px;
-  overflow-y: auto;
-  padding: 4px 2px 10px;
-}
-
-.msg {
-  max-width: 78%;
-  padding: 10px 14px;
-  border-radius: 14px;
-  font-size: 0.9rem;
-}
-
-.msg .meta {
-  font-size: 0.7rem;
-  color: var(--muted);
-  margin-top: 3px;
-}
-
-.msg.them {
-  background: var(--panel2);
-  align-self: flex-start;
-  border-bottom-left-radius: 4px;
-}
-
-.msg.me {
-  background: var(--accent);
-  color: var(--accent-ink);
-  align-self: flex-end;
-  border-bottom-right-radius: 4px;
-}
-
-.msg.me .meta {
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.msg.sys {
-  align-self: center;
-  background: transparent;
-  color: var(--muted);
-  font-size: 0.78rem;
-  padding: 2px;
-}
-
-.reply {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.reply input {
-  flex: 1;
-  border-radius: var(--r-pill);
-  padding-inline: 16px;
-}
-
 /* ---------- route ---------- */
 .stop {
   display: grid;
@@ -584,12 +696,12 @@ tr.open td {
 
 .stop.done .n {
   background: var(--ok);
-  color: #fff;
+  color: var(--panel);
 }
 
 .stop.skipped .n {
   background: var(--warn);
-  color: #fff;
+  color: var(--panel);
 }
 
 .switch {
@@ -622,7 +734,7 @@ tr.open td {
   height: 19px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.3);
+  box-shadow: 0 1px 3px rgba(6, 41, 41, 0.3);
   transition: left 0.2s;
 }
 
@@ -638,15 +750,23 @@ tr.open td {
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(20, 24, 40, 0.5);
+  background: rgba(3, 28, 28, 0.55);
   backdrop-filter: blur(3px);
   display: grid;
   place-items: center;
   padding: 16px;
   z-index: 50;
+  animation: fade-in 0.18s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
 }
 
 .sheet {
+  animation: sheet-in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
   background: var(--panel);
   border-radius: 20px;
   width: min(460px, 100%);
@@ -654,6 +774,49 @@ tr.open td {
   overflow-y: auto;
   padding: 24px;
   box-shadow: var(--shadow-pop);
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+}
+
+/* The badge that heads each step of the payment sheet. */
+.sheet-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+}
+
+.sheet-icon.accent {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.sheet-icon.ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.sheet-icon.bad {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+.sheet-icon.pop {
+  animation: pop 0.4s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
 }
 
 .phone {
@@ -713,6 +876,10 @@ tr.open td {
   }
 }
 
+svg.spin {
+  animation: spin 0.9s linear infinite;
+}
+
 pre.code {
   background: var(--panel2);
   border: 0;
@@ -729,6 +896,48 @@ details summary {
   cursor: pointer;
   font-weight: 600;
   font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  user-select: none;
+}
+
+details summary::-webkit-details-marker {
+  display: none;
+}
+
+details summary > svg {
+  flex: none;
+  color: var(--muted);
+}
+
+details summary .chev {
+  margin-left: auto;
+  transition: transform 0.2s ease;
+}
+
+details[open] > summary .chev {
+  transform: rotate(180deg);
+}
+
+/* Collapsible form panels: a tile, a title and the chevron on the right. */
+details.panel > summary {
+  font-size: 0.98rem;
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.summary-ico {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex: none;
 }
 
 .toast {
@@ -745,6 +954,22 @@ details summary {
   z-index: 60;
   max-width: calc(100% - 32px);
   box-shadow: var(--shadow-pop);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: toast-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.toast > svg {
+  flex: none;
+  color: #5fe196;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px) scale(0.97);
+  }
 }
 
 .empty {
@@ -753,6 +978,19 @@ details summary {
   color: var(--muted);
   border: 1px dashed var(--line);
   border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.empty > svg {
+  width: 48px;
+  height: 48px;
+  padding: 11px;
+  border-radius: 14px;
+  background: var(--panel2);
+  color: var(--muted);
 }
 
 .banner {
@@ -763,4 +1001,669 @@ details summary {
   font-size: 0.84rem;
   border: 0;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.banner > svg {
+  flex: none;
+}
+
+/* ---------- icon tiles ---------- */
+.itile {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 10px;
+  width: 34px;
+  height: 34px;
+}
+
+.itile.sm {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+
+.itile.lg {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+}
+
+.itile.accent {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* The page-title tile is the one solid, lit badge on each screen. */
+.pagehead .itile.lg {
+  background: var(--accent-grad);
+  color: var(--accent-ink);
+  box-shadow: var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.itile.sky {
+  background: var(--sky-soft);
+  color: var(--sky);
+}
+
+.itile.ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.itile.warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.itile.bad {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+.itile.violet {
+  background: var(--violet-soft);
+  color: var(--violet);
+}
+
+.itile.neutral {
+  background: var(--panel2);
+  color: var(--muted);
+}
+
+/* ---------- list rows with a leading glyph ---------- */
+.li-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.avatar.sm {
+  width: 30px;
+  height: 30px;
+  font-size: 0.7rem;
+}
+
+.amount {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.amount.in {
+  color: var(--ok);
+}
+
+.count-pill {
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 0.74rem;
+  font-weight: 700;
+  border-radius: var(--r-pill);
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  display: grid;
+  place-items: center;
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.86rem;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.result.ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.result.bad {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+.result > svg {
+  flex: none;
+}
+
+/* ---------- account card extras ---------- */
+.idcard-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* A card "chip" in the corner, so the number reads as a payment card. */
+.idcard-chip {
+  width: 38px;
+  height: 28px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.85);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.06));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.idcard-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  opacity: 0.75;
+}
+
+/* ---------- statement ---------- */
+.txn-ico {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.txn-ico.payment {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.txn-ico.charge {
+  background: var(--panel2);
+  color: var(--muted);
+}
+
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.meta-row > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---------- route ---------- */
+.route-progress {
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--panel2);
+  overflow: hidden;
+  margin: 6px 0 4px;
+}
+
+.route-progress > i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--leaf) 55%, transparent), var(--leaf));
+  transition: width 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.unpaid {
+  color: var(--bad);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.switch .live {
+  color: var(--ok);
+  animation: blink 1.6s ease-in-out infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* ---------- support ---------- */
+/* Ticket hints wrap on narrow cards; keep the glyph inline with the text. */
+.tickets .hint.with-ico {
+  display: block;
+}
+
+.tickets .hint > svg {
+  vertical-align: -2px;
+  margin-right: 5px;
+}
+
+.tk-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.care-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--panel);
+  border-radius: 14px;
+  padding: 8px 10px 8px 8px;
+  box-shadow: var(--shadow-sm);
+  line-height: 1.35;
+}
+
+/* ---------- fleet roster ---------- */
+.truck-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--truck);
+  background: color-mix(in srgb, var(--truck) 14%, transparent);
+}
+
+.truck-badge.offline {
+  color: var(--muted);
+  background: var(--panel2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .modal,
+  .sheet,
+  .sheet-icon.pop,
+  .switch .live {
+    animation: none;
+  }
+
+  .kpi:hover {
+    transform: none;
+  }
+}
+
+/* ---------- client care chat ---------- */
+/*
+ * One card: header, then either an empty state (new request) or the thread,
+ * then the composer. "Me" bubbles and the send button use the ink colour, so
+ * they read black in light mode and white in dark.
+ */
+.chatcard {
+  display: flex;
+  flex-direction: column;
+  min-height: 500px;
+  background: var(--panel);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+
+.chatcard-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.chatcard-head h3 {
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatcard-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+/* Small round control: the reset in the header. */
+.chat-round {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s, transform 0.12s;
+}
+
+.chat-round:hover {
+  color: var(--ink);
+}
+
+.chat-round:active {
+  transform: scale(0.9);
+}
+
+/* Overshoots a little on each full turn, like a spring. */
+.chat-spin {
+  transition: transform 0.7s cubic-bezier(0.34, 1.35, 0.5, 1);
+}
+
+/* ---- empty state ---- */
+.chatcard-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 32px;
+  text-align: center;
+}
+
+.chat-float {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--panel2);
+  color: var(--ink);
+  animation: chat-float 3s ease-in-out infinite;
+}
+
+@keyframes chat-float {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.chat-greet {
+  margin: 16px 0 0;
+  font-family: var(--display);
+  font-size: 1.125rem;
+  font-weight: 650;
+  line-height: 1.55;
+  letter-spacing: -0.025em;
+  animation: chat-in 0.5s ease-out 0.15s backwards;
+}
+
+.chat-prompt {
+  margin: 6px 0 0;
+  max-width: 250px;
+  font-size: 0.875rem;
+  line-height: 1.62;
+  color: var(--muted);
+  animation: chat-in 0.5s ease-out 0.25s backwards;
+}
+
+@keyframes chat-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* ---- thread ---- */
+.chat-thread {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px;
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.chat-msg {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  animation: chat-in 0.25s ease-out;
+}
+
+.chat-msg .meta {
+  font-size: 0.7rem;
+  margin-top: 4px;
+  opacity: 0.6;
+}
+
+.chat-msg.them {
+  align-self: flex-start;
+  background: var(--panel2);
+  border-bottom-left-radius: 6px;
+}
+
+.chat-msg.me {
+  align-self: flex-end;
+  background: var(--ink);
+  color: var(--panel);
+  border-bottom-right-radius: 6px;
+}
+
+.chat-sys {
+  align-self: center;
+  max-width: 90%;
+  text-align: center;
+  font-size: 0.74rem;
+  color: var(--muted);
+  padding: 3px 10px;
+}
+
+/* ---- composer ---- */
+.chat-composer-wrap {
+  padding: 0 20px 20px;
+}
+
+.chat-composer {
+  border-radius: 18px;
+  padding: 12px;
+  background: var(--panel2);
+  transition: background 0.15s;
+}
+
+.chat-composer:focus-within {
+  background: color-mix(in srgb, var(--panel2) 60%, var(--line));
+}
+
+/* Undo the global field chrome: the composer box is the field. */
+.chat-composer .chat-field,
+.chat-composer .chat-field:focus,
+.chat-composer .chat-field:hover {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  resize: none;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--ink);
+  outline: none;
+}
+
+.chat-field::placeholder,
+.chat-placeholder {
+  color: var(--muted);
+}
+
+.chat-typed {
+  cursor: text;
+  text-align: left;
+}
+
+.chat-typed:focus-visible {
+  outline: none;
+}
+
+.chat-caret {
+  display: inline-block;
+  width: 1px;
+  height: 14px;
+  margin-left: 1px;
+  vertical-align: middle;
+  background: var(--ink);
+  animation: chat-caret 1s steps(1) infinite;
+}
+
+@keyframes chat-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+.chat-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.chat-hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+/* Small pill select (topic, ticket status), matching the design's round buttons. */
+.chat-pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.chat-pill > svg {
+  position: absolute;
+  left: 10px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.chat-pill.status-open > svg {
+  color: var(--warn);
+}
+
+.chat-pill.status-pending > svg {
+  color: var(--muted);
+}
+
+.chat-pill.status-resolved > svg {
+  color: var(--ok);
+}
+
+.chat-pill select {
+  height: 30px;
+  padding: 0 28px 0 28px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background-color: var(--panel);
+  background-position: right 8px center;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.chat-pill select:focus {
+  box-shadow: none;
+  border-color: var(--accent);
+}
+
+.chat-send {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 18px;
+  background: var(--ink);
+  color: var(--panel);
+  cursor: pointer;
+  transition:
+    transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.15s;
+}
+
+.chat-send > svg {
+  transition: transform 0.2s;
+}
+
+.chat-send:hover:not(:disabled) {
+  transform: scale(1.08);
+}
+
+.chat-send:hover:not(:disabled) > svg {
+  transform: translateY(-1px);
+}
+
+.chat-send:active:not(:disabled) {
+  transform: scale(0.88);
+}
+
+.chat-send:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* A single beat while a finished example is on screen: "you could send this". */
+.chat-send.nudge {
+  animation: chat-nudge 0.5s ease-in-out;
+}
+
+@keyframes chat-nudge {
+  35% {
+    transform: scale(1.14);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-float,
+  .chat-greet,
+  .chat-prompt,
+  .chat-msg,
+  .chat-send.nudge {
+    animation: none;
+  }
+
+  .chat-spin,
+  .chat-send {
+    transition: none;
+  }
 }

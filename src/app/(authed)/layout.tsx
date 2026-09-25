@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { buildSnapshot } from "@/server/snapshot";
 import { getSession } from "@/server/session";
+import { StoreProvider } from "@/store/StoreProvider";
+
+// Every page here reads live data for the signed-in person.
+export const dynamic = "force-dynamic";
 
 /**
  * Everything under here needs a session. Middleware already turns anonymous
@@ -12,5 +17,11 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
   const session = await getSession();
   if (!session) redirect("/login");
 
-  return <AppShell>{children}</AppShell>;
+  const snapshot = await buildSnapshot(session);
+
+  return (
+    <StoreProvider scope={session.scope} initialData={snapshot}>
+      <AppShell>{children}</AppShell>
+    </StoreProvider>
+  );
 }

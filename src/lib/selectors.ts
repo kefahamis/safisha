@@ -1,10 +1,10 @@
-import { demoNow } from "./clock";
 import { DAYS, MONTHS } from "./format";
 import { companyById } from "./reference/companies";
 import { ESTATES } from "./reference/estates";
 import type { AppState, Client, Truck, Txn } from "./types";
 
-export const nowIn = (s: AppState) => demoNow(s.elapsedMs);
+/** Now, by the server's clock: the snapshot time plus the ticker since then. */
+export const nowIn = (s: Pick<AppState, "serverNow" | "elapsedMs">) => new Date(s.serverNow + s.elapsedMs);
 
 export const clientById = (s: AppState, id: string | null): Client | undefined =>
   s.clients.find((c) => c.id === id);
@@ -70,12 +70,24 @@ export function truckState(t: Truck): TruckState {
   return { label: "On route", cls: "ok" };
 }
 
+/** "2026-09", by the store's clock. */
+export function currentMonth(s: Pick<AppState, "serverNow" | "elapsedMs">): string {
+  const d = nowIn(s);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** The month before `month`. */
+export function previousMonth(month: string): string {
+  const d = new Date(Number(month.slice(0, 4)), Number(month.slice(5)) - 2, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 /** Total charged or paid by one company's clients in a given month. */
 export const monthSum = (
   s: AppState,
   companyId: string,
   kind: Txn["kind"],
-  month = "2026-09",
+  month = currentMonth(s),
 ): number =>
   s.txns
     .filter(

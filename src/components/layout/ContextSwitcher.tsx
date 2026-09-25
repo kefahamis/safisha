@@ -1,5 +1,6 @@
 "use client";
 
+import { Building2, Globe2, Hash, Truck } from "lucide-react";
 import { useSession } from "@/components/auth/SessionProvider";
 import { COMPANIES, companyById } from "@/lib/reference/companies";
 import { clientById, truckById } from "@/lib/selectors";
@@ -23,7 +24,8 @@ export function ContextSwitcher({ role }: { role: Role }) {
     if (!client) return null;
     return (
       <div className="ctx">
-        <span className="chip neutral">
+        <span className="chip neutral ctx-chip">
+          <Hash size={13} strokeWidth={2.4} aria-hidden="true" />
           {client.name} · <span className="mono">{client.id}</span>
         </span>
       </div>
@@ -35,7 +37,8 @@ export function ContextSwitcher({ role }: { role: Role }) {
     if (!truck) return null;
     return (
       <div className="ctx">
-        <span className="chip neutral">
+        <span className="chip neutral ctx-chip">
+          <Truck size={13} strokeWidth={2.4} aria-hidden="true" />
           <span className="mono">{truck.id}</span> · {truck.driver}
         </span>
       </div>
@@ -47,12 +50,16 @@ export function ContextSwitcher({ role }: { role: Role }) {
     if (session.scope.companyId) {
       return (
         <div className="ctx">
-          <span className="chip neutral">{companyById(session.scope.companyId).name}</span>
+          <span className="chip neutral ctx-chip">
+            <Building2 size={13} strokeWidth={2.4} aria-hidden="true" />
+            {companyById(session.scope.companyId).name}
+          </span>
         </div>
       );
     }
     return (
-      <div className="ctx">
+      <div className="ctx ctx-select">
+        <Building2 size={15} strokeWidth={2.2} aria-hidden="true" />
         <select
           aria-label="Company"
           value={s.companyId}
@@ -70,7 +77,10 @@ export function ContextSwitcher({ role }: { role: Role }) {
 
   return (
     <div className="ctx">
-      <span className="chip neutral">Platform admin · all companies</span>
+      <span className="chip neutral ctx-chip">
+        <Globe2 size={13} strokeWidth={2.4} aria-hidden="true" />
+        Platform admin · all companies
+      </span>
     </div>
   );
 }

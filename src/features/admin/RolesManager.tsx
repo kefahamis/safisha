@@ -1,9 +1,23 @@
 "use client";
 
+import {
+  Check,
+  KeyRound,
+  LoaderCircle,
+  Lock,
+  LockKeyhole,
+  Plus,
+  Save,
+  ShieldCheck,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/components/ui/ToastProvider";
 import { Chip } from "@/components/ui/Chip";
-import { PageHead, Panel } from "@/components/ui/Panel";
+import { ROLE_ICONS } from "@/components/ui/icons";
+import { Empty, PageHead, Panel } from "@/components/ui/Panel";
 import { permissionsByGroup, PERMISSION_IDS } from "@/lib/auth/permissions";
 import { WORKSPACES, type RoleDef, type Workspace } from "@/lib/auth/types";
 
@@ -97,8 +111,14 @@ export function RolesManager({
     <>
       <PageHead
         title="Roles & permissions"
+        icon={ShieldCheck}
         actions={
           <button type="button" className="btn primary" onClick={() => setCreating((v) => !v)}>
+            {creating ? (
+              <X size={16} strokeWidth={2.2} aria-hidden="true" />
+            ) : (
+              <Plus size={16} strokeWidth={2.2} aria-hidden="true" />
+            )}
             {creating ? "Cancel" : "New role"}
           </button>
         }
@@ -110,38 +130,47 @@ export function RolesManager({
       {creating && <NewRoleForm onCreated={onCreated} onError={toast} />}
 
       <div className="access">
-        <Panel title="Roles">
+        <Panel title="Roles" icon={KeyRound}>
           <div className="rolelist">
-            {roles.map((r) => (
-              <button
-                type="button"
-                key={r.id}
-                className="rolerow"
-                aria-current={r.id === selectedId}
-                onClick={() => select(r)}
-              >
-                <div className="row between" style={{ gap: 8 }}>
-                  <b>{r.name}</b>
-                  <Chip tone={r.system ? "neutral" : "ok"}>{r.system ? "Built-in" : "Custom"}</Chip>
-                </div>
-                <div className="hint">
-                  {r.workspace} workspace · {r.permissions.length} permissions ·{" "}
-                  {counts[r.id] ?? 0} user{(counts[r.id] ?? 0) === 1 ? "" : "s"}
-                </div>
-              </button>
-            ))}
+            {roles.map((r) => {
+              const WsIcon = ROLE_ICONS[r.workspace];
+              return (
+                <button
+                  type="button"
+                  key={r.id}
+                  className="rolerow"
+                  aria-current={r.id === selectedId}
+                  onClick={() => select(r)}
+                >
+                  <div className="row between" style={{ gap: 8 }}>
+                    <b>{r.name}</b>
+                    <Chip tone={r.system ? "neutral" : "ok"} icon={r.system ? Lock : Sparkles}>
+                      {r.system ? "Built-in" : "Custom"}
+                    </Chip>
+                  </div>
+                  <div className="hint with-ico">
+                    <WsIcon size={13} strokeWidth={2.2} aria-hidden="true" />
+                    {r.workspace} workspace · {r.permissions.length} permissions ·{" "}
+                    {counts[r.id] ?? 0} user{(counts[r.id] ?? 0) === 1 ? "" : "s"}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </Panel>
 
         <div className="stack" style={{ gap: 20 }}>
           {!selected ? (
-            <div className="empty">Pick a role to edit its permissions.</div>
+            <Empty icon={KeyRound}>Pick a role to edit its permissions.</Empty>
           ) : (
             <>
               <Panel>
                 <div className="row between">
                   <div>
-                    <h3>{selected.name}</h3>
+                    <h3 className="with-ico">
+                      <ShieldCheck size={18} strokeWidth={2.2} aria-hidden="true" />
+                      {selected.name}
+                    </h3>
                     <div className="hint">{selected.description}</div>
                   </div>
                   <div className="row">
@@ -155,6 +184,7 @@ export function RolesManager({
                         onClick={remove}
                         disabled={busy}
                       >
+                        <Trash2 size={14} strokeWidth={2.2} aria-hidden="true" />
                         Delete role
                       </button>
                     )}
@@ -164,6 +194,18 @@ export function RolesManager({
                       onClick={save}
                       disabled={busy || !dirty}
                     >
+                      {busy ? (
+                        <LoaderCircle
+                          size={14}
+                          strokeWidth={2.2}
+                          className="spin"
+                          aria-hidden="true"
+                        />
+                      ) : dirty ? (
+                        <Save size={14} strokeWidth={2.2} aria-hidden="true" />
+                      ) : (
+                        <Check size={14} strokeWidth={2.2} aria-hidden="true" />
+                      )}
                       {busy ? "Saving…" : dirty ? "Save changes" : "Saved"}
                     </button>
                   </div>
@@ -171,7 +213,7 @@ export function RolesManager({
               </Panel>
 
               {GROUPS.map(({ group, items }) => (
-                <Panel key={group} title={group}>
+                <Panel key={group} title={group} icon={LockKeyhole}>
                   <div className="permgrid">
                     {items.map((p) => (
                       <label className="perm" key={p.id}>
@@ -233,7 +275,7 @@ function NewRoleForm({
   };
 
   return (
-    <Panel title="New role">
+    <Panel title="New role" icon={Plus}>
       <form className="form" onSubmit={submit}>
         <label className="f">
           Name
@@ -258,6 +300,7 @@ function NewRoleForm({
           </select>
         </label>
         <button className="btn primary" disabled={busy}>
+          <Check size={16} strokeWidth={2.2} aria-hidden="true" />
           {busy ? "Creating…" : "Create role"}
         </button>
       </form>

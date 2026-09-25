@@ -1,6 +1,8 @@
 "use client";
 
-import { Chip } from "@/components/ui/Chip";
+import { Truck } from "lucide-react";
+import type { CSSProperties } from "react";
+import { TruckChip } from "@/components/ui/Chip";
 import { fmtDate } from "@/lib/format";
 import { formatCoord, truckPos } from "@/lib/geo";
 import { companyById } from "@/lib/reference/companies";
@@ -17,18 +19,28 @@ export function TruckList({ companyId = "" }: { companyId?: string }) {
       {trucks.map((t) => {
         const p = truckPos(t);
         const st = truckState(t);
+        const co = companyById(t.company);
         return (
           <div className="li" key={t.id}>
-            <div>
-              <div className="t mono">{t.id}</div>
-              <div className="sub">
-                {t.driver} · {companyById(t.company).name.split(" ")[0]}
-              </div>
-              <div className="sub mono">
-                {t.status === "offline" ? `Last seen ${fmtDate(t.lastSeen!)}` : formatCoord(p)}
+            <div className="li-main">
+              <span
+                className={`truck-badge${t.status === "offline" ? " offline" : ""}`}
+                style={{ "--truck": co.color } as CSSProperties}
+                aria-hidden="true"
+              >
+                <Truck size={15} strokeWidth={2.2} />
+              </span>
+              <div>
+                <div className="t mono">{t.id}</div>
+                <div className="sub">
+                  {t.driver} · {co.name.split(" ")[0]}
+                </div>
+                <div className="sub mono">
+                  {t.status === "offline" ? `Last seen ${fmtDate(t.lastSeen!)}` : formatCoord(p)}
+                </div>
               </div>
             </div>
-            <Chip tone={st.cls}>{st.label}</Chip>
+            <TruckChip state={st} />
           </div>
         );
       })}

@@ -1,22 +1,27 @@
-import { createInitialState } from "@/lib/seed";
-import type { AppState } from "@/lib/types";
+import type { AppData, AppState } from "@/lib/types";
 
 /**
  * A minimal observable store. State is mutated in place and a version counter
- * drives re-renders through `useSyncExternalStore`, which keeps the ported
- * mutation-heavy logic readable without pulling in a state library.
+ * drives re-renders through `useSyncExternalStore`. Server data arrives as whole
+ * snapshots; view-local state (filters, selections, the payment sheet) stays.
  */
 export interface AppStore {
   getState: () => AppState;
   getVersion: () => number;
   subscribe: (listener: () => void) => () => void;
   update: (mutate: (state: AppState) => void) => void;
+  /** Replaces the server-owned half of the state with a fresh snapshot. */
+  receive: (data: AppData) => void;
 }
 
-export function createAppStore(): AppStore {
-  const state = createInitialState();
+export function createAppStore(initial: AppState): AppStore {
+  const state = initial;
   let version = 0;
   const listeners = new Set<() => void>();
+  const notify = () => {
+    version++;
+    listeners.forEach((l) => l());
+  };
 
   return {
     getState: () => state,
@@ -29,8 +34,11 @@ export function createAppStore(): AppStore {
     },
     update(mutate) {
       mutate(state);
-      version++;
-      listeners.forEach((l) => l());
+      notify();
+    },
+    receive(data) {
+      Object.assign(state, data, { elapsedMs: 0 });
+      notify();
     },
   };
 }

@@ -1,16 +1,16 @@
-# Safisha Waste Hub
+# Zoa Waste Hub
 
-A prototype platform for Nairobi waste collection, ported from a single-file HTML
-prototype to a modular Next.js (App Router) application.
-
-Four roles share one live dataset:
+A platform for Nairobi waste collection: client accounts and M-Pesa billing,
+live fleet tracking, collector route sheets with proof of collection, customer
+care with Sheng/Kiswahili translation, on-demand pickups, dumping reports,
+recycling tracking and USSD for clients without smartphones.
 
 | Role | What it covers |
 | --- | --- |
-| **Client** | Account card, balance, M-Pesa payment, statement, live truck tracking, care desk |
-| **Company** | Dashboard KPIs, client register, fleet map, M-Pesa reconciliation, statements, care inbox |
-| **Collector** | Today's route sheet, GPS sharing toggle |
-| **Admin** | City-wide overview, full client database, all-company map |
+| **Client** | Account card, balance, pay by M-Pesa, statement, live truck tracking, book bulky/extra pickups, report illegal dumping, recycling figures, care chat |
+| **Company** | Dashboard and trends, client register, fleet map, M-Pesa payments and suspense, arrears and reminders, statements, pickup requests, dumping reports, recycling, care inbox, settings, audit log |
+| **Collector** | Today's route (optimised order), proof of collection (photo, GPS, weight, waste type), on-demand jobs, GPS sharing — works offline |
+| **Admin** | City overview and trends, all clients, all fleets, dumping reports, roles and users (with invitations), platform settings, audit log |
 
 ## Running it
 
@@ -21,183 +21,175 @@ npm run build && npm start
 npm run typecheck
 ```
 
-## Signing in
-
-Every dashboard is behind a session. Pick any account from the list on the
-sign-in page — they all use the password `safisha123`.
+With no configuration the app runs on a local embedded database (below) with
+demo data, and payments/SMS run in simulated mode. Sign in with any account on
+the sign-in page; they all use the password `zoa12345`.
 
 | Account | Role | Lands on |
 | --- | --- | --- |
 | `wanjiku@example.com` | Client | `/client` |
 | `john.kiprop@takasafi.co.ke` | Collector | `/collector` |
-| `care@takasafi.co.ke` | Care agent | `/company` (read-only billing) |
+| `care@takasafi.co.ke` | Care agent | `/company` |
 | `ops@takasafi.co.ke` | Company admin | `/company` |
-| `admin@safisha.go.ke` | Platform admin | `/admin` |
+| `admin@zoahub.co.ke` | Platform admin | `/admin` |
 
-Set `SESSION_SECRET` (see `.env.example`) before running in production; the
-server refuses to sign tokens without it.
+## Database
 
-## Authentication and access control
+PostgreSQL through [Drizzle ORM](https://orm.drizzle.team). Schema in
+`src/server/db/schema.ts`, migrations in `drizzle/`, applied automatically on
+start; an empty database is seeded with the demo world.
 
-**Sessions are HS256 JWTs** in an httpOnly, SameSite=Lax cookie, signed with
-`jose` because `src/middleware.ts` verifies them on the Edge runtime. Passwords
-are scrypt-hashed with a per-user salt and compared in constant time
-(`src/server/password.ts`).
+- **Production:** set `DATABASE_URL` to your Postgres (Neon, Supabase, RDS, your
+  own server…). It is required when `NODE_ENV=production`.
+- **Development:** leave `DATABASE_URL` unset and the app runs
+  [PGlite](https://pglite.dev) — real Postgres compiled to WebAssembly — in
+  process, stored under `.data/pglite`. Nothing to install. Delete that folder
+  to start over from the demo data.
 
-**Two layers of gating.** Middleware handles route level: it verifies the
-signature and checks the workspace claim, so a client hitting `/admin` is
-redirected to their own dashboard and an anonymous visitor is sent to
-`/login?next=…`. Fine-grained permissions are resolved server-side per request
-in `src/server/session.ts`, which re-reads the store each time — so an admin
-revoking a permission takes effect on the very next request, without the
-affected user signing out.
+After changing the schema: `npx drizzle-kit generate --name <change>`.
 
-**Permissions, not roles, are what the app checks.** The catalogue lives in
-`src/lib/auth/permissions.ts` as `resource.action` ids grouped for the admin
-matrix. A role is a named bundle of them; a user holds one role plus optional
-personal `grants` and `denies`. Effective set = role ∪ grants − denies, and
-**deny always wins**, so one capability can be pulled from one person without
-forking a role.
+## Going live with payments
 
-**Workspaces** decide which dashboard a role lands in. It travels in the token
-because Edge middleware has no access to the server store; changing a role's
-workspace therefore needs a fresh sign-in, while permission changes do not.
+Everything third-party is configured in the app, under **Settings** — no code
+or redeploy. Keys are encrypted at rest (AES-256-GCM) and are never sent back
+to the browser; the form only shows whether one is saved and its last four
+characters. Every change is written to the audit log (field names, never values).
 
-The admin manages all of this at `/admin/access` (role list plus the full
-permission matrix, and creating custom roles) and `/admin/users` (role
-assignment, per-person overrides with an inherit/allow/deny control, and
-suspension). Both refuse to let an admin change their own role or suspend
-themselves.
+**M-Pesa (per company — company admin, or the platform admin for any company):**
 
-### What is and isn't enforced
+1. *Platform admin* → Settings → **Public address**: the HTTPS URL your
+   deployment is reachable at. Safaricom calls back to it.
+2. *Company admin* → Settings → **Payments**: environment (sandbox or
+   production), Paybill or Till, short code, consumer key, consumer secret and
+   Lipa na M-Pesa Online passkey from the [Daraja portal](https://developer.safaricom.co.ke).
+3. **Test connection.** When the test passes, that company's STK Push switches
+   from the simulator to real M-Pesa immediately.
+4. Optional: **Register Paybill URLs** so payments typed into the Paybill menu
+   on a phone are confirmed automatically too.
 
-Auth and RBAC are genuinely server-enforced: the API routes under
-`/api/admin/*` call `requirePermission` and return 401/403, and middleware
-cannot be bypassed from the client. The **waste-domain data remains a
-client-side prototype** — clients, payments, tickets and trucks live in the
-browser store, so `Can` around a button hides it but there is no server to
-reject the write. Wiring that data to a real backend is the next step; the
-permission checks to call are already named and in place.
+Until step 3 passes, payments keep working in the built-in simulator (clearly
+labelled). In sandbox with live keys, the Paybill simulator on the payments page
+sends real test payments through Safaricom. Callback URLs carry an unguessable
+per-company token (Daraja doesn't sign callbacks) and avoid the words Safaricom
+rejects in registered URLs, so they live under `/api/pay/…`. Posting a payment
+is idempotent on the M-Pesa receipt, so Safaricom's retries never double-credit.
+If a callback can't reach the server, pending STK requests are checked with
+Daraja's STK query.
 
-Accounts and role edits are held in memory on the server (`accessStore.ts`) and
-reset when the process restarts.
+**Other integrations (platform admin):**
+
+| Setting | Provider | What it does |
+| --- | --- | --- |
+| SMS | Africa's Talking | Receipts, reminders, sign-in codes, care replies, missed-pickup notices. Until connected, messages are recorded in the outbox (Settings → Activity) but not sent. |
+| USSD | Africa's Talking | `*384*…#` menu: balance, pay (STK Push to the phone that dialled), next collection, report missed pickup, book a pickup, switch to Kiswahili. Point the service's callback at the URL shown in Settings. There's an in-app tester. |
+| Email | Resend | Password resets and staff invitations. |
+| Translation | Anthropic Claude | Chat translation between English, Kiswahili and Sheng. |
+
+## Scheduled billing
+
+`POST /api/cron/billing` with `Authorization: Bearer $CRON_SECRET` raises the
+month's collection fee for every client (idempotent) and sends due reminders for
+companies that turned them on. Call it daily from any scheduler. Reminders
+escalate at most one stage per run and each stage goes out at most once a month:
+an SMS, then an M-Pesa prompt for the balance, then a service warning — the day
+thresholds are set per company. Company admins can preview and send them by hand
+under **Arrears & reminders**.
+
+## Customer care: Sheng, Kiswahili, English
+
+`src/lib/sheng.ts` is a curated glossary of Nairobi Sheng and the everyday
+Kiswahili of waste-collection complaints. It's used two ways:
+
+- **Always**, with no key: slang in a message is highlighted and its meaning
+  shown under the message.
+- **With the Anthropic key**: a full translation, grounded on the glossary, which
+  flags anything ambiguous instead of guessing. Agents can also rewrite a draft
+  reply in Kiswahili or Sheng before sending.
+
+Translations use the official Anthropic SDK (`claude-opus-5` by default,
+selectable in Settings), structured output, and server-side refusal fallbacks
+(`fallbacks: "default"`). They're cached on the message, so each is paid for once.
+
+The interface itself has a Kiswahili toggle (EN/SW in the top bar), saved per
+account; client-facing screens and navigation are translated (`src/lib/i18n.tsx`).
+
+## Offline collector app
+
+The app is installable (web app manifest). A service worker keeps the
+collector screens and app code available offline; marking stops (with proof
+photos), undo and location updates are queued in IndexedDB and sent when the
+connection returns, with a banner showing what's waiting. Signing out clears the
+page cache. Real phone GPS is opt-in per device (My location → "Use this phone's
+GPS"); otherwise trucks move along a simulated route.
+
+## Security model
+
+- **Sessions** are HS256 JWTs in an httpOnly, SameSite=Lax cookie; passwords are
+  scrypt-hashed. `SESSION_SECRET` is required in production.
+- **Every write is checked on the server.** The app sends commands to
+  `/api/commands`; `src/server/commands.ts` checks the permission *and* the scope
+  (a client only their account, a collector only their truck, a company only its
+  own data) before touching the database. UI checks are a convenience only.
+- **Reads are scoped too.** `/api/state` returns only the session's slice: a
+  client never receives other clients' data.
+- **Permissions, not roles, are checked.** A role bundles `resource.action`
+  permissions; users can have personal grants and denies (deny wins). Managed at
+  `/admin/access` and `/admin/users`, where staff can also be invited by email.
+- **Account flows**: password reset by SMS or email code, SMS-code sign-in and
+  invitation links. Codes are 6 digits, stored as an HMAC, expire in 15 minutes
+  and lock after 5 attempts; responses never reveal whether an account exists.
+  When SMS/email aren't connected, the code is shown on screen outside
+  production only (demo convenience).
+- **Audit log** at `/admin/audit` and `/company/audit`.
 
 ## How it is put together
 
 ```
 src/
-  middleware.ts            Edge route gate: verify token, check workspace
+  middleware.ts          Edge route gate: verify token, check workspace
   app/
-    layout.tsx             <html>, fonts, global CSS, session resolution
-    providers.tsx          session + store + toasts, mounted once
-    login/                 Sign-in, outside the authenticated shell
-    (authed)/              Everything behind a session
-      layout.tsx           AppShell
-      client/ company/ collector/ admin/
+    (authed)/            Everything behind a session; the layout loads the snapshot
+    login/               Sign in, reset password, SMS code, accept invitation
     api/
-      auth/                login · logout · me
-      admin/               roles · users (permission-guarded)
-  server/                  Server-only: never imported by a client component
-    accessStore.ts         Roles and accounts, in memory
-    jwt.ts                 Sign and verify HS256 sessions
-    password.ts            scrypt hash and constant-time verify
-    session.ts             getSession / requirePermission
-  lib/auth/                Shared with the client
-    permissions.ts         The permission catalogue
-    defaultRoles.ts        Built-in roles and workspace access
-    types.ts               Role, User, Session shapes
-  features/                One component per screen, grouped by role
-  components/
-    layout/                Top bar, role tabs, context switcher, sidebar
-    billing/               Statement table, period select, ID card, Paybill block
-    clients/               Client register table, search, registration form
-    map/                   Leaflet city map, fleet list, legend
-    mpesa/                 STK Push modal, C2B simulator, suspense queue
-    support/               Ticket list, thread, new-request form
-    collector/             Route sheet, sharing toggle
-    ui/                    Chips, panels, KPIs, page head, toasts, copy button
-  lib/                     Framework-free domain layer
-    types.ts               Every entity in the model
-    reference/             Estates (real centroids) and companies
-    seed.ts                Builds the whole demo dataset from a fixed seed
-    selectors.ts           Balances, schedules, fleet status, monthly sums
-    statement.ts           Running-account computation
-    clientNumber.ts        Luhn check digit, number issuing and parsing
-    format.ts clock.ts navigation.ts rng.ts
-  store/
-    appStore.ts            Observable store (version counter + listeners)
-    actions.ts             Every mutation, typed and named
-    StoreProvider.tsx      React bindings + the one-second fleet ticker
-  styles/                  tokens · base · components · map · responsive
+      state/             The session's data snapshot
+      commands/          Every write, permission- and scope-checked
+      pay/               Safaricom callbacks (STK, C2B) and STK status
+      settings/          Integration settings, tests, outbox
+      ussd/              Africa's Talking callback and the in-app tester
+      translate/         Chat translation
+      reminders/ cron/   Arrears preview/run, scheduled billing
+      files/             Photo upload and download
+      auth/ admin/       Sessions, account flows, roles, users, invites
+  server/                Server-only
+    db/                  Drizzle schema, connection (Postgres or PGlite), seed
+    commands.ts          Applies commands
+    snapshot.ts          Builds the scoped snapshot
+    payments.ts          M-Pesa, live and simulated
+    billing.ts           Monthly charges and reminders
+    ussd.ts              USSD menu
+    settings.ts crypto.ts  Encrypted integration settings
+    integrations/        Daraja, Africa's Talking + Resend, Claude translation
+    authFlows.ts         Resets, SMS codes, invitations
+  lib/                   Shared domain code: types, selectors, analytics,
+                         Sheng glossary, i18n, route optimiser, integrations catalogue
+  store/                 Client store: snapshot + UI state, commands, offline queue
+  features/              One component per screen
+  components/            Layout, charts, map, M-Pesa, support, collector, UI
+  styles/                tokens · base · components · map · auth · features · responsive
+public/sw.js             Offline support
 ```
 
 ### Visual language
 
-Built to a dashboard reference kept at `reference/palette-ref.webp`: a cool
-grey-blue canvas, borderless white cards separated by soft shadow rather than
-hairlines, a full-height dark navy rail carrying the brand and sections, a vivid
-blue primary (`#3B6FF6`), and fully-rounded pills for buttons, chips and tabs.
-KPI tiles follow the reference pattern — caption, figure, a thin fill rail, then
-a trend pill beside the sub-caption.
-
-Two deliberate departures: **IBM Plex Mono is kept** for client numbers, M-Pesa
-receipts and coordinates, because those are strings people read character by
-character and transcribe into a Paybill prompt; and **green stays as the success
-colour** (paid up, collected, on route) rather than becoming blue, so status
-never collides with the primary action colour.
-
-All of it is token-driven in `src/styles/tokens.css` — retheming means editing
-that one file, in both the light and dark blocks.
+An environmental palette: a deep forest-teal rail, mint-white canvas,
+borderless white cards separated by soft green-tinted shadow, a vivid leaf-green
+primary with dark text, and coral for alerts and counts. Charts use a validated
+accent/context pair in both themes, thin marks, hover/focus tooltips and a table
+view for every chart. All colour is token-driven in `src/styles/tokens.css`.
 
 ### The map
 
-Leaflet (via `react-leaflet`) over **OpenStreetMap's standard raster tiles** —
-open source, no API key, no sign-up. Estate coordinates are real WGS84
-centroids, client gates are scattered within each estate's radius, and truck
-positions interpolate along their route by metres travelled, so distances and
-ETAs come from haversine rather than invented units.
-
-Two things worth knowing. OSM ships a single light style, so **dark mode
-recolours the tiles in CSS** (`invert` plus a hue rotation) instead of pulling a
-second, key-gated basemap; light mode is desaturated so the markers stay
-dominant. And OSM's [tile usage
-policy](https://operations.osmfoundation.org/policies/tiles/) covers
-development and light traffic like this — a real deployment should self-host
-tiles or use a paid provider.
-
-Leaflet touches `window` at import, so the map is loaded through
-`next/dynamic` with `ssr: false`; `.mapwrap` sets `position: relative; z-index: 0`
-to trap Leaflet's high internal z-indexes below the app's modals.
-
-Earlier versions drew a hand-built SVG of Nairobi. A real basemap makes that
-unnecessary — the roads, airports and neighbourhoods come with the tiles.
-
-### Design notes
-
-**The URL owns the role.** `roleFromPath` derives the active role from the
-pathname, so the sidebar, context switcher and role tabs are all plain links and
-every screen is deep-linkable. The store keeps each role's context (selected
-client, company, truck) so switching back and forth is lossless.
-
-**One store for the session.** `StoreProvider` sits above the route tree in the
-root layout, so navigating between views never resets state. State is mutated in
-place and a version counter drives `useSyncExternalStore`, which keeps the ported
-logic close to the original without an external state library.
-
-**Deterministic first render.** The dataset is generated by a seeded PRNG and the
-demo clock is frozen at 25 Sep 2026 10:15. `elapsedMs` only advances from the
-client-side ticker, so the server render and the first client render are
-identical — no hydration mismatches. Numbers are grouped without `Intl` for the
-same reason.
-
-**Client numbers carry a check digit.** `TS-KIL-01427` is company · estate ·
-sequence · Luhn digit. `parseClientNumber` is what lets the Paybill simulator
-reject a mistyped account number into the suspense queue instead of crediting
-the wrong client.
-
-### Simulated, not real
-
-M-Pesa is mocked end to end: STK Push walks through form → handset prompt →
-callback, and the C2B form stands in for Safaricom's confirmation webhook. Both
-show the Daraja-shaped payload they would receive. No money moves, and there is
-no backend — all state is in memory and resets on reload.
+Leaflet over OpenStreetMap tiles (no key). Dark mode recolours the tiles in CSS.
+OSM's [tile usage policy](https://operations.osmfoundation.org/policies/tiles/)
+covers development and light traffic; a real deployment should self-host tiles
+or use a paid provider.

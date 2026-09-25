@@ -1,5 +1,6 @@
 "use client";
 
+import { House, Search, SearchX, Store } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { BalanceChip, CompanyTag } from "@/components/ui/Chip";
 import { group } from "@/lib/format";
@@ -51,7 +52,10 @@ export function ClientTable({
           {rows.length === 0 ? (
             <tr>
               <td colSpan={7} className="muted" style={{ textAlign: "center", padding: 20 }}>
-                No clients match.
+                <span className="with-ico" style={{ justifyContent: "center" }}>
+                  <SearchX size={16} strokeWidth={2.2} aria-hidden="true" />
+                  No clients match.
+                </span>
               </td>
             </tr>
           ) : (
@@ -66,7 +70,18 @@ export function ClientTable({
                 }}
               >
                 <td className="mono">{c.id}</td>
-                <td>{c.name}</td>
+                <td>
+                  <span className="li-main">
+                    <span className="avatar sm" aria-hidden="true">
+                      {c.type === "Business" ? (
+                        <Store size={14} strokeWidth={2.2} />
+                      ) : (
+                        <House size={14} strokeWidth={2.2} />
+                      )}
+                    </span>
+                    {c.name}
+                  </span>
+                </td>
                 {showCompany ? (
                   <td>
                     <CompanyTag companyId={c.company} />
@@ -93,13 +108,16 @@ export function ClientSearch({ id }: { id: string }) {
   const s = useAppState();
   const actions = useActions();
   return (
-    <input
-      id={id}
-      placeholder="Search name, number or phone"
-      aria-label="Search clients"
-      style={{ flex: 1, minWidth: 180 }}
-      value={s.q}
-      onChange={(e) => actions.setQuery(e.target.value)}
-    />
+    <label className="search" style={{ flex: 1, minWidth: 180 }}>
+      <Search size={16} strokeWidth={2.2} aria-hidden="true" />
+      <input
+        id={id}
+        type="search"
+        placeholder="Search name, number or phone"
+        aria-label="Search clients"
+        value={s.q}
+        onChange={(e) => actions.setQuery(e.target.value)}
+      />
+    </label>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, ChevronDown, CircleAlert, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/components/ui/ToastProvider";
 import { estateName } from "@/lib/reference/estates";
@@ -17,10 +18,13 @@ export function AddClientForm({ company }: { company: Company }) {
   const [type, setType] = useState<ClientType>("Household");
   const [plan, setPlan] = useState(600);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = actions.addClient(company.id, { name, phone, estate, type, plan });
+    setBusy(true);
+    const result = await actions.addClient(company.id, { name, phone, estate, type, plan });
+    setBusy(false);
     if (!result.ok) {
       setError(result.error);
       return;
@@ -28,21 +32,22 @@ export function AddClientForm({ company }: { company: Company }) {
     setError("");
     setName("");
     setPhone("");
-    toast(`Created ${result.id} for ${result.name}. SMS with Paybill details sent.`);
+    toast(`Created ${result.id} for ${result.name}. Welcome SMS with Paybill details sent.`);
   };
 
   return (
     <details className="panel">
-      <summary>Register a new client</summary>
+      <summary>
+        <span className="summary-ico" aria-hidden="true">
+          <UserPlus size={17} strokeWidth={2.2} aria-hidden="true" />
+        </span>
+        Register a new client
+        <ChevronDown size={17} strokeWidth={2.2} className="chev" aria-hidden="true" />
+      </summary>
       <form className="form" style={{ marginTop: 14 }} onSubmit={submit}>
         <label className="f">
           Full name / business
-          <input
-            required
-            maxLength={60}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+          <input required maxLength={60} value={name} onChange={(e) => setName(e.target.value)} />
         </label>
         <label className="f">
           M-Pesa phone
@@ -81,9 +86,17 @@ export function AddClientForm({ company }: { company: Company }) {
             onChange={(e) => setPlan(Number(e.target.value))}
           />
         </label>
-        <button className="btn primary">Create account</button>
+        <button className="btn primary" disabled={busy}>
+          <Check size={16} strokeWidth={2.2} aria-hidden="true" />
+          Create account
+        </button>
       </form>
-      {error && <div className="err">{error}</div>}
+      {error && (
+        <div className="err">
+          <CircleAlert size={14} strokeWidth={2.2} aria-hidden="true" />
+          {error}
+        </div>
+      )}
     </details>
   );
 }

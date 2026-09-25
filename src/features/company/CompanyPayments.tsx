@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowDownLeft, CreditCard, Landmark, Smartphone } from "lucide-react";
 import { Can } from "@/components/auth/SessionProvider";
 import { C2BSimulator } from "@/components/mpesa/C2BSimulator";
 import { SuspenseQueue } from "@/components/mpesa/SuspenseQueue";
@@ -20,13 +21,13 @@ export function CompanyPayments() {
 
   return (
     <>
-      <PageHead title="M-Pesa payments">
+      <PageHead title="M-Pesa payments" icon={CreditCard}>
         Paybill <span className="mono">{co.paybill}</span>. STK Push and Paybill payments are
         matched to clients by account number.
       </PageHead>
 
       <div className="grid g-main">
-        <Panel title="Received">
+        <Panel title="Received" icon={ArrowDownLeft}>
           <div className="tablewrap">
             <table>
               <thead>
@@ -50,7 +51,12 @@ export function CompanyPayments() {
                         <div className="hint mono">{c?.id}</div>
                       </td>
                       <td>
-                        <Chip tone="neutral">{t.channel}</Chip>
+                        <Chip
+                          tone="neutral"
+                          icon={t.channel === "STK Push" ? Smartphone : Landmark}
+                        >
+                          {t.channel}
+                        </Chip>
                       </td>
                       <td className="r">{group(t.amount)}</td>
                     </tr>

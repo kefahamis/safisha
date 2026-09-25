@@ -1,25 +1,7 @@
-import { TODAY } from "@/lib/clock";
-import {
-  KE_MOBILE,
-  nextClientNumber,
-  normalisePhone,
-  parseClientNumber,
-  receiptNumber,
-} from "@/lib/clientNumber";
-import { kes, stamp } from "@/lib/format";
-import { offsetPoint } from "@/lib/geo";
-import { companyById } from "@/lib/reference/companies";
-import { ESTATES } from "@/lib/reference/estates";
-import { balance, clientById, nowIn } from "@/lib/selectors";
-import type {
-  ClientType,
-  StatementPeriod,
-  StopStatus,
-  TicketAuthor,
-  TicketStatus,
-  Txn,
-} from "@/lib/types";
+import type { Command, CommandResult, StopProofInput } from "@/lib/commands";
+import type { AppData, ClientType, DumpReport, PickupRequestStatus, StatementPeriod, StopStatus, TicketStatus, Txn } from "@/lib/types";
 import type { AppStore } from "./appStore";
+import { enqueue, isNetworkError, list, QUEUEABLE, remove } from "./outbox";
 
 export interface NewClientInput {
   name: string;
@@ -39,19 +21,211 @@ export type ActionResult<T extends object = Record<string, unknown>> =
   | ({ ok: true } & T)
   | { ok: false; error: string };
 
-export interface C2BResult {
-  ok: boolean;
-  message: string;
-  receipt: string;
-  date: string;
+/** Proof captured at a stop; the photo is a Blob so it can wait offline. */
+export interface StopProofDraft extends Omit<StopProofInput, "photo"> {
+  photo?: Blob;
+}
+
+/* ---------------- transport ---------------- */
+
+async function postCommand(cmd: Command): Promise<{ result: CommandResult; snapshot?: AppData }> {
+  const res = await fetch("/api/commands", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(cmd),
+  });
+  if (res.status === 401) {
+    window.location.href = "/login";
+    return { result: { ok: false, error: "Your session ended. Sign in again." } };
+  }
+  const body = await res.json().catch(() => ({}));
+  if (body.result) return body;
+  return { result: { ok: false, error: body.error ?? `Something went wrong (HTTP ${res.status}).` } };
+}
+
+/** Uploads a photo, downsized in the browser first. Returns the file id. */
+export async function uploadPhoto(blob: Blob): Promise<string> {
+  const small = await downsize(blob);
+  const res = await fetch("/api/files", {
+    method: "POST",
+    headers: { "content-type": small.type || "image/jpeg" },
+    body: small,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || !body.id) throw new Error(body.error ?? "Photo upload failed.");
+  return body.id as string;
+}
+
+/** Phone photos are several megabytes; 1600px JPEG is plenty as evidence. */
+async function downsize(blob: Blob, max = 1600): Promise<Blob> {
+  if (!blob.type.startsWith("image/")) return blob;
+  try {
+    const bitmap = await createImageBitmap(blob);
+    const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+    if (scale === 1 && blob.size < 900_000) return blob;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    return await new Promise((resolve) => canvas.toBlob((b) => resolve(b ?? blob), "image/jpeg", 0.82));
+  } catch {
+    return blob;
+  }
 }
 
 export function createActions(store: AppStore) {
-  const { update, getState } = store;
-  const nextTicketId = () => `T-${1046 + getState().tickets.length}`;
+  const { update, getState, receive } = store;
+
+  /** Sends a command; on success the store takes the fresh snapshot. */
+  async function send(cmd: Command, photo?: Blob): Promise<CommandResult> {
+    try {
+      let full = cmd;
+      if (photo && cmd.type === "route.mark") {
+        full = { ...cmd, proof: { ...cmd.proof, photo: await uploadPhoto(photo) } };
+      }
+      const { result, snapshot } = await postCommand(full);
+      if (snapshot) receive(snapshot);
+      update((s) => {
+        s.online = true;
+      });
+      return result;
+    } catch (err) {
+      if (isNetworkError(err) && QUEUEABLE.has(cmd.type)) {
+        await enqueue({ cmd, photo, at: Date.now() });
+        applyLocally(cmd);
+        update((s) => {
+          s.online = false;
+          s.pending += 1;
+        });
+        return { ok: true, message: "Saved offline. It will sync when you're back online." };
+      }
+      update((s) => {
+        s.online = !isNetworkError(err);
+      });
+      return { ok: false, error: isNetworkError(err) ? "You're offline. Try again when connected." : "Something went wrong." };
+    }
+  }
+
+  /** Mirrors a queued command in the UI until the server confirms it. */
+  function applyLocally(cmd: Command) {
+    update((s) => {
+      if (cmd.type === "route.mark") {
+        (s.stops[cmd.truck] ??= {})[cmd.client] = cmd.status;
+        s.proofs[`${cmd.truck}|${cmd.client}`] = {
+          status: cmd.status,
+          at: "pending sync",
+          weightKg: cmd.proof?.weightKg,
+          stream: cmd.proof?.stream,
+        };
+      } else if (cmd.type === "route.undo") {
+        delete s.stops[cmd.truck]?.[cmd.client];
+        delete s.proofs[`${cmd.truck}|${cmd.client}`];
+      } else if (cmd.type === "fleet.setSharing") {
+        const t = s.trucks.find((x) => x.id === cmd.truck);
+        if (t) t.sharing = cmd.sharing;
+      }
+    });
+  }
+
+  let flushing = false;
+  /** Replays queued commands in order; stops at the first network failure. */
+  async function flush() {
+    if (flushing) return;
+    flushing = true;
+    try {
+      const items = await list();
+      for (const item of items) {
+        try {
+          let cmd = item.cmd;
+          if (item.photo && cmd.type === "route.mark") {
+            cmd = { ...cmd, proof: { ...cmd.proof, photo: await uploadPhoto(item.photo) } };
+          }
+          const { snapshot } = await postCommand(cmd);
+          if (snapshot) receive(snapshot);
+          await remove(item.key!);
+        } catch (err) {
+          if (isNetworkError(err)) break;
+          await remove(item.key!); // a server rejection won't succeed on retry
+        }
+      }
+      const left = (await list()).length;
+      update((s) => {
+        s.pending = left;
+        s.online = left === 0 || s.online;
+      });
+    } finally {
+      flushing = false;
+    }
+  }
+
+  async function refresh() {
+    try {
+      const res = await fetch("/api/state", { cache: "no-store" });
+      if (res.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+      if (res.ok) {
+        receive(await res.json());
+        update((s) => {
+          s.online = true;
+        });
+      }
+    } catch {
+      update((s) => {
+        s.online = false;
+      });
+    }
+  }
+
+  /* ---------------- STK Push ---------------- */
+
+  let polling: number | undefined;
+  function pollStk(id: string) {
+    window.clearTimeout(polling);
+    const tick = async () => {
+      if (getState().stk?.requestId !== id) return;
+      try {
+        const res = await fetch(`/api/pay/requests/${encodeURIComponent(id)}`, { cache: "no-store" });
+        const body = await res.json();
+        if (body.status === "success") {
+          await refresh();
+          update((s) => {
+            if (!s.stk || s.stk.requestId !== id) return;
+            const txn: Txn | undefined = s.txns.find((x) => x.id === body.receipt);
+            s.stk.txn = txn ?? {
+              id: body.receipt,
+              client: s.stk.client,
+              date: "",
+              kind: "payment",
+              amount: body.amount,
+              desc: "M-Pesa STK Push",
+            };
+            s.stk.step = "done";
+          });
+          return;
+        }
+        if (body.status === "failed") {
+          update((s) => {
+            if (!s.stk || s.stk.requestId !== id) return;
+            s.stk.step = "declined";
+            s.stk.error = body.resultDesc;
+          });
+          return;
+        }
+      } catch {
+        /* keep polling through blips */
+      }
+      polling = window.setTimeout(tick, 2000);
+    };
+    polling = window.setTimeout(tick, 1500);
+  }
 
   return {
-    /* ---- context switching ---- */
+    refresh,
+    flush,
+
+    /* ---- context switching (view-local) ---- */
 
     selectClient(id: string) {
       update((s) => {
@@ -77,13 +251,11 @@ export function createActions(store: AppStore) {
     /** Opening a client from the admin database drops into that company's view. */
     focusClient(id: string) {
       update((s) => {
-        const c = clientById(s, id);
+        const c = s.clients.find((x) => x.id === id);
         if (c) s.companyId = c.company;
         s.stmtClient = id;
       });
     },
-
-    /* ---- view-local filters ---- */
 
     setQuery(q: string) {
       update((s) => {
@@ -125,7 +297,7 @@ export function createActions(store: AppStore) {
 
     /* ---- live fleet ---- */
 
-    /** One second of simulated driving. */
+    /** One second of simulated driving, so trucks move smoothly between syncs. */
     tick() {
       update((s) => {
         s.elapsedMs += 1000;
@@ -135,294 +307,139 @@ export function createActions(store: AppStore) {
       });
     },
 
-    setSharing(truckId: string, sharing: boolean) {
-      update((s) => {
-        const t = s.trucks.find((x) => x.id === truckId);
-        if (!t) return;
-        t.sharing = sharing;
-        if (sharing) t.status = "route";
-      });
-    },
+    setSharing: (truck: string, sharing: boolean) => send({ type: "fleet.setSharing", truck, sharing }),
+
+    gpsPing: (truck: string, lat: number, lng: number) => send({ type: "fleet.gps", truck, lat, lng }),
 
     /* ---- route sheet ---- */
 
-    markStop(truckId: string, clientId: string, status: StopStatus) {
-      update((s) => {
-        const sheet = (s.stops[truckId] ??= {});
-        sheet[clientId] = status;
-
-        if (status === "Collected") {
-          s.pickups.push({
-            client: clientId,
-            when: stamp(nowIn(s)),
-            truck: truckId,
-            status: "Collected",
-          });
-          return;
-        }
-
-        // A skipped stop opens a care ticket so the client hears about it.
-        const c = clientById(s, clientId);
-        if (!c) return;
-        const at = stamp(nowIn(s));
-        s.tickets.push({
-          id: nextTicketId(),
-          client: clientId,
-          company: c.company,
-          cat: "Missed pickup",
-          subject: "Crew could not access your gate",
-          status: "Open",
-          msgs: [
-            {
-              from: "agent",
-              text: `Our crew on ${truckId} could not access your gate at ${at.slice(
-                11,
-              )}. Reply here to arrange a return visit.`,
-              at,
-            },
-          ],
-        });
-      });
+    markStop(truck: string, client: string, status: StopStatus, proof: StopProofDraft = {}) {
+      const { photo, ...rest } = proof;
+      return send({ type: "route.mark", truck, client, status, proof: rest }, photo);
     },
 
-    undoStop(truckId: string, clientId: string) {
-      update((s) => {
-        delete s.stops[truckId]?.[clientId];
-        s.pickups = s.pickups.filter(
-          (p) => !(p.client === clientId && p.truck === truckId && p.when.startsWith(TODAY)),
-        );
-      });
-    },
+    undoStop: (truck: string, client: string) => send({ type: "route.undo", truck, client }),
+
+    optimiseRoute: (truck: string) => send({ type: "route.optimise", truck }),
 
     /* ---- customer care ---- */
 
-    reply(ticketId: string, from: Exclude<TicketAuthor, "sys">, text: string) {
-      const body = text.trim();
-      if (!body) return;
-      update((s) => {
-        const t = s.tickets.find((x) => x.id === ticketId);
-        if (!t) return;
-        t.msgs.push({ from, text: body, at: stamp(nowIn(s)) });
-        if (from === "agent" && t.status === "Open") t.status = "Pending";
-        if (from === "client" && t.status === "Resolved") t.status = "Open";
-      });
-    },
+    reply: (ticket: string, from: "client" | "agent", text: string) =>
+      send({ type: "ticket.reply", ticket, from, text }),
 
-    setTicketStatus(ticketId: string, status: TicketStatus) {
-      update((s) => {
-        const t = s.tickets.find((x) => x.id === ticketId);
-        if (!t) return;
-        t.status = status;
-        t.msgs.push({ from: "sys", text: `Status changed to ${status}`, at: stamp(nowIn(s)) });
-      });
-    },
+    setTicketStatus: (ticket: string, status: TicketStatus) => send({ type: "ticket.status", ticket, status }),
 
-    createTicket(clientId: string, cat: string, subject: string, message: string): string {
-      const id = nextTicketId();
-      update((s) => {
-        const c = clientById(s, clientId);
-        if (!c) return;
-        const at = stamp(nowIn(s));
-        s.tickets.push({
-          id,
-          client: c.id,
-          company: c.company,
-          cat,
-          subject: subject.trim(),
-          status: "Open",
-          msgs: [
-            { from: "client", text: message.trim(), at },
-            {
-              from: "sys",
-              text: `Ticket ${id} created. ${companyById(c.company).name} usually replies within 2 hours.`,
-              at,
-            },
-          ],
+    async createTicket(client: string, cat: string, subject: string, message: string) {
+      const result = await send({ type: "ticket.create", client, cat, subject, message });
+      if (result.ok && result.id) {
+        update((s) => {
+          s.selTicket = result.id!;
         });
-        s.selTicket = id;
-      });
-      return id;
-    },
-
-    /* ---- client registration ---- */
-
-    addClient(companyId: string, input: NewClientInput): ActionResult<{ id: string; name: string }> {
-      const phone = input.phone.replace(/\s/g, "");
-      if (!KE_MOBILE.test(phone)) {
-        return { ok: false, error: "Enter a Kenyan mobile number like 0712 345 678." };
       }
-      const name = input.name.trim();
-      if (!name) return { ok: false, error: "Enter a name for the account." };
+      return result;
+    },
 
-      let id = "";
+    /* ---- clients ---- */
+
+    async addClient(company: string, input: NewClientInput): Promise<ActionResult<{ id: string; name: string }>> {
+      const result = await send({
+        type: "client.add",
+        company,
+        name: input.name,
+        phone: input.phone,
+        estate: input.estate,
+        clientType: input.type,
+        plan: input.plan,
+      });
+      if (!result.ok) return result;
       update((s) => {
-        const e = ESTATES[input.estate];
-        id = nextClientNumber(s.seq, companyId, input.estate, Math.random);
-        const spread = e.radius * 0.62;
-        const gate = offsetPoint(
-          e,
-          (Math.random() - 0.5) * 2 * spread,
-          (Math.random() - 0.5) * 2 * spread,
-        );
-        s.clients.push({
-          id,
-          company: companyId,
-          estate: input.estate,
-          name,
-          type: input.type,
-          plan: Math.max(100, input.plan || 600),
-          phone: normalisePhone(phone),
-          joined: stamp(nowIn(s)).slice(0, 10),
-          lat: gate.lat,
-          lng: gate.lng,
-        });
-        s.txns.push({
-          id: `INV-${id}-9`,
-          client: id,
-          date: stamp(nowIn(s)),
-          kind: "charge",
-          amount: Math.max(100, input.plan || 600),
-          desc: "Collection fee · Sep 2026",
-        });
         s.q = "";
       });
-      return { ok: true, id, name };
+      return { ok: true, id: result.id!, name: result.message ?? input.name };
     },
 
     /* ---- M-Pesa ---- */
 
-    openStk(clientId: string) {
+    openStk(clientId: string, opts: { amount?: number; purpose?: string } = {}) {
       update((s) => {
-        const c = clientById(s, clientId);
+        const c = s.clients.find((x) => x.id === clientId);
         if (!c) return;
+        const bal = s.txns
+          .filter((t) => t.client === c.id)
+          .reduce((b, t) => b + (t.kind === "charge" ? t.amount : -t.amount), 0);
         s.stk = {
           step: "form",
           client: c.id,
           phone: c.phone,
-          amount: Math.max(balance(s, c.id), c.plan),
+          amount: opts.amount ?? Math.max(bal, c.plan),
+          purpose: opts.purpose ?? "account",
+          mode: s.integrations.mpesa[c.company]?.mode ?? "simulated",
         };
       });
     },
 
     closeStk() {
+      window.clearTimeout(polling);
       update((s) => {
         s.stk = null;
       });
     },
 
-    /** Validates the STK form and moves on to the simulated handset prompt. */
-    submitStk(phone: string, amount: number): ActionResult {
-      if (!KE_MOBILE.test(phone.replace(/\s/g, ""))) {
-        return { ok: false, error: "Enter a Safaricom number like 0712 345 678." };
-      }
-      if (!(amount >= 10 && amount <= 150000)) {
-        return { ok: false, error: "Amount must be between KES 10 and 150,000." };
-      }
+    /** Sends the payment prompt: to the simulated handset, or to the real phone. */
+    async submitStk(phone: string, amount: number): Promise<ActionResult> {
+      const stk = getState().stk;
+      if (!stk) return { ok: false, error: "No payment in progress." };
+      const result = await send({ type: "stk.start", client: stk.client, phone, amount, purpose: stk.purpose });
+      if (!result.ok) return result;
       update((s) => {
         if (!s.stk) return;
         s.stk.phone = phone;
         s.stk.amount = Math.round(amount);
-        s.stk.step = "phone";
+        s.stk.requestId = result.id;
+        s.stk.mode = result.mode;
+        // Live: the real phone shows the prompt. Simulated: we draw the handset.
+        s.stk.step = result.mode === "live" ? "wait" : "phone";
       });
+      if (result.mode === "live" && result.id) pollStk(result.id);
       return { ok: true };
     },
 
-    setStkStep(step: "wait" | "declined") {
+    /** The simulated handset's Approve / Cancel. */
+    async simulateStk(approve: boolean) {
+      const id = getState().stk?.requestId;
+      if (!id) return;
       update((s) => {
-        if (s.stk) s.stk.step = step;
+        if (s.stk) s.stk.step = "wait";
       });
+      await send({ type: "stk.simulate", request: id, approve });
+      pollStk(id);
     },
 
-    /** Safaricom's callback arriving: post the payment and show the receipt. */
-    completeStk() {
-      update((s) => {
-        if (!s.stk) return;
-        const txn: Txn = {
-          id: receiptNumber(),
-          client: s.stk.client,
-          date: stamp(nowIn(s)),
-          kind: "payment",
-          amount: s.stk.amount,
-          channel: "STK Push",
-          payer: s.stk.phone,
-          desc: "M-Pesa STK Push",
-        };
-        s.txns.push(txn);
-        s.stk.txn = txn;
-        s.stk.step = "done";
-      });
+    async payC2B(company: string, input: C2BInput) {
+      return send({ type: "c2b.simulate", company, ...input });
     },
 
-    /** Stands in for Safaricom's C2B confirmation callback. */
-    payC2B(companyId: string, input: C2BInput): C2BResult {
-      const rec = receiptNumber();
-      let result!: C2BResult;
+    assignSuspense: (id: string, client: string) => send({ type: "suspense.assign", id, client }),
 
-      update((s) => {
-        const date = stamp(nowIn(s));
-        const parsed = parseClientNumber(input.account);
-        const matched = parsed.ok ? clientById(s, parsed.id) : undefined;
+    /* ---- on-demand pickups ---- */
 
-        if (parsed.ok && matched && matched.company === companyId) {
-          s.txns.push({
-            id: rec,
-            client: matched.id,
-            date,
-            kind: "payment",
-            amount: input.amount,
-            channel: "Paybill",
-            payer: input.phone,
-            desc: "M-Pesa Paybill",
-          });
-          result = {
-            ok: true,
-            receipt: rec,
-            date,
-            message: `Matched to ${matched.name}. New balance ${kes(balance(s, matched.id))}.`,
-          };
-          return;
-        }
+    requestPickup: (input: { client: string; kind: string; notes: string; preferredDate: string; photo?: string }) =>
+      send({ type: "pickup.request", ...input }),
 
-        const reason = !parsed.ok
-          ? parsed.reason
-          : !matched
-            ? "No client with this number"
-            : "Number belongs to another company";
-        s.suspense.unshift({
-          id: rec,
-          account: input.account,
-          amount: input.amount,
-          payer: input.phone,
-          date,
-          company: companyId,
-          reason,
-        });
-        result = { ok: false, receipt: rec, date, message: `Held in suspense: ${reason}.` };
-      });
+    updatePickup: (
+      id: string,
+      patch: { status?: PickupRequestStatus; truck?: string | null; scheduledFor?: string | null },
+    ) => send({ type: "pickup.update", id, ...patch }),
 
-      return result;
-    },
+    /* ---- dumping ---- */
 
-    assignSuspense(suspenseId: string, clientId: string): string {
-      let label = "";
-      update((s) => {
-        const item = s.suspense.find((x) => x.id === suspenseId);
-        if (!item) return;
-        s.txns.push({
-          id: item.id,
-          client: clientId,
-          date: item.date,
-          kind: "payment",
-          amount: item.amount,
-          channel: "Paybill",
-          payer: item.payer,
-          desc: "M-Pesa Paybill (manually matched)",
-        });
-        s.suspense = s.suspense.filter((x) => x.id !== suspenseId);
-        label = `${kes(item.amount)} assigned to ${clientId}`;
-      });
-      return label;
-    },
+    reportDump: (input: { lat: number; lng: number; description: string; size: DumpReport["size"]; photo?: string }) =>
+      send({ type: "dump.report", ...input }),
+
+    updateDump: (id: string, status: DumpReport["status"], company?: string | null) =>
+      send({ type: "dump.update", id, status, company }),
+
+    setLang: (lang: "en" | "sw") => send({ type: "user.lang", lang }),
   };
 }
 

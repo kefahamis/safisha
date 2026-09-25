@@ -1,7 +1,12 @@
 "use client";
 
+import { Headset, MapPinned, MessageSquareText, Smartphone } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { BrandMark } from "@/components/layout/BrandMark";
+import { ROLE_ICONS } from "@/components/ui/icons";
+import { SignInPage, type Highlight } from "@/components/ui/SignInPage";
 import { roleHome } from "@/lib/navigation";
 import type { Workspace } from "@/lib/auth/types";
 
@@ -11,6 +16,25 @@ export interface DemoAccount {
   role: string;
   workspace: Workspace;
 }
+
+/** What the product actually does, for the hero's floating cards. */
+const HIGHLIGHTS: Highlight[] = [
+  {
+    icon: Smartphone,
+    title: "M-Pesa billing",
+    text: "STK Push and Paybill payments land on the right account automatically.",
+  },
+  {
+    icon: MapPinned,
+    title: "Live fleet",
+    text: "Clients see their collector coming; offices see every truck on route.",
+  },
+  {
+    icon: Headset,
+    title: "Customer care",
+    text: "Requests go straight to the company that serves the estate.",
+  },
+];
 
 /** Sign-in. Demo accounts are listed so each dashboard can be opened quickly. */
 export function LoginForm({
@@ -56,75 +80,75 @@ export function LoginForm({
   };
 
   return (
-    <div className="authpage">
-      <div className="authcard">
+    <SignInPage
+      brand={
         <div className="authbrand">
-          <span className="mark" aria-hidden="true" />
+          <BrandMark size={42} />
           <div>
-            <b>Safisha</b>
+            <b>Zoa</b>
             <small>Waste Hub</small>
           </div>
         </div>
-
-        <h1>Sign in</h1>
-        <p className="hint" style={{ marginTop: 4 }}>
-          Your dashboard depends on the role your account holds.
-        </p>
-
-        <form className="stack" style={{ marginTop: 20, gap: 14 }} onSubmit={submit}>
-          <label className="f">
-            Email
-            <input
-              type="email"
-              autoComplete="username"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </label>
-          <label className="f">
-            Password
-            <input
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </label>
-          {error && <div className="err">{error}</div>}
-          <button className="btn primary" disabled={busy} style={{ justifyContent: "center" }}>
-            {busy ? "Signing in…" : "Sign in"}
-          </button>
-        </form>
-      </div>
-
-      <div className="authcard demo">
-        <h2>Demo accounts</h2>
-        <p className="hint" style={{ marginTop: 4 }}>
-          Password for all of them: <span className="mono">{demoPassword}</span>
-        </p>
-        <div className="list" style={{ marginTop: 8 }}>
-          {accounts.map((a) => (
+      }
+      title={
+        <>
+          <span className="light">Welcome</span> back
+        </>
+      }
+      description="Sign in to your dashboard. What you see depends on the role your account holds."
+      email={email}
+      password={password}
+      onEmailChange={setEmail}
+      onPasswordChange={setPassword}
+      onSubmit={submit}
+      busy={busy}
+      error={error}
+      dividerLabel="Or try a demo account"
+      formFooter={
+        <>
+          <Link href="/login/forgot" prefetch={false}>
+            Forgot password?
+          </Link>
+          <Link href="/login/code" prefetch={false} className="with-ico">
+            <MessageSquareText size={14} strokeWidth={2.2} aria-hidden="true" />
+            Sign in with an SMS code
+          </Link>
+        </>
+      }
+      heroTitle="Nairobi’s waste collection, in one place."
+      heroText="Clients, collectors and companies on the same live picture: every bin, every truck, every shilling."
+      highlights={HIGHLIGHTS}
+    >
+      <p className="hint" style={{ margin: "0 0 10px" }}>
+        Pick one to fill the form. The password for all of them is{" "}
+        <span className="mono">{demoPassword}</span>.
+      </p>
+      <div className="demo-grid">
+        {accounts.map((a) => {
+          const Icon = ROLE_ICONS[a.workspace];
+          return (
             <button
               type="button"
               key={a.email}
-              className="li demo-row"
+              className="demo-row"
+              aria-pressed={email === a.email}
               onClick={() => {
                 setEmail(a.email);
                 setPassword(demoPassword);
                 setError("");
               }}
             >
-              <div>
-                <div className="t">{a.name}</div>
-                <div className="sub mono">{a.email}</div>
-              </div>
-              <span className="chip neutral">{a.role}</span>
+              <span className={`avatar sm ws-${a.workspace}`} aria-hidden="true">
+                <Icon size={14} strokeWidth={2.2} />
+              </span>
+              <span className="demo-text">
+                <span className="t">{a.name}</span>
+                <span className="sub">{a.role}</span>
+              </span>
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
-    </div>
+    </SignInPage>
   );
 }
