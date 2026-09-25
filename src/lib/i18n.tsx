@@ -234,6 +234,23 @@ const SW: Record<string, string> = {
   "Waiting for the payment confirmation.": "Tunasubiri uthibitisho wa malipo.",
   "The request was cancelled on the phone.": "Ombi liliachwa kwenye simu.",
   "Sending…": "Inatuma…",
+  Notifications: "Arifa",
+  "Mark all read": "Weka zote zimesomwa",
+  "You're all caught up.": "Huna arifa mpya.",
+  "Customer care replied": "Huduma kwa wateja wamejibu",
+  "Pickup scheduled": "Uchukuzi umepangwa",
+  "Pickup completed": "Uchukuzi umekamilika",
+  "Dumping site cleared": "Eneo la utupaji limesafishwa",
+  "Message from {name}": "Ujumbe kutoka kwa {name}",
+  "New pickup request": "Ombi jipya la uchukuzi",
+  "Illegal dumping reported": "Utupaji haramu umeripotiwa",
+  "Your client reported dumping": "Mteja wako ameripoti utupaji",
+  "Unmatched payment": "Malipo yasiyolinganishwa",
+  "Pickup added to your route": "Uchukuzi umeongezwa kwenye njia yako",
+  "just now": "sasa hivi",
+  "{n} min ago": "dakika {n} zilizopita",
+  "{n} h ago": "saa {n} zilizopita",
+  "{n} d ago": "siku {n} zilizopita",
 };
 
 export function translate(lang: Lang, key: string, vars?: Record<string, string | number>): string {

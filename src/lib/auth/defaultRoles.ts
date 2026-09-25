@@ -75,6 +75,8 @@ export const DEFAULT_ROLES: RoleDef[] = [
       "dumping.manage",
       "settings.company.manage",
       "audit.view",
+      "finance.view",
+      "finance.journal",
     ],
   },
   {
@@ -95,6 +97,7 @@ export const DEFAULT_ROLES: RoleDef[] = [
       "settings.platform.manage",
       "settings.company.manage",
       "audit.view",
+      "finance.view",
     ],
   },
 ];

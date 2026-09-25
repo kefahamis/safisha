@@ -122,7 +122,7 @@
     overflow: hidden;
   }
 
-  .usermenu {
+  .top-actions {
     border-left: 0;
     padding-left: 0;
   }
@@ -134,12 +134,7 @@
 }
 
 @media (max-width: 480px) {
-  /* Keep the avatar and sign-out; the name is on the account card anyway. */
-  .usermenu .who {
-    display: none;
-  }
-
-  .usermenu {
+  .top-actions {
     margin-left: auto;
   }
 

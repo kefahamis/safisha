@@ -21,7 +21,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const session = await getSession();
 
   return (
-    <html lang={session?.lang === "sw" ? "sw" : "en"}>
+    <html lang={session?.lang === "sw" ? "sw" : "en"} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
@@ -30,7 +30,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
         />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <Providers session={session}>{children}</Providers>
       </body>
     </html>

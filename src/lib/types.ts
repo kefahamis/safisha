@@ -1,3 +1,5 @@
+import type { Branding } from "./branding";
+
 export type Role = "client" | "company" | "collector" | "admin";
 
 export type ClientType = "Household" | "Business";
@@ -225,6 +227,8 @@ export interface AppData {
   dumpReports: DumpReport[];
   pricing: Record<string, PriceItem[]>;
   integrations: IntegrationStatus;
+  /** Logo and colours per company in view; unbranded companies are absent. */
+  branding: Record<string, Branding>;
   /** Server time when this snapshot was taken (epoch ms). */
   serverNow: number;
 }

@@ -1,5 +1,6 @@
 import {
   Building2,
+  Calculator,
   ClipboardList,
   Hourglass,
   Recycle,
@@ -46,6 +47,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   "/company/payments": CreditCard,
   "/company/arrears": Hourglass,
   "/company/statements": FileText,
+  "/company/finance": Calculator,
   "/company/pickups": ClipboardList,
   "/company/dumping": TriangleAlert,
   "/company/impact": Recycle,

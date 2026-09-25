@@ -1,22 +1,57 @@
 "use client";
 
-import { LoaderCircle, LogOut } from "lucide-react";
+import { ChevronDown, LoaderCircle, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useSession } from "@/components/auth/SessionProvider";
 import { initials } from "@/lib/format";
 import { useT, type Lang } from "@/lib/i18n";
 import { useActions } from "@/store/StoreProvider";
 
-/** Who you are signed in as, and the way out. */
+/** How long the card lingers after the pointer leaves, so it can be reached. */
+const CLOSE_DELAY = 160;
+
+/** Who you are signed in as, and the way out — tucked behind the avatar. */
 export function UserMenu() {
   const { session } = useSession();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
   const { lang, setLang, t } = useT();
   const actions = useActions();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const cardId = useId();
+
+  // Tap outside or Escape closes it — hover alone does nothing on touch screens.
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  useEffect(() => () => clearTimeout(closeTimer.current), []);
 
   if (!session) return null;
+
+  const show = () => {
+    clearTimeout(closeTimer.current);
+    setOpen(true);
+  };
+  const hide = () => {
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setOpen(false), CLOSE_DELAY);
+  };
 
   const changeLang = async (next: Lang) => {
     if (next === lang) return;
@@ -33,42 +68,70 @@ export function UserMenu() {
   };
 
   return (
-    <div className="usermenu">
-      <span className="avatar" aria-hidden="true">
-        {initials(session.name)}
-      </span>
-      <div className="who">
-        <b>{session.name}</b>
-        <small>{session.roleName}</small>
-      </div>
-      <div className="segmented lang-toggle" role="radiogroup" aria-label={t("Language")}>
-        {(["en", "sw"] as Lang[]).map((l) => (
-          <button
-            key={l}
-            type="button"
-            role="radio"
-            aria-checked={lang === l}
-            onClick={() => void changeLang(l)}
-            title={l === "en" ? "English" : "Kiswahili"}
-          >
-            {l.toUpperCase()}
-          </button>
-        ))}
-      </div>
+    <div
+      ref={rootRef}
+      className="usermenu"
+      data-open={open || undefined}
+      onPointerEnter={(e) => e.pointerType === "mouse" && show()}
+      onPointerLeave={(e) => e.pointerType === "mouse" && hide()}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
+      }}
+    >
       <button
         type="button"
-        className="btn small ghost icon-only"
-        onClick={signOut}
-        disabled={busy}
-        aria-label={busy ? "Signing out" : t("Sign out")}
-        title={t("Sign out")}
+        className="usermenu-trigger"
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-controls={cardId}
+        aria-label={session.name}
+        onClick={() => setOpen((o) => !o)}
       >
-        {busy ? (
-          <LoaderCircle size={17} strokeWidth={2.2} className="spin" aria-hidden="true" />
-        ) : (
-          <LogOut size={17} strokeWidth={2.2} aria-hidden="true" />
-        )}
+        <span className="avatar" aria-hidden="true">
+          {initials(session.name)}
+        </span>
+        <ChevronDown size={15} strokeWidth={2.4} className="usermenu-caret" aria-hidden="true" />
       </button>
+
+      <div id={cardId} className="usermenu-card" hidden={!open}>
+        <div className="usermenu-head">
+          <span className="avatar lg" aria-hidden="true">
+            {initials(session.name)}
+          </span>
+          <div className="who">
+            <b>{session.name}</b>
+            <small>{session.email}</small>
+            <span className="usermenu-role">{session.roleName}</span>
+          </div>
+        </div>
+
+        <div className="usermenu-row">
+          <span>{t("Language")}</span>
+          <div className="segmented lang-toggle" role="radiogroup" aria-label={t("Language")}>
+            {(["en", "sw"] as Lang[]).map((l) => (
+              <button
+                key={l}
+                type="button"
+                role="radio"
+                aria-checked={lang === l}
+                onClick={() => void changeLang(l)}
+                title={l === "en" ? "English" : "Kiswahili"}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button type="button" className="usermenu-signout" onClick={signOut} disabled={busy}>
+          {busy ? (
+            <LoaderCircle size={17} strokeWidth={2.2} className="spin" aria-hidden="true" />
+          ) : (
+            <LogOut size={17} strokeWidth={2.2} aria-hidden="true" />
+          )}
+          {busy ? "Signing out…" : t("Sign out")}
+        </button>
+      </div>
     </div>
   );
 }
