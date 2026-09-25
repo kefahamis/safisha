@@ -784,37 +784,51 @@ main > *:nth-child(n + 4) {
 
 /* ---------- company logo in the rail ---------- */
 /*
- * Logos arrive trimmed to their visible edges, so the boxes below decide all
- * spacing: a 38px mark tile beside the name, or a full-width wordmark row.
+ * Logos arrive trimmed to their visible edges. CompanyLogo gives each image
+ * exact pixel dimensions from its aspect ratio; these boxes only centre it,
+ * clip anything stray, and never let the image size itself.
  */
 .co-logo {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: none;
+  box-sizing: border-box;
+  overflow: hidden;
+  min-width: 0;
+  line-height: 0;
 }
 
 .co-logo img {
   display: block;
+  flex: none;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
 }
 
 .co-logo.mark-box {
-  width: 38px;
-  height: 38px;
   border-radius: 12px;
 }
 
-.co-logo.wide {
-  height: 40px;
-  max-width: 184px;
-  justify-items: start;
+.co-wordmark {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
 }
 
-.co-logo.wide img {
-  height: 100%;
-  width: auto;
+.co-wordmark .co-logo.wide {
+  justify-content: flex-start;
+  justify-self: start;
+  max-width: 100%;
+}
+
+.co-wordmark small {
+  overflow: hidden;
+  color: var(--rail-ink);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* A light tile for logos that would sink into the sidebar colour. */
@@ -823,13 +837,7 @@ main > *:nth-child(n + 4) {
   box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.45);
 }
 
-.co-logo.mark-box.tiled {
-  padding: 5px;
-}
-
 .co-logo.wide.tiled {
-  height: 46px;
-  padding: 7px 12px;
   border-radius: 12px;
 }
 

@@ -4,7 +4,7 @@ import { RolesManager } from "@/features/admin/RolesManager";
 import { listRoles, roleUsage } from "@/server/accessStore";
 import { getSession } from "@/server/session";
 
-export const metadata: Metadata = { title: "Roles & permissions · Zoa" };
+export const metadata: Metadata = { title: "Roles & permissions" };
 
 export default async function Page() {
   const session = await getSession();

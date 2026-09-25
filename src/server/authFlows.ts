@@ -4,6 +4,7 @@ import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { KE_MOBILE, normalisePhone } from "@/lib/clientNumber";
 import type { User, UserScope } from "@/lib/auth/types";
 import { createUser, findRole, findUserByEmail, findUserByPhone, setPassword } from "./accessStore";
+import { platformIdentity } from "./branding";
 import { randomToken } from "./crypto";
 import { getDb, schema } from "./db";
 import { emailLive, sendEmail, sendSms, smsLive } from "./integrations/messaging";
@@ -99,7 +100,7 @@ export async function requestReset(identifier: string): Promise<CodeSent> {
       to: user.phone,
       purpose: "reset",
       company: user.scope.companyId ?? null,
-      body: `Your Zoa password reset code is ${code}. It expires in 15 minutes. Ignore this if you didn't ask for it.`,
+      body: `Your ${(await platformIdentity()).name} password reset code is ${code}. It expires in 15 minutes. Ignore this if you didn't ask for it.`,
     });
     const delivered = res.status === "sent";
     return { message: GENERIC, via: "sms", demoCode: !delivered && mayRevealCodes() ? code : undefined };
@@ -107,7 +108,7 @@ export async function requestReset(identifier: string): Promise<CodeSent> {
 
   const res = await sendEmail({
     to: user.email,
-    subject: "Your Zoa password reset code",
+    subject: `Your ${(await platformIdentity()).name} password reset code`,
     text: `Your password reset code is ${code}. It expires in 15 minutes.\n\nIf you didn't ask for this, you can ignore this email.`,
   });
   return { message: GENERIC, via: "email", demoCode: res.status !== "sent" && mayRevealCodes() ? code : undefined };

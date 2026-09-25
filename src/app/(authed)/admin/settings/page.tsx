@@ -3,7 +3,7 @@ import { NoAccess } from "@/components/auth/NoAccess";
 import { SettingsCenter } from "@/features/settings/SettingsCenter";
 import { getSession } from "@/server/session";
 
-export const metadata: Metadata = { title: "Settings · Zoa" };
+export const metadata: Metadata = { title: "Settings" };
 
 export default async function Page() {
   const session = await getSession();

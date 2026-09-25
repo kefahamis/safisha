@@ -1,15 +1,56 @@
 /*
- * Company branding: a logo and one or two colours, turned into the app's accent
- * and sidebar tokens for both themes.
+ * Branding in two layers. The platform brand (scope "platform") names and
+ * styles the whole system; each company can lay its own logo and colours on
+ * top for its staff, clients and collectors. Anything a company leaves unset
+ * falls through to the platform, and anything the platform leaves unset falls
+ * through to the built-in Zoa look.
  *
  * Colours are worked in OKLCH so a lightness step looks the same for any hue,
- * and every derived pair is pushed until it meets WCAG contrast — a company
- * can pick any colour and the interface stays readable.
+ * and every derived pair is pushed until it meets WCAG contrast — any colour
+ * can be picked and the interface stays readable.
  */
 
 export type LogoTile = "auto" | "light" | "none";
+/** Where the browser-tab icon comes from; "none" falls through to the layer below. */
+export type FaviconMode = "logo" | "monogram" | "upload" | "none";
+
+/** The settings scope that holds the platform brand. */
+export const PLATFORM = "platform";
+
+/** Built-in identity, used until the platform admin sets their own. */
+export const PLATFORM_NAME = "Zoa";
+export const PLATFORM_TAGLINE = "Waste Hub";
+export const NAME_MAX = 24;
+export const TAGLINE_MAX = 40;
+
+export interface Identity {
+  /** "Zoa" — short, for page titles and the app icon label. */
+  name: string;
+  /** "Waste Hub" — the line under the name; may be empty. */
+  tagline: string;
+  /** "Zoa Waste Hub" */
+  full: string;
+}
+
+export function identity(platform?: Branding): Identity {
+  const name = platform?.name?.trim() || PLATFORM_NAME;
+  const tagline = platform?.tagline ?? PLATFORM_TAGLINE;
+  return { name, tagline, full: tagline ? `${name} ${tagline}` : name };
+}
+
+/** The line under a company's name in the sidebar, unless it sets its own. */
+export const companyTagline = (platform?: Branding) => `on ${identity(platform).full}`;
+
+/** Whose colours apply: a company with its own wins, else the platform's. */
+export function resolveColours(company: Branding | undefined, platform: Branding | undefined): Branding {
+  const own = company && (isHex(company.primary) || isHex(company.rail));
+  const src = own ? company : platform;
+  return { primary: src?.primary, rail: src?.rail };
+}
 
 export interface Branding {
+  /** Platform only: the product name that replaces "Zoa". */
+  name?: string;
   /** "#rrggbb" — buttons, links, highlights. */
   primary?: string;
   /** "#rrggbb" — the sidebar. Derived from the primary when unset. */
@@ -21,6 +62,11 @@ export interface Branding {
   /** Mean relative luminance of the logo's visible pixels, 0–1. */
   logoLuma?: number;
   logoTile?: LogoTile;
+  /** Sidebar line under the name; "" hides it, unset shows DEFAULT_TAGLINE. */
+  tagline?: string;
+  /** Stored file id of the 64 × 64 PNG tab icon. */
+  favicon?: string;
+  faviconMode?: FaviconMode;
   updatedAt?: string;
 }
 

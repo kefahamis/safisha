@@ -3,7 +3,7 @@ import { NoAccess } from "@/components/auth/NoAccess";
 import { FinanceCenter } from "@/features/finance/FinanceCenter";
 import { getSession } from "@/server/session";
 
-export const metadata: Metadata = { title: "Financial reports · Zoa" };
+export const metadata: Metadata = { title: "Financial reports" };
 
 export default async function Page() {
   const session = await getSession();

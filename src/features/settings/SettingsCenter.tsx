@@ -22,6 +22,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Empty, PageHead, Panel } from "@/components/ui/Panel";
 import type { IntegrationKey, IntegrationView } from "@/lib/integrations";
 import { COMPANIES, companyById } from "@/lib/reference/companies";
+import { PLATFORM } from "@/lib/branding";
 import { BrandingSettings } from "./BrandingSettings";
 import { IntegrationCard } from "./IntegrationCard";
 import { UssdTester } from "./UssdTester";
@@ -42,7 +43,7 @@ interface ScopeData {
   platform: { publicBaseUrl: string | null; sms: string; email: string; ai: string };
 }
 
-type Tab = "payments" | "branding" | "messaging" | "translation" | "billing" | "system" | "activity";
+type Tab = "payments" | "branding" | "platform-brand" | "messaging" | "translation" | "billing" | "system" | "activity";
 
 /**
  * Settings for everything third-party, in one place. A company admin manages
@@ -98,6 +99,7 @@ export function SettingsCenter({ platform, companyId }: { platform: boolean; com
     { id: "payments", label: "Payments", icon: Smartphone },
     { id: "billing", label: "Billing & prices", icon: Bell },
     { id: "branding", label: "Branding", icon: Palette },
+    { id: "platform-brand", label: "Platform brand", icon: Globe, platformOnly: true },
     { id: "messaging", label: "SMS, USSD & email", icon: MessageSquareText, platformOnly: true },
     { id: "translation", label: "Translation", icon: Languages, platformOnly: true },
     { id: "system", label: "Public address", icon: Globe, platformOnly: true },
@@ -154,7 +156,8 @@ export function SettingsCenter({ platform, companyId }: { platform: boolean; com
       {error && <div className="banner">{error}</div>}
       {!companyData && !error && <Empty icon={RefreshCw}>Loading settings…</Empty>}
 
-      {tab === "branding" && <BrandingSettings company={company} />}
+      {tab === "branding" && <BrandingSettings key={company} scope={company} />}
+      {tab === "platform-brand" && <BrandingSettings key="platform" scope={PLATFORM} />}
 
       {companyData && tab === "payments" && (
         <div className="settings-grid">

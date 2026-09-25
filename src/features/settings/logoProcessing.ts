@@ -220,3 +220,102 @@ export async function processLogo(file: File, opts: { removeBackground: boolean 
     URL.revokeObjectURL(img.src);
   }
 }
+
+/* ---------------- favicon ---------------- */
+
+/** Tab icons are drawn at 16–32px; 64px covers high-density screens. */
+const FAVICON_EDGE = 64;
+
+export interface Favicon {
+  blob: Blob;
+  url: string;
+}
+
+function loadUrl(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Couldn't read the image for the tab icon."));
+    img.src = src;
+  });
+}
+
+const monogramOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter((w) => /^[A-Za-z0-9]/.test(w))
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("") || "?";
+
+function squareCanvas() {
+  const c = document.createElement("canvas");
+  c.width = FAVICON_EDGE;
+  c.height = FAVICON_EDGE;
+  const ctx = c.getContext("2d")!;
+  ctx.imageSmoothingQuality = "high";
+  return { c, ctx };
+}
+
+function roundedRect(ctx: CanvasRenderingContext2D, size: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.arcTo(size, 0, size, size, r);
+  ctx.arcTo(size, size, 0, size, r);
+  ctx.arcTo(0, size, 0, 0, r);
+  ctx.arcTo(0, 0, size, 0, r);
+  ctx.closePath();
+}
+
+/** Fits an image, keeping its shape, into the square with a little breathing room. */
+function drawContained(ctx: CanvasRenderingContext2D, img: CanvasImageSource, w: number, h: number) {
+  const pad = FAVICON_EDGE * 0.06;
+  const room = FAVICON_EDGE - 2 * pad;
+  const k = Math.min(room / w, room / h);
+  const dw = w * k;
+  const dh = h * k;
+  ctx.drawImage(img, (FAVICON_EDGE - dw) / 2, (FAVICON_EDGE - dh) / 2, dw, dh);
+}
+
+const encode = (c: HTMLCanvasElement) =>
+  new Promise<Favicon>((resolve, reject) =>
+    c.toBlob((b) => (b ? resolve({ blob: b, url: URL.createObjectURL(b) }) : reject(new Error("Couldn't draw the tab icon."))), "image/png"),
+  );
+
+export async function makeFavicon(
+  opts:
+    | { mode: "logo"; src: string }
+    | { mode: "upload"; file: File }
+    | { mode: "monogram"; name: string; fill: string; ink: string },
+): Promise<Favicon> {
+  const { c, ctx } = squareCanvas();
+
+  if (opts.mode === "monogram") {
+    const text = monogramOf(opts.name);
+    roundedRect(ctx, FAVICON_EDGE, FAVICON_EDGE * 0.22);
+    ctx.fillStyle = opts.fill;
+    ctx.fill();
+    ctx.fillStyle = opts.ink;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `800 ${text.length > 1 ? 28 : 36}px "Plus Jakarta Sans", system-ui, sans-serif`;
+    ctx.fillText(text, FAVICON_EDGE / 2, FAVICON_EDGE / 2 + 2);
+    return encode(c);
+  }
+
+  if (opts.mode === "upload") {
+    // Same clean-up as a logo: background off, margins trimmed.
+    const processed = await processLogo(opts.file, { removeBackground: true });
+    try {
+      const img = await loadUrl(processed.url);
+      drawContained(ctx, img, img.naturalWidth, img.naturalHeight);
+    } finally {
+      URL.revokeObjectURL(processed.url);
+    }
+    return encode(c);
+  }
+
+  const img = await loadUrl(opts.src);
+  drawContained(ctx, img, img.naturalWidth || 1, img.naturalHeight || 1);
+  return encode(c);
+}

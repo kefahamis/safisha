@@ -3,7 +3,7 @@ import { NoAccess } from "@/components/auth/NoAccess";
 import { ClientPickups } from "@/features/client/ClientPickups";
 import { getSession } from "@/server/session";
 
-export const metadata: Metadata = { title: "Book a pickup · Zoa" };
+export const metadata: Metadata = { title: "Book a pickup" };
 
 export default async function Page() {
   const session = await getSession();

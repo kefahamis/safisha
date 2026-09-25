@@ -1,6 +1,8 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { SIDEBAR_COOKIE } from "@/lib/navigation";
 import { buildSnapshot } from "@/server/snapshot";
 import { getSession } from "@/server/session";
 import { StoreProvider } from "@/store/StoreProvider";
@@ -18,10 +20,12 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
   if (!session) redirect("/login");
 
   const snapshot = await buildSnapshot(session);
+  // Read on the server so the page is drawn at the right width, with no jump.
+  const collapsed = (await cookies()).get(SIDEBAR_COOKIE)?.value === "collapsed";
 
   return (
     <StoreProvider scope={session.scope} initialData={snapshot}>
-      <AppShell>{children}</AppShell>
+      <AppShell sidebarCollapsed={collapsed}>{children}</AppShell>
     </StoreProvider>
   );
 }

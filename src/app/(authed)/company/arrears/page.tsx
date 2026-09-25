@@ -3,7 +3,7 @@ import { NoAccess } from "@/components/auth/NoAccess";
 import { CompanyArrears } from "@/features/company/CompanyArrears";
 import { getSession } from "@/server/session";
 
-export const metadata: Metadata = { title: "Arrears & reminders · Zoa" };
+export const metadata: Metadata = { title: "Arrears & reminders" };
 
 export default async function Page() {
   const session = await getSession();

@@ -3,7 +3,7 @@ import { NoAccess } from "@/components/auth/NoAccess";
 import { CompanyImpact } from "@/features/company/CompanyImpact";
 import { getSession } from "@/server/session";
 
-export const metadata: Metadata = { title: "Recycling · Zoa" };
+export const metadata: Metadata = { title: "Recycling" };
 
 export default async function Page() {
   const session = await getSession();

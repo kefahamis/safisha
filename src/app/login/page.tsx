@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { LoginForm } from "@/features/auth/LoginForm";
 import { DEMO_PASSWORD, listRoles, listUsers } from "@/server/accessStore";
 
-export const metadata: Metadata = { title: "Sign in · Zoa" };
+export const metadata: Metadata = { title: "Sign in" };
 
 // Reads accounts from the database on each request.
 export const dynamic = "force-dynamic";
