@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- The brand mark: a blue rounded tile with a pared-back bin glyph. -->
+  <rect width="32" height="32" rx="10" fill="#3B6FF6"/>
+  <rect x="8" y="10" width="16" height="3" rx="1.5" fill="#fff"/>
+  <path d="M10 15h12l-1.2 8.2a1.6 1.6 0 0 1-1.6 1.4h-6.4a1.6 1.6 0 0 1-1.6-1.4L10 15Z" fill="#fff" fill-opacity=".88"/>
+</svg>

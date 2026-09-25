@@ -1,0 +1,226 @@
+/* Leaflet map: container, themed controls, and the custom markers. */
+
+.mapwrap {
+  position: relative;
+  border-radius: var(--r-card);
+  overflow: hidden;
+  background: var(--panel2);
+  box-shadow: var(--shadow);
+  z-index: 0; /* keep tiles and panes under the app's modals */
+}
+
+.mapwrap-loading {
+  display: grid;
+  place-items: center;
+}
+
+/* Leaflet's own chrome, restyled to the app's tokens. */
+.mapwrap .leaflet-container {
+  background: var(--panel2);
+  font-family: var(--body);
+}
+
+/*
+ * OSM's standard tiles are a saturated general-purpose style. Light mode mutes
+ * them so the data markers stay dominant; dark mode inverts the lightness while
+ * rotating hues back, the usual way to get a dark basemap from a light one.
+ */
+.mapwrap .basemap-light {
+  filter: saturate(0.55) brightness(1.04) contrast(0.94);
+}
+
+.mapwrap .basemap-dark {
+  filter: invert(1) hue-rotate(180deg) saturate(0.55) brightness(0.92) contrast(1.05);
+}
+
+.mapwrap .leaflet-control-zoom a {
+  background: var(--panel);
+  color: var(--ink);
+  border-color: var(--line);
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+}
+
+.mapwrap .leaflet-control-zoom a:hover {
+  background: var(--panel2);
+}
+
+.mapwrap .leaflet-bar {
+  border: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.mapwrap .leaflet-control-attribution {
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  color: var(--muted);
+  font-size: 0.66rem;
+  border-radius: 8px 0 0 0;
+  padding: 2px 8px;
+}
+
+.mapwrap .leaflet-control-attribution a {
+  color: var(--muted);
+}
+
+/* Estate names, rendered as permanent labels on the service circles. */
+.mapwrap .leaflet-tooltip.estate-label {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--map-label);
+  font-family: var(--display);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-shadow:
+    0 1px 2px var(--panel),
+    0 0 4px var(--panel);
+  padding: 0;
+}
+
+.mapwrap .leaflet-tooltip.estate-label::before {
+  display: none;
+}
+
+/* Hover tooltips for clients and trucks. */
+.mapwrap .leaflet-tooltip:not(.estate-label) {
+  background: var(--ink);
+  color: var(--bg);
+  border: 0;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 5px 9px;
+}
+
+.mapwrap .leaflet-tooltip-top:not(.estate-label)::before {
+  border-top-color: var(--ink);
+}
+
+.mapwrap .leaflet-tooltip-bottom:not(.estate-label)::before {
+  border-bottom-color: var(--ink);
+}
+
+.mapwrap .leaflet-tooltip-left:not(.estate-label)::before {
+  border-left-color: var(--ink);
+}
+
+.mapwrap .leaflet-tooltip-right:not(.estate-label)::before {
+  border-right-color: var(--ink);
+}
+
+/* ---------- truck marker ---------- */
+.truck-icon {
+  display: grid;
+  justify-items: center;
+  /* The marker moves on every tick; ease it so it reads as driving. */
+  transition: transform 0.9s linear;
+}
+
+.truck-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  background: var(--truck);
+  border: 2px solid var(--panel);
+  box-shadow: 0 2px 6px rgba(16, 24, 40, 0.35);
+  display: block;
+  position: relative;
+}
+
+.truck-dot::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 10px;
+  background: var(--truck);
+  opacity: 0.35;
+  animation: truck-pulse 1.8s ease-out infinite;
+}
+
+.truck-dot.offline::after {
+  display: none;
+}
+
+.truck-dot.focused {
+  border-width: 3px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--truck) 40%, transparent);
+}
+
+.truck-plate {
+  margin-top: 3px;
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 5px;
+  padding: 1px 5px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+}
+
+@keyframes truck-pulse {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.7);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .truck-icon {
+    transition: none;
+  }
+
+  .truck-dot::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* ---------- the client's own gate ---------- */
+.home-icon {
+  display: grid;
+  place-items: center;
+}
+
+.home-pin {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--vis);
+  border: 3px solid var(--ink);
+  display: block;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--vis) 35%, transparent);
+}
+
+.home-label {
+  position: absolute;
+  left: 22px;
+  top: 1px;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--panel);
+  border-radius: 5px;
+  padding: 1px 5px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------- legend ---------- */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 12px;
+}

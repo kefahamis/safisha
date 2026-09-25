@@ -1,0 +1,343 @@
+/* Reset, typography, app shell layout and text utilities. */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+body {
+  margin: 0;
+  font-family: var(--body);
+  font-size: 14.5px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--display);
+  margin: 0;
+  text-wrap: balance;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+h3 {
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.mono {
+  font-family: var(--mono);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.label {
+  font-size: 0.76rem;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ---------- shell ---------- */
+/* A full-height dark rail in column one; the top bar sits over the content only. */
+.app {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.side {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  background: var(--rail);
+  color: var(--rail-ink);
+  padding: 22px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.top {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px 18px;
+  padding: 16px 28px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+main {
+  grid-column: 2;
+  grid-row: 2;
+  padding: 26px 28px 60px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ---------- brand ---------- */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  text-decoration: none;
+  color: var(--rail-ink-strong);
+  padding: 0 6px;
+}
+
+.mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--accent);
+  position: relative;
+  overflow: hidden;
+  flex: none;
+  box-shadow: 0 6px 16px -4px rgba(59, 111, 246, 0.6);
+}
+
+/* Two stacked bars — a bin lid and body, reduced to the essentials. */
+.mark::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  top: 11px;
+  height: 3px;
+  border-radius: 2px;
+  background: #fff;
+}
+
+.mark::after {
+  content: "";
+  position: absolute;
+  left: 11px;
+  right: 11px;
+  top: 17px;
+  height: 9px;
+  border-radius: 0 0 3px 3px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.brand b {
+  font-family: var(--display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  display: block;
+  line-height: 1.25;
+}
+
+.brand small {
+  color: var(--rail-ink);
+  font-size: 0.72rem;
+}
+
+/* ---------- sidebar nav ---------- */
+.nav-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.side a.nav-item {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 11px 14px;
+  border-radius: var(--r-ctl);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--rail-ink);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.side a.nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--rail-ink-strong);
+}
+
+.side a.nav-item[aria-current="page"] {
+  background: var(--rail-panel);
+  color: var(--rail-ink-strong);
+  font-weight: 650;
+}
+
+/* The small marker that pins the active row, as in the reference. */
+.side a.nav-item[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 22px;
+  border-radius: 0 4px 4px 0;
+  background: var(--accent);
+}
+
+.side .count {
+  background: var(--vis);
+  color: var(--vis-ink);
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: var(--r-pill);
+  min-width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  padding: 0 6px;
+}
+
+.side .foot {
+  margin-top: auto;
+  padding: 14px 16px;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--rail-ink);
+  background: var(--rail-panel);
+  border-radius: 14px;
+}
+
+/* ---------- top bar ---------- */
+.roles {
+  display: flex;
+  background: var(--panel2);
+  border-radius: var(--r-pill);
+  padding: 4px;
+  gap: 2px;
+  flex-wrap: wrap;
+  margin-right: auto;
+}
+
+.roles a {
+  border: 0;
+  background: transparent;
+  padding: 7px 16px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.roles a[aria-selected="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 4px 12px -3px rgba(59, 111, 246, 0.55);
+}
+
+.ctx {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ctx select {
+  max-width: 280px;
+  border-radius: var(--r-pill);
+  padding-inline: 16px;
+}
+
+/* ---------- signed-in identity ---------- */
+.usermenu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 14px;
+  border-left: 1px solid var(--line);
+}
+
+.usermenu .avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  font-size: 0.76rem;
+  font-weight: 700;
+  flex: none;
+}
+
+.usermenu .who {
+  line-height: 1.25;
+}
+
+.usermenu .who b {
+  display: block;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.usermenu .who small {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+/* ---------- page head ---------- */
+.pagehead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pagehead p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  max-width: 62ch;
+}

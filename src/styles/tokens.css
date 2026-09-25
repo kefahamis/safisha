@@ -1,0 +1,145 @@
+/*
+ * Design tokens: colour, type, radius and elevation for both themes.
+ *
+ * Direction: cool grey-blue canvas, borderless white cards, a dark navy
+ * sidebar rail and a vivid blue primary. Separation comes from white-on-grey
+ * contrast and soft shadow rather than hairline borders.
+ */
+
+:root {
+  /* surfaces */
+  --bg: #eef0f5;
+  --panel: #ffffff;
+  --panel2: #f4f6fa;
+  --ink: #1b1d2a;
+  --muted: #858ba0;
+  --line: #e8ebf2;
+
+  /* dark sidebar rail */
+  --rail: #1e1f2e;
+  --rail-panel: #282a3c;
+  --rail-ink: #a9aec2;
+  --rail-ink-strong: #ffffff;
+
+  /* primary */
+  --accent: #3b6ff6;
+  --accent-soft: #e7edfe;
+  --accent-ink: #ffffff;
+  --accent-2: #7cc2fb;
+
+  /* the amber count badge */
+  --vis: #f5a524;
+  --vis-ink: #241a05;
+
+  /* status */
+  --ok: #15a24a;
+  --ok-soft: #dcfce7;
+  --warn: #b45309;
+  --warn-soft: #fef3c7;
+  --bad: #e11d48;
+  --bad-soft: #ffe4ea;
+
+  /* map */
+  --map-land: #e4e8f0;
+  --map-zone: #d4dae8;
+  --map-road: #ffffff;
+  --map-road-edge: #cad2e3;
+  --map-label: #5b6480;
+
+  /* elevation — diffuse and low-contrast, cards read as floating paper */
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 12px 32px -8px rgba(16, 24, 40, 0.1);
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-pop: 0 24px 64px -12px rgba(16, 24, 40, 0.28);
+
+  /* radius */
+  --r-card: 16px;
+  --r-ctl: 10px;
+  --r-pill: 999px;
+
+  /* type */
+  --display: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --body: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #14151f;
+    --panel: #1c1e2b;
+    --panel2: #242739;
+    --ink: #e7e9f2;
+    --muted: #8c93ac;
+    --line: #2b2f42;
+
+    --rail: #101119;
+    --rail-panel: #1e2030;
+    --rail-ink: #969db6;
+    --rail-ink-strong: #ffffff;
+
+    --accent: #5b87ff;
+    --accent-soft: #1f2a4d;
+    --accent-ink: #ffffff;
+    --accent-2: #6bb6f5;
+
+    --vis: #f7b643;
+    --vis-ink: #241a05;
+
+    --ok: #3ecf78;
+    --ok-soft: #10301f;
+    --warn: #e0a02f;
+    --warn-soft: #362a10;
+    --bad: #fb6f8d;
+    --bad-soft: #3c1721;
+
+    --map-land: #161824;
+    --map-zone: #202436;
+    --map-road: #2e3348;
+    --map-road-edge: #262b3d;
+    --map-label: #8e96b0;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -8px rgba(0, 0, 0, 0.45);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-pop: 0 24px 64px -12px rgba(0, 0, 0, 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #14151f;
+  --panel: #1c1e2b;
+  --panel2: #242739;
+  --ink: #e7e9f2;
+  --muted: #8c93ac;
+  --line: #2b2f42;
+
+  --rail: #101119;
+  --rail-panel: #1e2030;
+  --rail-ink: #969db6;
+  --rail-ink-strong: #ffffff;
+
+  --accent: #5b87ff;
+  --accent-soft: #1f2a4d;
+  --accent-ink: #ffffff;
+  --accent-2: #6bb6f5;
+
+  --vis: #f7b643;
+  --vis-ink: #241a05;
+
+  --ok: #3ecf78;
+  --ok-soft: #10301f;
+  --warn: #e0a02f;
+  --warn-soft: #362a10;
+  --bad: #fb6f8d;
+  --bad-soft: #3c1721;
+
+  --map-land: #161824;
+  --map-zone: #202436;
+  --map-road: #2e3348;
+  --map-road-edge: #262b3d;
+  --map-label: #8e96b0;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -8px rgba(0, 0, 0, 0.45);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-pop: 0 24px 64px -12px rgba(0, 0, 0, 0.6);
+}

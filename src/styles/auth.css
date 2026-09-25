@@ -1,0 +1,151 @@
+/* Sign-in page: two cards centred on the canvas. */
+
+.authpage {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 380px) minmax(0, 340px);
+  gap: 20px;
+  align-content: center;
+  justify-content: center;
+  align-items: start;
+  padding: 40px 20px;
+}
+
+.authcard {
+  background: var(--panel);
+  border-radius: var(--r-card);
+  padding: 28px;
+  box-shadow: var(--shadow);
+}
+
+.authbrand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 22px;
+}
+
+.authbrand b {
+  font-family: var(--display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  display: block;
+  line-height: 1.25;
+}
+
+.authbrand small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.authcard.demo {
+  background: var(--panel);
+}
+
+.authcard.demo h2 {
+  font-size: 1rem;
+}
+
+/* Each demo account is a button that fills the form. */
+.demo-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  border-radius: 8px;
+  padding: 12px 6px;
+}
+
+.demo-row:hover {
+  background: var(--panel2);
+}
+
+/* ---------- access control ---------- */
+.access {
+  display: grid;
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.rolelist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rolerow {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: var(--panel2);
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.rolerow[aria-current="true"] {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  background: var(--accent-soft);
+}
+
+.permgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.perm {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel2);
+  cursor: pointer;
+}
+
+.perm input {
+  margin-top: 3px;
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  flex: none;
+  padding: 0;
+}
+
+.perm .t {
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.permid {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  background: var(--panel);
+  border-radius: 5px;
+  padding: 1px 6px;
+  display: inline-block;
+  margin-top: 5px;
+}
+
+@media (max-width: 980px) {
+  .access {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .authpage {
+    grid-template-columns: minmax(0, 420px);
+    align-content: start;
+  }
+}
