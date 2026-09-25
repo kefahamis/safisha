@@ -86,12 +86,40 @@ h3 {
 .side {
   grid-column: 1;
   grid-row: 1 / span 2;
+  position: relative;
+  /*
+   * Its own stacking layer, so the pattern can sit under the content but over
+   * the fill. Kept just above the sticky top bar (20) so the edge toggle and
+   * the collapsed-rail tooltips still overlap it; popovers, dialogs and toasts
+   * sit higher still.
+   */
+  isolation: isolate;
+  z-index: 21;
   background: var(--rail);
   color: var(--rail-ink);
   padding: 22px 16px 18px;
   display: flex;
   flex-direction: column;
   gap: 22px;
+}
+
+/*
+ * The sign-in halftone (public/login-pattern.svg), faint and low in the rail.
+ * It sits beneath every child (z-index -1 inside the isolated rail), ignores
+ * the pointer, and fades out upward so the nav labels stay on a clean fill.
+ * Scaled so the densest middle band of dots is what shows in the column.
+ */
+.side::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  z-index: -1;
+  height: min(560px, 75%);
+  background: url("/login-pattern.svg") center bottom / 900px auto no-repeat;
+  opacity: 0.2;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to top, #000 0%, #000 35%, transparent 100%);
+  mask-image: linear-gradient(to top, #000 0%, #000 35%, transparent 100%);
 }
 
 .top {

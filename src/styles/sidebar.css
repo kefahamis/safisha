@@ -39,10 +39,6 @@
     transition: grid-template-columns 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
-  .side {
-    position: relative;
-  }
-
   /* A round handle on the rail's edge, half over the page. */
   .side-toggle {
     position: absolute;
