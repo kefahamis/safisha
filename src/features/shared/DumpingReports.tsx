@@ -26,7 +26,9 @@ export function DumpingReports({ platform = false }: { platform?: boolean }) {
     <>
       <PageHead title="Dumping reports" icon={TriangleAlert}>
         Reported by residents with a photo and a map pin.{" "}
-        {platform ? "Reports outside every company's estates land here unassigned." : "Only reports in your estates are shown."}
+        {platform
+          ? "Reports outside every company's estates land here unassigned."
+          : "Reports in your estates, plus any your clients filed in another company's area."}
       </PageHead>
 
       <div className="segmented" role="radiogroup" aria-label="Show" style={{ alignSelf: "flex-start" }}>
@@ -80,7 +82,10 @@ export function DumpingReports({ platform = false }: { platform?: boolean }) {
 }
 
 function ReportRow({ report: r, platform, highlight }: { report: DumpReport; platform: boolean; highlight: boolean }) {
+  const s = useAppState();
   const actions = useActions();
+  // Only the company serving the location (or the platform) can act on a report.
+  const canAct = platform || r.company === s.companyId;
   const toast = useToast();
   const [company, setCompany] = useState(r.company ?? COMPANIES[0].id);
 
@@ -97,7 +102,10 @@ function ReportRow({ report: r, platform, highlight }: { report: DumpReport; pla
           <span className="mono">{r.id}</span> · {SIZE[r.size]} · {r.estate ? estateName(r.estate) : "No estate"} ·{" "}
           {fmtDate(r.createdAt)}
         </div>
-        <div className="sub">{r.company ? companyById(r.company).name : "Unassigned"}</div>
+        <div className="sub">
+          {r.company ? companyById(r.company).name : "Unassigned"}
+          {!canAct && " · reported by your client"}
+        </div>
         {r.photo && (
           <a className="sub with-ico" href={`/api/files/${r.photo}`} target="_blank" rel="noreferrer">
             <ImageIcon size={13} strokeWidth={2.2} aria-hidden="true" />
@@ -116,7 +124,7 @@ function ReportRow({ report: r, platform, highlight }: { report: DumpReport; pla
             ))}
           </select>
         )}
-        {r.status === "New" && (
+        {canAct && r.status === "New" && (
           <button
             type="button"
             className="btn small"
@@ -126,7 +134,7 @@ function ReportRow({ report: r, platform, highlight }: { report: DumpReport; pla
             Assign crew
           </button>
         )}
-        {r.status !== "Cleared" && (
+        {canAct && r.status !== "Cleared" && (
           <button type="button" className="btn small primary" onClick={() => set("Cleared")}>
             <Check size={14} strokeWidth={2.2} aria-hidden="true" />
             Cleared

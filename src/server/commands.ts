@@ -586,7 +586,9 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
         .map((e) => ({ e, d: distanceMeters(e, { lat: cmd.lat, lng: cmd.lng }) }))
         .sort((a, b) => a.d - b.d)[0];
       const estate = nearest && nearest.d < nearest.e.radius * 2 ? nearest.e.code : null;
-      const company = estate ? (companyForEstate(estate)?.id ?? null) : null;
+      // Outside every estate, the reporter's own company picks it up rather than no one.
+      const reporterCompany = session.scope.clientId ? ((await getClient(db, session.scope.clientId))?.company ?? null) : null;
+      const company = estate ? (companyForEstate(estate)?.id ?? reporterCompany) : reporterCompany;
       const id = await nextId(db, t.dumpReports, "D-", 2001);
       await db.insert(t.dumpReports).values({
         id,

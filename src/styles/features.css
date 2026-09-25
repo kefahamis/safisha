@@ -946,3 +946,342 @@
     transition: none;
   }
 }
+
+/* ---------- financial reports ---------- */
+.chip.accent {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* A button that reads as an inline link. */
+.linklike {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.linklike:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.fin-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 16px 0 18px;
+}
+
+.fin-controls label.f {
+  min-width: 150px;
+}
+
+.fin-controls-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.fin-report-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 12px;
+}
+
+.fin-report-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.fin-report-head .hint {
+  margin: 2px 0 0;
+}
+
+.fin-table td.r,
+.fin-table th.r {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fin-table .fin-group td {
+  padding-top: 16px;
+  padding-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.fin-table .fin-indent {
+  padding-left: 20px;
+}
+
+.fin-table .fin-subtotal td {
+  font-weight: 600;
+  border-top: 1px solid var(--line);
+}
+
+.fin-table .fin-total td {
+  font-weight: 700;
+  background: var(--panel2);
+  border-top: 1px solid var(--line);
+  border-bottom: 0;
+}
+
+.fin-table .fin-total.strong td {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 0.95rem;
+}
+
+:root[data-theme="dark"] .fin-table .fin-total.strong td {
+  color: var(--ink);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .fin-table .fin-total.strong td {
+    color: var(--ink);
+  }
+}
+
+.fin-statement {
+  max-width: 720px;
+}
+
+.fin-statement td:last-child {
+  width: 160px;
+}
+
+.fin-bs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 8px 32px;
+  align-items: start;
+}
+
+/* Journal: one tbody per entry, lines indented under a heading row. */
+.fin-journal .fin-entry td {
+  border-bottom: 0;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.fin-journal .fin-entry-head td {
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.fin-journal .fin-entry:first-of-type .fin-entry-head td {
+  border-top: 0;
+}
+
+.fin-entry-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.fin-memo {
+  font-weight: 600;
+}
+
+.fin-reverse {
+  margin-left: auto;
+}
+
+/* Credits sit indented under the debits, as in a written journal. */
+.fin-journal td.fin-cr {
+  padding-left: 32px;
+}
+
+.fin-ledger-sum {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.fin-ledger-sum b {
+  margin-left: 4px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- journal entry form ---------- */
+.sheet.fin-sheet {
+  width: min(760px, 100%);
+}
+
+.fin-templates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 14px 0 16px;
+}
+
+.fin-template {
+  padding: 5px 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.fin-template:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.fin-form-top {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 12px;
+}
+
+.fin-form-top .fin-form-memo {
+  grid-column: 1 / -1;
+}
+
+.fin-lines {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  overflow: hidden;
+}
+
+.fin-lines-head,
+.fin-line-row,
+.fin-lines-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px 120px 34px;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 10px;
+}
+
+.fin-lines-head {
+  background: var(--panel2);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.fin-line-row + .fin-line-row {
+  border-top: 1px solid var(--line);
+}
+
+.fin-line-acct {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fin-line-acct select,
+.fin-line-row input {
+  width: 100%;
+}
+
+.fin-line-row input.r {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.fin-line-memo {
+  padding-block: 6px;
+  font-size: 0.8rem;
+}
+
+.fin-lines-foot {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  background: var(--panel2);
+  font-weight: 700;
+  font-size: 0.86rem;
+}
+
+.fin-lines-foot .btn {
+  justify-self: start;
+}
+
+.fin-lines .r {
+  text-align: right;
+}
+
+.fin-balance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-ctl);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.fin-balance.ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.fin-balance.off {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.fin-balance .linklike {
+  margin-left: auto;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .fin-form-top {
+    grid-template-columns: 1fr;
+  }
+
+  .fin-lines-head {
+    display: none;
+  }
+
+  .fin-line-row,
+  .fin-lines-foot {
+    grid-template-columns: 1fr 1fr 34px;
+  }
+
+  .fin-line-acct {
+    grid-column: 1 / -1;
+  }
+
+  .fin-lines-foot .btn {
+    grid-column: 1 / -1;
+  }
+
+  .fin-controls-actions {
+    margin-left: 0;
+  }
+}

@@ -1,5 +1,5 @@
 // Server-only. The slice of the database one session may see.
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import type { Session } from "@/lib/auth/types";
 import { COMPANIES } from "@/lib/reference/companies";
@@ -14,6 +14,7 @@ import type {
   Truck,
   WasteStream,
 } from "@/lib/types";
+import { brandingFor } from "./branding";
 import { getDb, schema } from "./db";
 import { smsLive } from "./integrations/messaging";
 import { translateAvailable } from "./integrations/translate";
@@ -107,7 +108,11 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
             ? eq(t.dumpReports.reporter, clientOnly)
             : companies === null
               ? undefined
-              : inArray(t.dumpReports.company, companies.length ? companies : ["__none__"]),
+              : // Reports in the company's estates, plus any its own clients filed elsewhere.
+                or(
+                  inArray(t.dumpReports.company, companies.length ? companies : ["__none__"]),
+                  inArray(t.dumpReports.reporter, ids),
+                ),
         )
         .orderBy(desc(t.dumpReports.createdAt)),
     ]);
@@ -270,6 +275,7 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
       sms: (await smsLive()) ? "live" : "simulated",
       translate: await translateAvailable(),
     },
+    branding: await brandingFor(companyIds),
     serverNow: now,
   };
 }

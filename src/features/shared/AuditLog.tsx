@@ -30,6 +30,10 @@ const ACTION: Record<string, string> = {
   "reminders.run": "Sent billing reminders",
   "billing.cycle": "Ran billing cycle",
   "dump.update": "Updated dumping report",
+  "journal.post": "Posted journal entry",
+  "journal.reverse": "Reversed journal entry",
+  "branding.update": "Updated branding",
+  "branding.reset": "Reset branding",
 };
 
 /** Summarises the detail object without dumping raw JSON on people. */

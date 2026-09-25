@@ -9,7 +9,9 @@ import { navFor } from "@/lib/navigation";
 import { openTicketCount } from "@/lib/selectors";
 import type { Role } from "@/lib/types";
 import { useAppState } from "@/store/StoreProvider";
+import { companyById } from "@/lib/reference/companies";
 import { BrandMark } from "./BrandMark";
+import { CompanyLogo } from "./CompanyBrand";
 
 /** The dark rail: brand, the sections this session may open, and a footnote. */
 export function SideNav({ role, pathname }: { role: Role; pathname: string }) {
@@ -20,6 +22,8 @@ export function SideNav({ role, pathname }: { role: Role; pathname: string }) {
   const live = Object.values(s.integrations.mpesa).some((m) => m.mode === "live");
 
   const items = navFor(role, session?.permissions ?? []);
+  // Company surfaces wear the company's brand; the platform admin's stays Zoa.
+  const branding = role === "admin" ? undefined : s.branding[s.companyId];
 
   const openTickets =
     role === "company"
@@ -31,11 +35,17 @@ export function SideNav({ role, pathname }: { role: Role; pathname: string }) {
   return (
     <nav className="side" aria-label="Sections">
       <Link href="/" className="brand" prefetch={false}>
-        <BrandMark />
-        <div>
-          <b>Zoa</b>
-          <small>Waste Hub</small>
-        </div>
+        {branding?.logo ? (
+          <CompanyLogo branding={branding} name={companyById(s.companyId).name} sub="on Zoa Waste Hub" />
+        ) : (
+          <>
+            <BrandMark />
+            <div>
+              <b>Zoa</b>
+              <small>Waste Hub</small>
+            </div>
+          </>
+        )}
       </Link>
 
       <div className="nav-label">{t("Menu")}</div>

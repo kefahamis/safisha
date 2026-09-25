@@ -4,28 +4,35 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { roleFromPath } from "@/lib/navigation";
 import { StkModal } from "@/components/mpesa/StkModal";
-import { useFleetTicker, useLiveSync } from "@/store/StoreProvider";
+import { useAppState, useFleetTicker, useLiveSync } from "@/store/StoreProvider";
+import { BrandTheme } from "./CompanyBrand";
 import { ContextSwitcher } from "./ContextSwitcher";
 import { OfflineSupport } from "./OfflineSupport";
 import { RoleTabs } from "./RoleTabs";
 import { SideNav } from "./SideNav";
+import { NotificationBell } from "./NotificationBell";
 import { UserMenu } from "./UserMenu";
 
 /** Dark rail, top bar and page slot. The active role comes from the URL. */
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const role = roleFromPath(pathname);
+  const s = useAppState();
   useFleetTicker();
   useLiveSync();
 
   return (
     <>
+      <BrandTheme branding={role === "admin" ? undefined : s.branding[s.companyId]} />
       <div className="app">
         <SideNav role={role} pathname={pathname} />
         <header className="top">
           <RoleTabs active={role} />
           <ContextSwitcher role={role} />
-          <UserMenu />
+          <div className="top-actions">
+            <NotificationBell role={role} />
+            <UserMenu />
+          </div>
         </header>
         <main>{children}</main>
       </div>

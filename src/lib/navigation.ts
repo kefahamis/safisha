@@ -37,6 +37,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/company/payments", label: "M-Pesa payments", requires: ["payments.view"] },
     { href: "/company/arrears", label: "Arrears & reminders", requires: ["payments.view"] },
     { href: "/company/statements", label: "Statements", requires: ["statements.view"] },
+    { href: "/company/finance", label: "Financial reports", requires: ["finance.view"] },
     { href: "/company/pickups", label: "Pickup requests", requires: ["pickups.manage"] },
     { href: "/company/dumping", label: "Dumping reports", requires: ["dumping.manage"] },
     { href: "/company/impact", label: "Recycling", requires: ["clients.view"] },

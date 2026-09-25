@@ -13,6 +13,7 @@ export const PERMISSION_GROUPS = [
   "My account",
   "Clients",
   "Billing",
+  "Accounting",
   "Fleet",
   "Collection",
   "Customer care",
@@ -50,6 +51,10 @@ export const PERMISSIONS: PermissionDef[] = [
   { id: "payments.simulate", group: "Billing", label: "Simulate C2B payment", detail: "Fire a test Paybill confirmation into the system." },
   { id: "payments.reconcile", group: "Billing", label: "Reconcile suspense", detail: "Assign unmatched payments to a client by hand." },
   { id: "reminders.manage", group: "Billing", label: "Run billing reminders", detail: "Preview and send arrears reminders and payment prompts." },
+
+  // Accounting
+  { id: "finance.view", group: "Accounting", label: "View financial reports", detail: "Trial balance, profit & loss, balance sheet, journal and ledgers." },
+  { id: "finance.journal", group: "Accounting", label: "Post journal entries", detail: "Record expenses, capital and adjustments, and reverse manual entries." },
 
   // Fleet
   { id: "fleet.view", group: "Fleet", label: "View fleet map", detail: "See truck positions and status across the company." },

@@ -230,6 +230,34 @@ export const files = pgTable("files", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/* ---------------- accounting ---------------- */
+
+/**
+ * Manual journal entries: expenses, capital, adjustments. Billing and M-Pesa
+ * postings are derived from txns and suspense rather than stored twice.
+ */
+export const journalEntries = pgTable("journal_entries", {
+  id: text("id").primaryKey(), // JE-1001
+  company: text("company").notNull(),
+  date: text("date").notNull(), // YYYY-MM-DD
+  memo: text("memo").notNull(),
+  reference: text("reference"),
+  /** Set on an entry that undoes another; entries are reversed, never edited. */
+  reverses: text("reverses"),
+  postedBy: text("posted_by").notNull(),
+  postedByName: text("posted_by_name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const journalLines = pgTable("journal_lines", {
+  id: serial("id").primaryKey(),
+  entry: text("entry").notNull(),
+  account: text("account").notNull(),
+  debit: integer("debit").notNull().default(0),
+  credit: integer("credit").notNull().default(0),
+  memo: text("memo"),
+});
+
 /* ---------------- payments ---------------- */
 
 /** Every STK Push we start, live or simulated, and how it ended. */
