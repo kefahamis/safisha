@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AcceptInvite } from "@/features/auth/AuthFlows";
 
-export const metadata: Metadata = { title: "Accept invitation · Zoa" };
+export const metadata: Metadata = { title: "Accept invitation" };
 
 type Props = { searchParams: Promise<{ email?: string; token?: string }> };
 

@@ -651,3 +651,23 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/*
+ * A platform logo on the sign-in pages: legibility was judged against the
+ * sidebar colour, so an untiled logo keeps that colour behind it as a chip.
+ * The ring is a shadow, so it adds breathing room without resizing the logo.
+ */
+.authbrand .co-logo:not(.tiled) {
+  background: var(--rail);
+  box-shadow: 0 0 0 6px var(--rail);
+  border-radius: 8px;
+}
+
+.authbrand .co-wordmark {
+  gap: 10px;
+}
+
+.authbrand .co-logo-text small,
+.authbrand .co-wordmark small {
+  color: var(--muted);
+}

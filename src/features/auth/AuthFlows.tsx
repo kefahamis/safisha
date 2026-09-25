@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, CircleAlert, KeyRound, LoaderCircle, LockKeyhole
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { BrandMark } from "@/components/layout/BrandMark";
+import { PlatformIdentity } from "@/components/layout/PlatformBrand";
 import { roleHome } from "@/lib/navigation";
 import type { Workspace } from "@/lib/auth/types";
 
@@ -14,11 +14,7 @@ function AuthCard({ title, lead, children }: { title: string; lead: ReactNode; c
     <div className="authflow">
       <div className="authflow-card">
         <div className="authbrand">
-          <BrandMark size={40} />
-          <div>
-            <b>Zoa</b>
-            <small>Waste Hub</small>
-          </div>
+          <PlatformIdentity markSize={40} />
         </div>
         <h1 className="signin-title" style={{ fontSize: "2rem" }}>
           {title}

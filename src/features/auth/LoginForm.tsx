@@ -4,7 +4,7 @@ import { Headset, MapPinned, MessageSquareText, Smartphone } from "lucide-react"
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { BrandMark } from "@/components/layout/BrandMark";
+import { PlatformIdentity } from "@/components/layout/PlatformBrand";
 import { ROLE_ICONS } from "@/components/ui/icons";
 import { SignInPage, type Highlight } from "@/components/ui/SignInPage";
 import { roleHome } from "@/lib/navigation";
@@ -83,11 +83,7 @@ export function LoginForm({
     <SignInPage
       brand={
         <div className="authbrand">
-          <BrandMark size={42} />
-          <div>
-            <b>Zoa</b>
-            <small>Waste Hub</small>
-          </div>
+          <PlatformIdentity markSize={42} />
         </div>
       }
       title={

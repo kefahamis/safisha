@@ -1,4 +1,118 @@
 /* ---------- branding settings ---------- */
+.bs-label-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bs-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+}
+
+.bs-note.warn {
+  color: var(--warn);
+}
+
+.bs-note > svg {
+  flex: none;
+}
+
+/* Tab icon: a large proof beside it at real size in two tab strips. */
+.bs-favicon {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.bs-favicon-big {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  color: var(--muted);
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #eef1f0 25%, transparent 25%),
+    linear-gradient(-45deg, #eef1f0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #eef1f0 75%),
+    linear-gradient(-45deg, transparent 75%, #eef1f0 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+  box-shadow: inset 0 0 0 1px var(--line);
+  overflow: hidden;
+}
+
+.bs-favicon-big img {
+  display: block;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.bs-tabs {
+  display: grid;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.bs-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 240px;
+  padding: 7px 10px;
+  border-radius: 9px 9px 0 0;
+  background: #ffffff;
+  color: #1f2328;
+  font-size: 0.75rem;
+  box-shadow: inset 0 0 0 1px #d8dee4;
+}
+
+.bs-tab.dark {
+  background: #2b2d31;
+  color: #e6e6e6;
+  box-shadow: none;
+}
+
+.bs-tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+}
+
+.bs-tab-icon img {
+  display: block;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.bs-tab-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bs-tab > svg {
+  flex: none;
+  opacity: 0.6;
+}
+
 .bs-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
@@ -85,10 +199,13 @@
 }
 
 .bs-logo-stage {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 150px;
   padding: 20px;
+  box-sizing: border-box;
+  overflow: hidden;
   border-radius: 12px;
   background-color: #fff;
   background-image:
@@ -100,9 +217,11 @@
   background-position: 0 0, 0 8px, 8px -8px, -8px 0;
 }
 
+/* The stage has a fixed height, so the image can fill it and keep its shape. */
 .bs-logo-stage img {
-  max-width: 100%;
-  max-height: 100%;
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 
@@ -317,15 +436,6 @@
   font-size: 0.86rem;
 }
 
-.bp-brand .co-logo.wide {
-  max-width: 160px;
-  height: 34px;
-}
-
-.bp-brand .co-logo.wide.tiled {
-  height: 40px;
-}
-
 .bp-monogram {
   display: grid;
   place-items: center;
@@ -479,4 +589,27 @@
   .bp-nav {
     display: none;
   }
+}
+
+/* "Following the platform": its two colours as swatches, then the note. */
+.bs-inherit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.bs-inherit > span {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.bs-inherit > span + span {
+  margin-left: -10px;
+  margin-right: 4px;
 }

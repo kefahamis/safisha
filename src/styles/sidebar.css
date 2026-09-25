@@ -1,0 +1,201 @@
+/* ---------- collapsible sidebar ---------- */
+/*
+ * The shell's first column animates between the full rail and a 76px icon
+ * rail. Labels clip while the column moves, then hide; in the icon rail they
+ * come back as tooltips. Phones keep the horizontal strip from responsive.css.
+ */
+
+.brand-full {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.brand-mini {
+  display: none;
+}
+
+.brand-monogram {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--accent-grad);
+  color: var(--accent-ink);
+  font-family: var(--display);
+  font-size: 0.86rem;
+  font-weight: 800;
+  box-shadow: var(--accent-glow);
+}
+
+.side-toggle {
+  display: none;
+}
+
+@media (min-width: 761px) {
+  .app {
+    transition: grid-template-columns 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .side {
+    position: relative;
+  }
+
+  /* A round handle on the rail's edge, half over the page. */
+  .side-toggle {
+    position: absolute;
+    top: 31px;
+    right: -13px;
+    z-index: 25;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: var(--panel);
+    color: var(--muted);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    opacity: 0.85;
+    transition: color 0.15s, opacity 0.15s, transform 0.15s, box-shadow 0.15s;
+  }
+
+  .side-toggle:hover,
+  .side-toggle:focus-visible {
+    color: var(--ink);
+    opacity: 1;
+    transform: scale(1.08);
+    box-shadow: var(--shadow);
+  }
+
+  .side-toggle svg {
+    transition: transform 0.24s ease;
+  }
+
+  /*
+   * While the column animates, labels clip instead of wrapping. Only the text
+   * clips: the row itself stays unclipped so the active marker, which sits
+   * outside it, still shows. The margin keeps the mark's shadow.
+   */
+  .nav-text {
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .brand-full,
+  .side .foot {
+    overflow: clip;
+    overflow-clip-margin: 12px;
+  }
+
+  .brand-full b,
+  .brand-full small,
+  .side .foot > div {
+    white-space: nowrap;
+  }
+
+  /* ---------- collapsed ---------- */
+  .app[data-sidebar="collapsed"] {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+
+  .app[data-sidebar="collapsed"] .side {
+    padding-inline: 12px;
+  }
+
+  .app[data-sidebar="collapsed"] .side-toggle svg {
+    transform: rotate(180deg);
+  }
+
+  .app[data-sidebar="collapsed"] .brand {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .app[data-sidebar="collapsed"] .brand-full {
+    display: none;
+  }
+
+  .app[data-sidebar="collapsed"] .brand-mini {
+    display: block;
+  }
+
+  .app[data-sidebar="collapsed"] .nav-label {
+    visibility: hidden;
+  }
+
+  .app[data-sidebar="collapsed"] .side a.nav-item {
+    justify-content: center;
+    padding: 9px 0;
+    overflow: visible;
+  }
+
+  .app[data-sidebar="collapsed"] .nav-text {
+    display: none;
+  }
+
+  .app[data-sidebar="collapsed"] .side a.nav-item[aria-current="page"]::before {
+    left: -12px;
+  }
+
+  /* Counts shrink to a corner badge on the icon. */
+  .app[data-sidebar="collapsed"] .side .count {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    font-size: 0.62rem;
+    box-shadow: 0 0 0 2px var(--rail);
+  }
+
+  /* Labels return as tooltips, on hover and on keyboard focus. */
+  .app[data-sidebar="collapsed"] .side a.nav-item::after {
+    content: attr(data-label);
+    position: absolute;
+    left: calc(100% + 14px);
+    top: 50%;
+    z-index: 30;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--ink);
+    color: var(--panel);
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: var(--shadow-pop);
+    opacity: 0;
+    transform: translate(-4px, -50%);
+    pointer-events: none;
+    transition: opacity 0.12s, transform 0.12s;
+  }
+
+  .app[data-sidebar="collapsed"] .side a.nav-item:hover::after,
+  .app[data-sidebar="collapsed"] .side a.nav-item:focus-visible::after {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+
+  .app[data-sidebar="collapsed"] .side .foot {
+    justify-content: center;
+    padding: 12px 0;
+  }
+
+  .app[data-sidebar="collapsed"] .side .foot > div {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app,
+  .side-toggle,
+  .side-toggle svg,
+  .app[data-sidebar="collapsed"] .side a.nav-item::after {
+    transition: none;
+  }
+}

@@ -66,6 +66,9 @@ export const NAV: Record<Role, NavItem[]> = {
   ],
 };
 
+/** Remembers whether the sidebar is folded to icons; read on the server to avoid a jump. */
+export const SIDEBAR_COOKIE = "zoa-sidebar";
+
 export const roleHome = (role: Role) => NAV[role][0].href;
 
 const ROLE_SET = new Set<string>(ROLES.map((r) => r.role));

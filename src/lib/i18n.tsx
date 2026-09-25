@@ -235,6 +235,8 @@ const SW: Record<string, string> = {
   "The request was cancelled on the phone.": "Ombi liliachwa kwenye simu.",
   "Sending…": "Inatuma…",
   Notifications: "Arifa",
+  "Collapse sidebar": "Kunja upau wa pembeni",
+  "Expand sidebar": "Panua upau wa pembeni",
   "Mark all read": "Weka zote zimesomwa",
   "You're all caught up.": "Huna arifa mpya.",
   "Customer care replied": "Huduma kwa wateja wamejibu",

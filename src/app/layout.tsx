@@ -1,14 +1,20 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { BrandTheme } from "@/components/layout/CompanyBrand";
+import { identity } from "@/lib/branding";
+import { platformBranding } from "@/server/branding";
 import { getSession } from "@/server/session";
 import { Providers } from "./providers";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "Zoa Waste Hub",
-  description:
-    "Prototype platform for Nairobi waste collection: client accounts, M-Pesa billing, live fleet tracking and customer care.",
-};
+const DESCRIPTION =
+  "Prototype platform for Nairobi waste collection: client accounts, M-Pesa billing, live fleet tracking and customer care.";
+
+/** Every page title ends in the platform's name, whatever the admin has called it. */
+export async function generateMetadata(): Promise<Metadata> {
+  const { name, full } = identity(await platformBranding());
+  return { title: { default: full, template: `%s · ${name}` }, description: DESCRIPTION };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -19,6 +25,7 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: ReactNode }) {
   // Resolved per request so a role change takes effect without signing out.
   const session = await getSession();
+  const platform = await platformBranding();
 
   return (
     <html lang={session?.lang === "sw" ? "sw" : "en"} suppressHydrationWarning>
@@ -31,7 +38,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         />
       </head>
       <body suppressHydrationWarning>
-        <Providers session={session}>{children}</Providers>
+        {/* The platform look underneath everything; a company's brand layers on top. */}
+        <BrandTheme branding={platform} />
+        <Providers session={session} platform={platform}>
+          {children}
+        </Providers>
       </body>
     </html>
   );

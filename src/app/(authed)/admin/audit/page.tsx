@@ -3,7 +3,7 @@ import { NoAccess } from "@/components/auth/NoAccess";
 import { AuditLog } from "@/features/shared/AuditLog";
 import { getSession } from "@/server/session";
 
-export const metadata: Metadata = { title: "Audit log · Zoa" };
+export const metadata: Metadata = { title: "Audit log" };
 
 export default async function Page() {
   const session = await getSession();

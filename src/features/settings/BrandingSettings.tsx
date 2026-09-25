@@ -3,6 +3,7 @@
 import {
   CircleAlert,
   CircleCheck,
+  Globe,
   ImagePlus,
   LayoutDashboard,
   Moon,
@@ -14,10 +15,14 @@ import {
   TriangleAlert,
   Upload,
   Users,
+  Type,
   Wallet,
+  X,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { CompanyLogo } from "@/components/layout/CompanyBrand";
+import { usePlatformBrand } from "@/components/layout/PlatformBrand";
 import { Panel } from "@/components/ui/Panel";
 import { useToast } from "@/components/ui/ToastProvider";
 import {
@@ -25,21 +30,50 @@ import {
   contrastReport,
   DEFAULT_PRIMARY,
   DEFAULT_RAIL,
+  companyTagline,
+  identity,
   isHex,
+  NAME_MAX,
+  PLATFORM,
+  PLATFORM_NAME,
+  PLATFORM_TAGLINE,
   PRESETS,
+  TAGLINE_MAX,
   WORDMARK_ASPECT,
   type Branding,
+  type FaviconMode,
   type LogoTile,
 } from "@/lib/branding";
 import { companyById } from "@/lib/reference/companies";
 import { useActions, useAppState } from "@/store/StoreProvider";
-import { ACCEPT, processLogo, type ProcessedLogo } from "./logoProcessing";
+import { ACCEPT, makeFavicon, processLogo, type Favicon, type ProcessedLogo } from "./logoProcessing";
 
 /** Surfaces for the preview, so it shows either theme whatever the app is in. */
 const SURFACES = {
   light: { "--bg": "#f1f6f4", "--panel": "#ffffff", "--panel2": "#eef4f1", "--ink": "#0f1f1b", "--muted": "#667a73", "--line": "#e0ebe6" },
   dark: { "--bg": "#061a1b", "--panel": "#0c2526", "--panel2": "#123031", "--ink": "#e4f1ec", "--muted": "#88a59c", "--line": "#1b3b3c" },
 };
+
+const FAVICON_OPTIONS: { id: FaviconMode; label: string }[] = [
+  { id: "logo", label: "From logo" },
+  { id: "monogram", label: "Monogram" },
+  { id: "upload", label: "Upload" },
+  { id: "none", label: "Default" },
+];
+
+/** A browser tab strip, to judge the icon at the size people will actually see it. */
+function TabMock({ src, title, dark }: { src: string | null; title: string; dark?: boolean }) {
+  return (
+    <div className={`bs-tab${dark ? " dark" : ""}`}>
+      <span className="bs-tab-icon">
+        {/* eslint-disable-next-line @next/next/no-img-element -- local blob or auth-gated file */}
+        {src ? <img src={src} alt="" width={16} height={16} /> : <Globe size={14} strokeWidth={2} aria-hidden="true" />}
+      </span>
+      <span className="bs-tab-title">{title}</span>
+      <X size={12} strokeWidth={2.4} aria-hidden="true" />
+    </div>
+  );
+}
 
 const TILE_OPTIONS: { id: LogoTile; label: string; hint: string }[] = [
   { id: "auto", label: "Auto", hint: "A light tile only if the logo would be hard to see on the sidebar." },
@@ -74,14 +108,22 @@ function HexField({ label, value, onChange }: { label: string; value: string; on
   );
 }
 
-export function BrandingSettings({ company }: { company: string }) {
+/**
+ * Brand editor for one layer: `scope` is a company id, or PLATFORM for the
+ * look of the whole system. Companies inherit whatever they leave unset.
+ */
+export function BrandingSettings({ scope }: { scope: string }) {
   const s = useAppState();
   const actions = useActions();
+  const router = useRouter();
   const toast = useToast();
-  const saved = s.branding[company];
-  const name = companyById(company).name;
+  const { branding: platformB } = usePlatformBrand();
+  const isPlatform = scope === PLATFORM;
+  const saved = isPlatform ? (platformB.updatedAt ? platformB : undefined) : s.branding[scope];
 
   const [draft, setDraft] = useState<Branding>(() => saved ?? {});
+  // A company can follow the platform's colours, or set its own.
+  const [ownColours, setOwnColours] = useState(isPlatform || Boolean(saved?.primary || saved?.rail));
   const [pending, setPending] = useState<ProcessedLogo | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [removeBg, setRemoveBg] = useState(true);
@@ -90,41 +132,129 @@ export function BrandingSettings({ company }: { company: string }) {
   const [dragging, setDragging] = useState(false);
   const [mode, setMode] = useState<"light" | "dark">("light");
   const [customRail, setCustomRail] = useState(Boolean(saved?.rail));
+  const [faviconMode, setFaviconMode] = useState<FaviconMode>(saved?.faviconMode ?? "none");
+  const [faviconFile, setFaviconFile] = useState<File | null>(null);
+  const [favicon, setFavicon] = useState<Favicon | null>(null);
+  const [faviconError, setFaviconError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
 
   // A different company, or a save landing from the sync, resets the editor.
-  const savedKey = `${company}|${saved?.updatedAt ?? ""}`;
+  const savedKey = `${scope}|${saved?.updatedAt ?? ""}`;
   const [lastKey, setLastKey] = useState(savedKey);
   if (savedKey !== lastKey) {
     setLastKey(savedKey);
     setDraft(saved ?? {});
+    setOwnColours(isPlatform || Boolean(saved?.primary || saved?.rail));
     setCustomRail(Boolean(saved?.rail));
     setPending(null);
     setFile(null);
+    setFaviconMode(saved?.faviconMode ?? "none");
+    setFaviconFile(null);
   }
 
   useEffect(() => () => void (pending && URL.revokeObjectURL(pending.url)), [pending]);
 
-  const primary = draft.primary ?? DEFAULT_PRIMARY;
+  // What this layer falls back to: the platform for a company, the built-in look for the platform.
+  const basePrimary = isPlatform ? DEFAULT_PRIMARY : (platformB.primary ?? DEFAULT_PRIMARY);
+  const baseRail = isPlatform ? undefined : platformB.rail;
+  const primary = ownColours ? (draft.primary ?? basePrimary) : basePrimary;
+  const rail = ownColours ? (customRail ? (draft.rail ?? DEFAULT_RAIL) : undefined) : baseRail;
+  const productName = draft.name?.trim() || PLATFORM_NAME;
+  const name = isPlatform ? productName : companyById(scope).name;
   const effective: Branding = {
     ...draft,
     primary,
-    rail: customRail ? (draft.rail ?? DEFAULT_RAIL) : undefined,
+    rail,
     ...(pending ? { logo: "pending", logoAspect: pending.aspect, logoLuma: pending.luma } : {}),
   };
   const tokens = brandTokens(effective)!;
   const checks = contrastReport(effective);
   const logoSrc = pending?.url ?? (draft.logo ? `/api/files/${draft.logo}` : null);
   const palette = pending?.palette ?? [];
+  const defaultTagline = isPlatform ? PLATFORM_TAGLINE : companyTagline(platformB);
+  const tagline = draft.tagline ?? defaultTagline;
+  const defaultLabel = isPlatform ? "Zoa default" : "Platform default";
+
+  // The tab icon is redrawn from whatever it depends on, so the preview is always current.
+  const fill = tokens.light["--leaf"];
+  const ink = tokens.light["--accent-ink"];
+  /** Everything the icon is drawn from; if it differs from the saved set, re-upload. */
+  const faviconSig = (m: FaviconMode, logo: string | null, colours: string, uploadKey: string | undefined) =>
+    m === "logo" ? `logo|${logo}` : m === "monogram" ? `mono|${colours}|${name}` : m === "upload" ? `up|${uploadKey}` : "none";
+  const savedColours = isPlatform ? saved : saved?.primary || saved?.rail ? saved : platformB;
+  const savedTokens = saved
+    ? brandTokens({ primary: savedColours?.primary ?? DEFAULT_PRIMARY, rail: savedColours?.rail })
+    : null;
+  const savedSig = faviconSig(
+    saved?.faviconMode ?? "none",
+    saved?.logo ? `/api/files/${saved.logo}` : null,
+    savedTokens ? `${savedTokens.light["--leaf"]}${savedTokens.light["--accent-ink"]}` : "",
+    saved?.favicon,
+  );
+  const currentSig = faviconSig(
+    faviconMode,
+    logoSrc,
+    `${fill}${ink}`,
+    faviconFile ? `${faviconFile.name}:${faviconFile.size}:${faviconFile.lastModified}` : draft.favicon,
+  );
+  // Needs a new upload on save: the inputs moved, or there's no stored icon yet.
+  const faviconStale = faviconMode !== "none" && (currentSig !== savedSig || !saved?.favicon);
+
+  useEffect(() => {
+    let cancelled = false;
+    setFaviconError("");
+    const next =
+      faviconMode === "monogram"
+        ? makeFavicon({ mode: "monogram", name, fill, ink })
+        : faviconMode === "logo" && logoSrc
+          ? makeFavicon({ mode: "logo", src: logoSrc })
+          : faviconMode === "upload" && faviconFile
+            ? makeFavicon({ mode: "upload", file: faviconFile })
+            : null;
+    if (!next) {
+      setFavicon(null);
+      return;
+    }
+    next
+      .then((f) => {
+        if (cancelled) return URL.revokeObjectURL(f.url);
+        setFavicon((old) => {
+          if (old) URL.revokeObjectURL(old.url);
+          return f;
+        });
+      })
+      .catch((err) => !cancelled && setFaviconError(err instanceof Error ? err.message : "Couldn't make the tab icon."));
+    return () => {
+      cancelled = true;
+    };
+  }, [faviconMode, logoSrc, faviconFile, name, fill, ink]);
+
+  // What the tab shows: a fresh drawing, else the stored icon for an untouched upload.
+  const faviconSrc =
+    favicon?.url ?? (faviconMode === "upload" && !faviconFile && draft.favicon ? `/api/files/${draft.favicon}` : null);
+
   // What Save would send, against what's stored now.
-  const payload = { primary, rail: effective.rail, logo: draft.logo, logoTile: draft.logoTile ?? "auto" };
+  const payload = {
+    name: isPlatform ? productName : undefined,
+    primary: ownColours ? primary : undefined,
+    rail: ownColours ? rail : undefined,
+    logo: draft.logo,
+    logoTile: draft.logoTile ?? "auto",
+    tagline,
+    faviconMode,
+  };
   const stored = {
-    primary: saved?.primary ?? DEFAULT_PRIMARY,
+    name: isPlatform ? (saved?.name ?? PLATFORM_NAME) : undefined,
+    primary: isPlatform ? (saved?.primary ?? DEFAULT_PRIMARY) : saved?.primary,
     rail: saved?.rail,
     logo: saved?.logo,
     logoTile: saved?.logoTile ?? "auto",
+    tagline: saved?.tagline ?? defaultTagline,
+    faviconMode: saved?.faviconMode ?? "none",
   };
-  const dirty = Boolean(pending) || JSON.stringify(payload) !== JSON.stringify(stored);
+  const dirty =
+    Boolean(pending) || JSON.stringify(payload) !== JSON.stringify(stored) || (faviconStale && Boolean(favicon));
 
   const run = async (f: File, remove: boolean) => {
     setBusy("processing");
@@ -157,6 +287,17 @@ export function BrandingSettings({ company }: { company: string }) {
     return () => window.removeEventListener("paste", onPaste);
   });
 
+  const upload = async (blob: Blob, what: string) => {
+    const res = await fetch(`/api/branding/${scope}/logo`, {
+      method: "POST",
+      headers: { "Content-Type": "image/png" },
+      body: blob,
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error ?? `The ${what} didn't upload.`);
+    return body.id as string;
+  };
+
   const save = async () => {
     setBusy("saving");
     setError("");
@@ -165,33 +306,41 @@ export function BrandingSettings({ company }: { company: string }) {
       let logoAspect = draft.logoAspect;
       let logoLuma = draft.logoLuma;
       if (pending) {
-        const res = await fetch(`/api/branding/${company}/logo`, {
-          method: "POST",
-          headers: { "Content-Type": "image/png" },
-          body: pending.blob,
-        });
-        const body = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(body.error ?? "The logo didn't upload.");
-        logo = body.id;
+        logo = await upload(pending.blob, "logo");
         logoAspect = pending.aspect;
         logoLuma = pending.luma;
       }
-      const res = await fetch(`/api/branding/${company}`, {
+      let faviconId = faviconMode === "none" ? undefined : draft.favicon;
+      if (faviconMode !== "none" && faviconStale) {
+        if (!favicon) throw new Error(`The tab icon isn't ready yet. Pick a source for it, or choose ${defaultLabel}.`);
+        faviconId = await upload(favicon.blob, "tab icon");
+      }
+      const res = await fetch(`/api/branding/${scope}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          primary,
-          rail: customRail ? (draft.rail ?? DEFAULT_RAIL) : undefined,
+          name: isPlatform ? productName : undefined,
+          primary: ownColours ? primary : undefined,
+          rail: ownColours ? rail : undefined,
           logo,
           logoAspect: logo ? logoAspect : undefined,
           logoLuma: logo ? logoLuma : undefined,
           logoTile: draft.logoTile ?? "auto",
+          tagline,
+          faviconMode,
+          favicon: faviconId,
         }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? "Couldn't save the branding.");
       await actions.refresh();
-      toast(`${name} branding saved. Staff, clients and collectors see it now.`);
+      // The platform layer is drawn by the root layout, so redraw that too.
+      router.refresh();
+      toast(
+        isPlatform
+          ? `Platform brand saved. Everyone sees ${productName} now, apart from companies' own logos and colours.`
+          : `${name} branding saved. Staff, clients and collectors see it now.`,
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save the branding.");
     } finally {
@@ -200,16 +349,23 @@ export function BrandingSettings({ company }: { company: string }) {
   };
 
   const reset = async () => {
-    if (!window.confirm(`Remove ${name}'s logo and colours and go back to the Zoa look?`)) return;
+    const question = isPlatform
+      ? "Remove the platform brand and go back to the built-in Zoa look for everyone?"
+      : `Remove ${name}'s logo and colours so it follows the platform brand?`;
+    if (!window.confirm(question)) return;
     setBusy("resetting");
-    const res = await fetch(`/api/branding/${company}`, { method: "DELETE" });
+    const res = await fetch(`/api/branding/${scope}`, { method: "DELETE" });
     setBusy("");
     if (!res.ok) return setError("Couldn't reset the branding.");
     await actions.refresh();
+    router.refresh();
     setDraft({});
+    setOwnColours(isPlatform);
     setPending(null);
     setCustomRail(false);
-    toast(`${name} is back on the Zoa look.`);
+    setFaviconMode("none");
+    setFaviconFile(null);
+    toast(isPlatform ? "The platform is back on the Zoa look." : `${name} now follows the platform brand.`);
   };
 
   const previewStyle = { ...SURFACES[mode], ...tokens[mode] } as CSSProperties;
@@ -259,6 +415,7 @@ export function BrandingSettings({ company }: { company: string }) {
                     setPending(null);
                     setFile(null);
                     setDraft((d) => ({ ...d, logo: undefined, logoAspect: undefined, logoLuma: undefined }));
+                    if (faviconMode === "logo") setFaviconMode("monogram");
                   }}
                   disabled={Boolean(busy)}
                 >
@@ -340,7 +497,152 @@ export function BrandingSettings({ company }: { company: string }) {
           </div>
         </Panel>
 
+        <Panel title="Name & tab icon" icon={Type}>
+          {isPlatform && (
+            <label className="f" style={{ marginBottom: 14 }}>
+              <span className="bs-label-row">
+                Product name
+                <span className="hint mono">
+                  {(draft.name ?? PLATFORM_NAME).length}/{NAME_MAX}
+                </span>
+              </span>
+              <input
+                value={draft.name ?? PLATFORM_NAME}
+                maxLength={NAME_MAX}
+                onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+              />
+              <span className="hint">
+                Replaces “{PLATFORM_NAME}” in the sidebar, sign-in page, browser tabs and emails.
+              </span>
+            </label>
+          )}
+          <label className="f">
+            <span className="bs-label-row">
+              {isPlatform ? "Tagline" : "Sidebar tagline"}
+              <span className="hint mono">
+                {tagline.length}/{TAGLINE_MAX}
+              </span>
+            </span>
+            <input
+              value={tagline}
+              maxLength={TAGLINE_MAX}
+              placeholder="Leave empty to hide it"
+              onChange={(e) => setDraft((d) => ({ ...d, tagline: e.target.value }))}
+            />
+          </label>
+          <div className="row" style={{ gap: 6, marginTop: 8 }}>
+            {tagline !== defaultTagline && (
+              <button type="button" className="btn small ghost" onClick={() => setDraft((d) => ({ ...d, tagline: undefined }))}>
+                <RotateCcw size={14} strokeWidth={2.2} aria-hidden="true" />
+                Use “{defaultTagline}”
+              </button>
+            )}
+            <span className="hint">
+              {isPlatform
+                ? `Shown after the name, as in “${identity({ name: productName, tagline }).full}”. Empty hides it.`
+                : "Shown under your name in the sidebar. Empty hides the line."}
+            </span>
+          </div>
+
+          <div className="bs-field">
+            <span className="bs-label">Tab icon (favicon)</span>
+            <div className="segmented" role="radiogroup" aria-label="Tab icon source">
+              {FAVICON_OPTIONS.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={faviconMode === o.id}
+                  disabled={o.id === "logo" && !logoSrc}
+                  title={o.id === "logo" && !logoSrc ? "Add a logo first" : undefined}
+                  onClick={() => {
+                    setFaviconMode(o.id);
+                    if (o.id === "upload" && !faviconFile && !draft.favicon) faviconInputRef.current?.click();
+                  }}
+                >
+                  {o.id === "none" ? defaultLabel : o.label}
+                </button>
+              ))}
+            </div>
+            <input
+              ref={faviconInputRef}
+              type="file"
+              accept={ACCEPT}
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) {
+                  setFaviconFile(f);
+                  setFaviconMode("upload");
+                }
+                e.target.value = "";
+              }}
+            />
+          </div>
+
+          <div className="bs-favicon">
+            <div className="bs-favicon-big" aria-hidden="true">
+              {faviconMode === "none" ? (
+                // eslint-disable-next-line @next/next/no-img-element -- the platform icon
+                <img src="/icon.svg" alt="" width={48} height={48} />
+              ) : faviconSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element -- local blob or auth-gated file
+                <img src={faviconSrc} alt="" width={48} height={48} />
+              ) : (
+                <ImagePlus size={20} strokeWidth={2} />
+              )}
+            </div>
+            <div className="bs-tabs">
+              <TabMock src={faviconMode === "none" ? "/icon.svg" : faviconSrc} title={`Dashboard · ${name}`} />
+              <TabMock src={faviconMode === "none" ? "/icon.svg" : faviconSrc} title={`Dashboard · ${name}`} dark />
+            </div>
+          </div>
+          {faviconMode === "upload" && (
+            <button type="button" className="btn small" style={{ marginTop: 10 }} onClick={() => faviconInputRef.current?.click()}>
+              <Upload size={15} strokeWidth={2.2} aria-hidden="true" />
+              {faviconFile || draft.favicon ? "Replace icon" : "Choose icon"}
+            </button>
+          )}
+          {faviconMode === "logo" && wide && (
+            <p className="bs-note warn">
+              <TriangleAlert size={14} strokeWidth={2.2} aria-hidden="true" />
+              Wide logos shrink to a sliver at tab size. Monogram usually reads better.
+            </p>
+          )}
+          {faviconError && (
+            <p className="err" role="alert">
+              <CircleAlert size={15} strokeWidth={2.2} aria-hidden="true" />
+              {faviconError}
+            </p>
+          )}
+          <p className="hint" style={{ marginTop: 8 }}>
+            Drawn as a crisp 64 × 64 icon. Staff, clients and collectors see it in their browser tabs.
+          </p>
+        </Panel>
+
         <Panel title="Colours" icon={Palette}>
+          {!isPlatform && (
+            <div className="bs-field" style={{ marginTop: 0 }}>
+              <div className="segmented" role="radiogroup" aria-label="Colour source">
+                <button type="button" role="radio" aria-checked={!ownColours} onClick={() => setOwnColours(false)}>
+                  Platform colours
+                </button>
+                <button type="button" role="radio" aria-checked={ownColours} onClick={() => setOwnColours(true)}>
+                  Custom
+                </button>
+              </div>
+              {!ownColours && (
+                <p className="bs-inherit">
+                  <span style={{ background: primary }} />
+                  <span style={{ background: tokens.light["--rail"] }} />
+                  Following the platform brand, including any future changes to it.
+                </p>
+              )}
+            </div>
+          )}
+
+          {ownColours && (
+          <>
           <div className="bs-field">
             <span className="bs-label">Presets</span>
             <div className="bs-presets">
@@ -377,7 +679,10 @@ export function BrandingSettings({ company }: { company: string }) {
                     style={{ background: c }}
                     aria-label={`Use ${c}`}
                     aria-pressed={primary === c}
-                    onClick={() => setDraft((d) => ({ ...d, primary: c }))}
+                    onClick={() => {
+                      setDraft((d) => ({ ...d, primary: c }));
+                      setOwnColours(true);
+                    }}
                     title={c}
                   />
                 ))}
@@ -405,6 +710,8 @@ export function BrandingSettings({ company }: { company: string }) {
               value={draft.rail ?? DEFAULT_RAIL}
               onChange={(v) => setDraft((d) => ({ ...d, rail: v }))}
             />
+          )}
+          </>
           )}
 
           <div className="bs-checks">
@@ -445,13 +752,20 @@ export function BrandingSettings({ company }: { company: string }) {
             <div className="bp-rail">
               <div className="brand bp-brand">
                 {logoSrc ? (
-                  <CompanyLogo branding={effective} name={name} sub="on Zoa Waste Hub" src={logoSrc} railHex={tokens[mode]["--rail"]} />
+                  <CompanyLogo
+                    branding={{ ...effective, tagline }}
+                    name={name}
+                    fallbackTagline={defaultTagline}
+                    src={logoSrc}
+                    railHex={tokens[mode]["--rail"]}
+                    size="sm"
+                  />
                 ) : (
                   <>
                     <span className="bp-monogram">{name.slice(0, 1)}</span>
                     <div>
                       <b>{name}</b>
-                      <small>on Zoa Waste Hub</small>
+                      {tagline && <small>{tagline}</small>}
                     </div>
                   </>
                 )}
@@ -500,7 +814,7 @@ export function BrandingSettings({ company }: { company: string }) {
             {logoSrc
               ? wide
                 ? "Wide logos take the whole sidebar header on their own."
-                : "Square logos sit in the 38px mark beside your company name."
+                : "Square logos sit in a fixed mark beside your company name."
               : "Add a logo to replace the monogram."}
           </p>
         </Panel>
@@ -517,7 +831,7 @@ export function BrandingSettings({ company }: { company: string }) {
           {saved && (
             <button type="button" className="btn ghost" onClick={() => void reset()} disabled={Boolean(busy)}>
               <RotateCcw size={15} strokeWidth={2.2} aria-hidden="true" />
-              Reset to Zoa default
+              {isPlatform ? "Reset to Zoa default" : "Use platform branding"}
             </button>
           )}
           <button type="button" className="btn primary" onClick={() => void save()} disabled={!dirty || Boolean(busy)}>
