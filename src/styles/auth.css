@@ -349,16 +349,84 @@
   animation: signin-route 1.2s linear infinite;
 }
 
-.signin-track .truck circle {
-  fill: #fff;
-  stroke: #47d480;
-  stroke-width: 4;
+/* The refuse trucks: a white one with the leaf stripe, and a coral one. */
+.signin-track .truck {
+  --truck-body: #ffffff;
+  --truck-cab: #47d480;
+  --truck-stripe: #47d480;
+  --truck-trim: #0c6955;
 }
 
-.signin-track .truck.alt circle {
-  fill: #f07a45;
-  stroke: #fff;
-  stroke-width: 3;
+.signin-track .truck.alt {
+  --truck-body: #f07a45;
+  --truck-cab: #ffffff;
+  --truck-stripe: #ffffff;
+  --truck-trim: #9a3c14;
+}
+
+.signin-track .truck .shadow {
+  fill: rgba(0, 0, 0, 0.28);
+}
+
+.signin-track .truck .body {
+  fill: var(--truck-body);
+}
+
+.signin-track .truck .tailgate,
+.signin-track .truck .chassis {
+  fill: var(--truck-trim);
+}
+
+.signin-track .truck .stripe {
+  fill: var(--truck-stripe);
+}
+
+.signin-track .truck .ribs {
+  fill: none;
+  stroke: var(--truck-trim);
+  stroke-width: 1;
+  stroke-linecap: round;
+  opacity: 0.35;
+}
+
+.signin-track .truck .cab {
+  fill: var(--truck-cab);
+}
+
+.signin-track .truck .glass {
+  fill: #cfeff0;
+}
+
+.signin-track .truck .lamp {
+  fill: #ffe08a;
+}
+
+.signin-track .truck .tyre {
+  fill: #13221e;
+}
+
+.signin-track .truck .hub {
+  fill: #d5dfda;
+}
+
+.signin-track .truck .spoke {
+  fill: none;
+  stroke: #13221e;
+  stroke-width: 0.9;
+  stroke-linecap: round;
+}
+
+/* Wheels turn as the truck drives. */
+.signin-track .truck .spokes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: signin-wheel 0.7s linear infinite;
+}
+
+@keyframes signin-wheel {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes signin-route {
