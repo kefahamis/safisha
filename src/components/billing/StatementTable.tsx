@@ -1,6 +1,8 @@
 "use client";
 
+import { ArrowDownLeft, ArrowUpRight, CalendarRange, CornerDownRight, Sigma } from "lucide-react";
 import { fmtDate, group } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import { buildStatement, PERIODS } from "@/lib/statement";
 import type { StatementPeriod } from "@/lib/types";
 import { useActions, useAppState } from "@/store/StoreProvider";
@@ -8,18 +10,22 @@ import { useActions, useAppState } from "@/store/StoreProvider";
 export function PeriodSelect() {
   const s = useAppState();
   const actions = useActions();
+  const { t } = useT();
   return (
-    <select
-      aria-label="Statement period"
-      value={s.stmtPeriod}
-      onChange={(e) => actions.setPeriod(e.target.value as StatementPeriod)}
-    >
-      {PERIODS.map((p) => (
-        <option key={p.value} value={p.value}>
-          {p.label}
-        </option>
-      ))}
-    </select>
+    <label className="select-ico">
+      <CalendarRange size={15} strokeWidth={2.2} aria-hidden="true" />
+      <select
+        aria-label={t("Statement period")}
+        value={s.stmtPeriod}
+        onChange={(e) => actions.setPeriod(e.target.value as StatementPeriod)}
+      >
+        {PERIODS.map((p) => (
+          <option key={p.value} value={p.value}>
+            {t(p.label)}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -27,6 +33,7 @@ export function PeriodSelect() {
 export function StatementTable({ clientId }: { clientId: string }) {
   const s = useAppState();
   const st = buildStatement(s, clientId, s.stmtPeriod);
+  const { t } = useT();
 
   return (
     <>
@@ -34,18 +41,23 @@ export function StatementTable({ clientId }: { clientId: string }) {
         <table>
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Description</th>
-              <th>M-Pesa ref</th>
-              <th className="r">Charge</th>
-              <th className="r">Paid</th>
-              <th className="r">Balance</th>
+              <th>{t("Date")}</th>
+              <th>{t("Description")}</th>
+              <th>{t("M-Pesa ref")}</th>
+              <th className="r">{t("Charge")}</th>
+              <th className="r">{t("Paid")}</th>
+              <th className="r">{t("Balance")}</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td />
-              <td className="muted">Opening balance</td>
+              <td className="muted">
+                <span className="with-ico">
+                  <CornerDownRight size={14} strokeWidth={2.2} aria-hidden="true" />
+                  {t("Opening balance")}
+                </span>
+              </td>
               <td />
               <td />
               <td />
@@ -54,7 +66,18 @@ export function StatementTable({ clientId }: { clientId: string }) {
             {st.rows.map(({ txn, running }) => (
               <tr key={txn.id + txn.date}>
                 <td className="num">{fmtDate(txn.date)}</td>
-                <td>{txn.desc}</td>
+                <td>
+                  <span className="with-ico">
+                    <span className={`txn-ico ${txn.kind}`} aria-hidden="true">
+                      {txn.kind === "payment" ? (
+                        <ArrowDownLeft size={13} strokeWidth={2.4} />
+                      ) : (
+                        <ArrowUpRight size={13} strokeWidth={2.4} />
+                      )}
+                    </span>
+                    {txn.desc}
+                  </span>
+                </td>
                 <td className="mono">{txn.kind === "payment" ? txn.id : "—"}</td>
                 <td className="r">{txn.kind === "charge" ? group(txn.amount) : ""}</td>
                 <td className="r">{txn.kind === "payment" ? group(txn.amount) : ""}</td>
@@ -63,7 +86,12 @@ export function StatementTable({ clientId }: { clientId: string }) {
             ))}
             <tr className="open">
               <td />
-              <td>Closing balance</td>
+              <td>
+                <span className="with-ico">
+                  <Sigma size={14} strokeWidth={2.2} aria-hidden="true" />
+                  {t("Closing balance")}
+                </span>
+              </td>
               <td />
               <td className="r">{group(st.charges)}</td>
               <td className="r">{group(st.payments)}</td>
@@ -73,7 +101,7 @@ export function StatementTable({ clientId }: { clientId: string }) {
         </table>
       </div>
       <p className="hint">
-        Amounts in KES. Positive balance = amount owed; negative = credit carried forward.
+        {t("Amounts in KES. Positive balance = amount owed; negative = credit carried forward.")}
       </p>
     </>
   );

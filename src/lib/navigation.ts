@@ -21,6 +21,8 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/client", label: "My account", requires: ["account.view"] },
     { href: "/client/statement", label: "Statement", requires: ["account.statement"] },
     { href: "/client/track", label: "Track collector", requires: ["fleet.track"] },
+    { href: "/client/pickups", label: "Book a pickup", requires: ["pickups.request"] },
+    { href: "/client/report", label: "Report dumping", requires: ["dumping.report"] },
     {
       href: "/client/support",
       label: "Customer care",
@@ -33,13 +35,19 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/company/clients", label: "Clients", requires: ["clients.view"] },
     { href: "/company/map", label: "Fleet map", requires: ["fleet.view"] },
     { href: "/company/payments", label: "M-Pesa payments", requires: ["payments.view"] },
+    { href: "/company/arrears", label: "Arrears & reminders", requires: ["payments.view"] },
     { href: "/company/statements", label: "Statements", requires: ["statements.view"] },
+    { href: "/company/pickups", label: "Pickup requests", requires: ["pickups.manage"] },
+    { href: "/company/dumping", label: "Dumping reports", requires: ["dumping.manage"] },
+    { href: "/company/impact", label: "Recycling", requires: ["clients.view"] },
     {
       href: "/company/support",
       label: "Customer care",
       requires: ["tickets.view.company"],
       badge: "tickets",
     },
+    { href: "/company/settings", label: "Settings", requires: ["settings.company.manage"] },
+    { href: "/company/audit", label: "Audit log", requires: ["audit.view"] },
   ],
   collector: [
     { href: "/collector", label: "Today’s route", requires: ["route.view"] },
@@ -49,8 +57,11 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/admin", label: "Overview", requires: ["platform.overview"] },
     { href: "/admin/clients", label: "Client database", requires: ["platform.clients"] },
     { href: "/admin/map", label: "City map", requires: ["platform.fleet"] },
+    { href: "/admin/dumping", label: "Dumping reports", requires: ["dumping.manage"] },
     { href: "/admin/access", label: "Roles & permissions", requires: ["access.roles.manage"] },
     { href: "/admin/users", label: "Users", requires: ["access.users.manage"] },
+    { href: "/admin/settings", label: "Settings", requires: ["settings.platform.manage"] },
+    { href: "/admin/audit", label: "Audit log", requires: ["audit.view"] },
   ],
 };
 

@@ -102,9 +102,14 @@ h3 {
   align-items: center;
   justify-content: flex-end;
   gap: 12px 18px;
-  padding: 16px 28px;
-  background: var(--panel);
+  padding: 14px 28px;
+  background: color-mix(in srgb, var(--panel) 84%, transparent);
+  backdrop-filter: saturate(1.6) blur(12px);
+  -webkit-backdrop-filter: saturate(1.6) blur(12px);
   border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
 main {
@@ -117,6 +122,36 @@ main {
   gap: 20px;
 }
 
+/* Page sections settle in with a short stagger on navigation. */
+main > * {
+  animation: rise 0.42s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+main > *:nth-child(2) {
+  animation-delay: 0.04s;
+}
+
+main > *:nth-child(3) {
+  animation-delay: 0.08s;
+}
+
+main > *:nth-child(n + 4) {
+  animation-delay: 0.12s;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main > * {
+    animation: none;
+  }
+}
+
 /* ---------- brand ---------- */
 .brand {
   display: flex;
@@ -127,38 +162,12 @@ main {
   padding: 0 6px;
 }
 
+/* The mark is an inline SVG (BrandMark); this only adds depth. */
 .mark {
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
-  background: var(--accent);
-  position: relative;
-  overflow: hidden;
+  display: block;
   flex: none;
-  box-shadow: 0 6px 16px -4px rgba(59, 111, 246, 0.6);
-}
-
-/* Two stacked bars — a bin lid and body, reduced to the essentials. */
-.mark::before {
-  content: "";
-  position: absolute;
-  left: 9px;
-  right: 9px;
-  top: 11px;
-  height: 3px;
-  border-radius: 2px;
-  background: #fff;
-}
-
-.mark::after {
-  content: "";
-  position: absolute;
-  left: 11px;
-  right: 11px;
-  top: 17px;
-  height: 9px;
-  border-radius: 0 0 3px 3px;
-  background: rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  box-shadow: 0 8px 18px -6px rgba(53, 194, 111, 0.55);
 }
 
 .brand b {
@@ -176,6 +185,17 @@ main {
 }
 
 /* ---------- sidebar nav ---------- */
+.nav-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--rail-ink);
+  opacity: 0.55;
+  padding: 0 14px;
+  margin-bottom: -12px;
+}
+
 .nav-items {
   display: flex;
   flex-direction: column;
@@ -185,13 +205,12 @@ main {
 .side a.nav-item {
   position: relative;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   text-align: left;
   border: 0;
   background: transparent;
-  padding: 11px 14px;
+  padding: 10px 12px;
   border-radius: var(--r-ctl);
   cursor: pointer;
   font-weight: 500;
@@ -199,6 +218,21 @@ main {
   color: var(--rail-ink);
   text-decoration: none;
   transition: background 0.15s, color 0.15s;
+}
+
+.nav-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-text {
+  flex: 1;
+  min-width: 0;
 }
 
 .side a.nav-item:hover {
@@ -210,6 +244,12 @@ main {
   background: var(--rail-panel);
   color: var(--rail-ink-strong);
   font-weight: 650;
+}
+
+.side a.nav-item[aria-current="page"] .nav-ico {
+  background: var(--accent-grad);
+  color: var(--accent-ink);
+  box-shadow: 0 6px 14px -5px rgba(71, 212, 128, 0.6);
 }
 
 /* The small marker that pins the active row, as in the reference. */
@@ -240,12 +280,34 @@ main {
 
 .side .foot {
   margin-top: auto;
-  padding: 14px 16px;
-  font-size: 0.76rem;
+  padding: 14px;
+  font-size: 0.74rem;
   line-height: 1.5;
   color: var(--rail-ink);
   background: var(--rail-panel);
   border-radius: 14px;
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+}
+
+.side .foot b {
+  display: block;
+  color: var(--rail-ink-strong);
+  font-size: 0.8rem;
+  font-weight: 650;
+  margin-bottom: 1px;
+}
+
+.foot-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: color-mix(in srgb, var(--vis) 16%, transparent);
+  color: var(--vis);
 }
 
 /* ---------- top bar ---------- */
@@ -260,6 +322,9 @@ main {
 }
 
 .roles a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   border: 0;
   background: transparent;
   padding: 7px 16px;
@@ -272,10 +337,14 @@ main {
   transition: background 0.15s, color 0.15s;
 }
 
+.roles a:hover {
+  color: var(--ink);
+}
+
 .roles a[aria-selected="true"] {
-  background: var(--accent);
+  background: var(--accent-grad);
   color: var(--accent-ink);
-  box-shadow: 0 4px 12px -3px rgba(59, 111, 246, 0.55);
+  box-shadow: var(--accent-glow);
 }
 
 .ctx {
@@ -284,10 +353,28 @@ main {
   gap: 8px;
 }
 
+.ctx-chip {
+  padding: 7px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* The admin's company picker: a pill select with a leading glyph. */
+.ctx-select {
+  position: relative;
+}
+
+.ctx-select > svg {
+  position: absolute;
+  left: 14px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
 .ctx select {
   max-width: 280px;
   border-radius: var(--r-pill);
-  padding-inline: 16px;
+  padding-left: 38px;
 }
 
 /* ---------- signed-in identity ---------- */
@@ -300,16 +387,10 @@ main {
 }
 
 .usermenu .avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent);
-  display: grid;
-  place-items: center;
+  width: 36px;
+  height: 36px;
   font-size: 0.76rem;
-  font-weight: 700;
-  flex: none;
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--accent-soft);
 }
 
 .usermenu .who {
@@ -334,6 +415,13 @@ main {
   align-items: flex-end;
   justify-content: space-between;
   gap: 10px;
+}
+
+.pagehead-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
 }
 
 .pagehead p {

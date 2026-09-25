@@ -8,7 +8,7 @@ export const COMPANIES: Company[] = [
     paybill: "400221",
     care: "0709 400 221",
     hours: "Mon–Sat, 7am–7pm",
-    color: "#3B6FF6",
+    color: "#0E7490",
     estates: ["KIL", "LAV", "WES", "KAR"],
   },
   {
@@ -17,7 +17,7 @@ export const COMPANIES: Company[] = [
     paybill: "400318",
     care: "0711 318 000",
     hours: "Mon–Fri, 8am–6pm",
-    color: "#56B7F0",
+    color: "#2FB86A",
     estates: ["RUA", "KAS", "UMO"],
   },
   {
@@ -26,7 +26,7 @@ export const COMPANIES: Company[] = [
     paybill: "400455",
     care: "0722 455 455",
     hours: "Daily, 6am–8pm",
-    color: "#F5A524",
+    color: "#F07A45",
     estates: ["SOB", "EMB", "LAN"],
   },
 ];

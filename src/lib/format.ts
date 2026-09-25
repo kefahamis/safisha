@@ -42,3 +42,13 @@ export function stamp(d: Date): string {
     d.getHours(),
   )}:${pad(d.getMinutes())}`;
 }
+
+/** "Wanjiru Kamau" -> "WK"; used for avatar badges. */
+export const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase();

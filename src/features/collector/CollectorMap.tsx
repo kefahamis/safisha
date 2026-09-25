@@ -1,8 +1,10 @@
 "use client";
 
+import { TruckChip } from "@/components/ui/Chip";
+import { LocateFixed, Satellite } from "lucide-react";
+import { GpsReporter } from "@/components/collector/GpsReporter";
 import { ShareToggle } from "@/components/collector/ShareToggle";
 import { CityMap } from "@/components/map/CityMap";
-import { Chip } from "@/components/ui/Chip";
 import { PageHead, Panel } from "@/components/ui/Panel";
 import { formatCoord, truckPos } from "@/lib/geo";
 import { truckById, truckState } from "@/lib/selectors";
@@ -19,7 +21,7 @@ export function CollectorMap() {
 
   return (
     <>
-      <PageHead title="My location" actions={<ShareToggle truck={truck} />}>
+      <PageHead title="My location" icon={LocateFixed} actions={<ShareToggle truck={truck} />}>
         What the office and your clients see.
       </PageHead>
 
@@ -27,16 +29,17 @@ export function CollectorMap() {
         <div>
           <CityMap companyId={truck.company} focusTruckId={truck.id} showClients={false} />
         </div>
-        <Panel title="GPS ping">
+        <Panel title="GPS ping" icon={Satellite}>
           <div className="list">
             <div className="li">
               <div>
                 <div className="t mono">{truck.id}</div>
                 <div className="sub mono">{formatCoord(p)}</div>
               </div>
-              <Chip tone={st.cls}>{st.label}</Chip>
+              <TruckChip state={st} />
             </div>
           </div>
+          <GpsReporter truck={truck} />
           <p className="hint">
             In production the driver app sends a ping every 15–30 s; clients see ETAs from the
             nearest truck serving their estate.

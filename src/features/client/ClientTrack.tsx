@@ -1,10 +1,12 @@
 "use client";
 
+import { TruckChip } from "@/components/ui/Chip";
+import { MapPinned, Timer, Truck } from "lucide-react";
 import { CityMap } from "@/components/map/CityMap";
-import { Chip } from "@/components/ui/Chip";
 import { PageHead, Panel } from "@/components/ui/Panel";
 import { fmtDate } from "@/lib/format";
 import { etaMin, formatCoord, truckPos } from "@/lib/geo";
+import { useT } from "@/lib/i18n";
 import { companyById } from "@/lib/reference/companies";
 import { clientById, truckState, trucksOf } from "@/lib/selectors";
 import { useAppState } from "@/store/StoreProvider";
@@ -12,6 +14,7 @@ import { useAppState } from "@/store/StoreProvider";
 /** Live fleet view from the client's side, with their gate pinned. */
 export function ClientTrack() {
   const s = useAppState();
+  const { t } = useT();
   const client = clientById(s, s.clientId);
   if (!client) return null;
 
@@ -20,46 +23,51 @@ export function ClientTrack() {
 
   return (
     <>
-      <PageHead title="Track your collector">
-        Live positions of {company.name} trucks. Your gate is marked in yellow.
+      <PageHead title={t("Track your collector")} icon={MapPinned}>
+        {t("Live positions of {company} trucks. Your gate is marked in yellow.", {
+          company: company.name,
+        })}
       </PageHead>
 
       <div className="grid g-main">
         <div>
           <CityMap companyId={client.company} homeClientId={client.id} showClients={false} />
         </div>
-        <Panel title={`${company.name} fleet`}>
+        <Panel title={t("{company} fleet", { company: company.name })} icon={Truck}>
           <div className="list">
-            {fleet.map((t) => {
-              const st = truckState(t);
-              const p = truckPos(t);
-              const serves = t.route.includes(client.estate);
+            {fleet.map((tr) => {
+              const st = truckState(tr);
+              const p = truckPos(tr);
+              const serves = tr.route.includes(client.estate);
               return (
-                <div className="li" key={t.id}>
+                <div className="li" key={tr.id}>
                   <div>
-                    <div className="t mono">{t.id}</div>
+                    <div className="t mono">{tr.id}</div>
                     <div className="sub">
-                      {t.driver}
-                      {serves ? " · serves your estate" : ""}
+                      {tr.driver}
+                      {serves ? ` · ${t("serves your estate")}` : ""}
                     </div>
                     <div className="sub mono">
-                      {t.status === "offline"
-                        ? `Last seen ${fmtDate(t.lastSeen!)}`
+                      {tr.status === "offline"
+                        ? t("Last seen {when}", { when: fmtDate(tr.lastSeen!) })
                         : formatCoord(p)}
                     </div>
-                    {t.status !== "offline" && t.sharing && (
-                      <div className="sub" style={{ color: "var(--ok)", fontWeight: 600 }}>
-                        ≈ {etaMin(t, client)} min away
+                    {tr.status !== "offline" && tr.sharing && (
+                      <div className="sub eta">
+                        <Timer size={13} strokeWidth={2.2} aria-hidden="true" />
+                        {t("≈ {n} min away", { n: etaMin(tr, client) })}
                       </div>
                     )}
                   </div>
-                  <Chip tone={st.cls}>{st.label}</Chip>
+                  <TruckChip state={st} />
                 </div>
               );
             })}
           </div>
           <p className="hint">
-            Coordinates update every second from the driver’s phone (simulated here).
+            {t(
+              "Positions update from the driver’s phone, or follow the planned route when GPS isn’t shared.",
+            )}
           </p>
         </Panel>
       </div>

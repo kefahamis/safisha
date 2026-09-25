@@ -4,10 +4,10 @@ import { offsetPoint } from "./geo";
 import { ESTATES } from "./reference/estates";
 import { rng, SEED } from "./rng";
 import type {
-  AppState,
   Client,
   ClientType,
   Pickup,
+  SuspenseItem,
   Ticket,
   Truck,
   Txn,
@@ -46,11 +46,22 @@ const TRUCK_ROWS: Truck[] = [
   { id: "KCR 774L", company: "MZ", driver: "Ibrahim Said", route: ["EMB", "SOB"], d: 0, speed: 85, status: "offline", sharing: false, lastSeen: "2026-09-24 17:42" },
 ];
 
+/** The demo world the database is seeded with. */
+export interface DemoWorld {
+  seq: Record<string, number>;
+  clients: Client[];
+  trucks: Truck[];
+  txns: Txn[];
+  tickets: Ticket[];
+  pickups: Pickup[];
+  suspense: SuspenseItem[];
+}
+
 /**
  * Builds the whole demo dataset from a fixed seed: clients with issued numbers,
  * three months of billing, the last collection per client, and a care inbox.
  */
-export function createInitialState(): AppState {
+export function createInitialState(): DemoWorld {
   const rand = rng(SEED);
   const seq: Record<string, number> = {};
 
@@ -185,18 +196,7 @@ export function createInitialState(): AppState {
     },
   ];
 
-  const stops: AppState["stops"] = {};
-  for (const t of trucks) stops[t.id] = {};
-
   return {
-    companyId: "TS",
-    clientId: demoClient.id,
-    truckId: "KDA 412X",
-    q: "",
-    estateFilter: "",
-    stmtPeriod: "all",
-    stmtClient: null,
-    selTicket: null,
     seq,
     clients,
     trucks,
@@ -215,8 +215,5 @@ export function createInitialState(): AppState {
         reason: "Wrong format. Expected e.g. TS-KIL-01427",
       },
     ],
-    stops,
-    stk: null,
-    elapsedMs: 0,
   };
 }

@@ -52,15 +52,31 @@
   .side a.nav-item {
     white-space: nowrap;
     flex: none;
-    padding: 9px 14px;
   }
 
   .side a.nav-item[aria-current="page"]::before {
     display: none;
   }
 
-  .side .foot {
+  .side .foot,
+  .nav-label {
     display: none;
+  }
+
+  .side a.nav-item {
+    gap: 8px;
+    padding: 6px 12px 6px 6px;
+  }
+
+  .nav-ico {
+    width: 28px;
+    height: 28px;
+  }
+
+  .pagehead .itile.lg {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
   }
 
   .top {
@@ -90,17 +106,44 @@
     justify-content: center;
   }
 
-  .ctx,
+  /* The context takes the free space, leaving the avatar and sign-out beside it. */
+  .ctx {
+    flex: 1;
+    min-width: 0;
+  }
+
   .ctx select {
     width: 100%;
     max-width: none;
+  }
+
+  .ctx-chip {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .usermenu {
+    border-left: 0;
+    padding-left: 0;
   }
 
   .bal {
     font-size: 1.95rem;
   }
 
-  .msg {
-    max-width: 90%;
+}
+
+@media (max-width: 480px) {
+  /* Keep the avatar and sign-out; the name is on the account card anyway. */
+  .usermenu .who {
+    display: none;
+  }
+
+  .usermenu {
+    margin-left: auto;
+  }
+
+  .care-card {
+    width: 100%;
   }
 }

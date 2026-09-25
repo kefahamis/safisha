@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarCheck, FileText, House, MapPin, Phone, Store, UserRound } from "lucide-react";
 import { PeriodSelect, StatementTable } from "@/components/billing/StatementTable";
 import { BalanceChip } from "@/components/ui/Chip";
 import { PageHead, Panel } from "@/components/ui/Panel";
@@ -19,32 +20,53 @@ export function CompanyStatements() {
 
   return (
     <>
-      <PageHead title="Statements">
+      <PageHead title="Statements" icon={FileText}>
         Running account for any client, by month or all time.
       </PageHead>
 
       <Panel>
         <div className="row between" style={{ marginBottom: 14 }}>
           <div className="row">
-            <select
-              aria-label="Client"
-              value={client.id}
-              onChange={(e) => actions.setStatementClient(e.target.value)}
-            >
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} · {c.id}
-                </option>
-              ))}
-            </select>
+            <label className="select-ico">
+              <UserRound size={15} strokeWidth={2.2} aria-hidden="true" />
+              <select
+                aria-label="Client"
+                value={client.id}
+                onChange={(e) => actions.setStatementClient(e.target.value)}
+              >
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} · {c.id}
+                  </option>
+                ))}
+              </select>
+            </label>
             <PeriodSelect />
           </div>
           <BalanceChip balance={balance(s, client.id)} />
         </div>
 
-        <div className="hint" style={{ marginBottom: 8 }}>
-          {client.name} · {client.type} · {estateName(client.estate)} · {client.phone} · client
-          since {fmtDate(client.joined)}
+        <div className="meta-row">
+          <span>
+            {client.type === "Business" ? (
+              <Store size={14} strokeWidth={2.2} aria-hidden="true" />
+            ) : (
+              <House size={14} strokeWidth={2.2} aria-hidden="true" />
+            )}
+            {client.name} · {client.type}
+          </span>
+          <span>
+            <MapPin size={14} strokeWidth={2.2} aria-hidden="true" />
+            {estateName(client.estate)}
+          </span>
+          <span className="mono">
+            <Phone size={14} strokeWidth={2.2} aria-hidden="true" />
+            {client.phone}
+          </span>
+          <span>
+            <CalendarCheck size={14} strokeWidth={2.2} aria-hidden="true" />
+            Client since {fmtDate(client.joined)}
+          </span>
         </div>
 
         <StatementTable clientId={client.id} />

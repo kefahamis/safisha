@@ -1,5 +1,6 @@
 "use client";
 
+import { Radio, RadioTower } from "lucide-react";
 import { useToast } from "@/components/ui/ToastProvider";
 import type { Truck } from "@/lib/types";
 import { useActions } from "@/store/StoreProvider";
@@ -19,7 +20,14 @@ export function ShareToggle({ truck }: { truck: Truck }) {
           toast(e.target.checked ? "Location sharing on" : "Location sharing paused");
         }}
       />
-      Share my location
+      <span className="with-ico">
+        {truck.sharing && truck.status !== "offline" ? (
+          <Radio size={16} strokeWidth={2.2} className="live" aria-hidden="true" />
+        ) : (
+          <RadioTower size={16} strokeWidth={2.2} aria-hidden="true" />
+        )}
+        Share my location
+      </span>
     </label>
   );
 }

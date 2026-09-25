@@ -1,55 +1,77 @@
 /*
  * Design tokens: colour, type, radius and elevation for both themes.
  *
- * Direction: cool grey-blue canvas, borderless white cards, a dark navy
- * sidebar rail and a vivid blue primary. Separation comes from white-on-grey
- * contrast and soft shadow rather than hairline borders.
+ * Direction: an environmental palette for a waste-collection platform. A deep
+ * forest-teal sidebar rail, a mint-white canvas, borderless white cards and a
+ * vivid leaf-green primary, with coral kept for alerts and counts. Separation
+ * comes from white-on-mint contrast and soft, green-tinted shadow.
+ *
+ * `--accent` is the deeper leaf used for icons, links and text on light
+ * surfaces; `--accent-grad` is the vivid leaf fill for primary buttons, which
+ * carry dark `--accent-ink` text because white on bright green doesn't read.
  */
 
 :root {
   /* surfaces */
-  --bg: #eef0f5;
+  --bg: #f1f6f4;
   --panel: #ffffff;
-  --panel2: #f4f6fa;
-  --ink: #1b1d2a;
-  --muted: #858ba0;
-  --line: #e8ebf2;
+  --panel2: #eef4f1;
+  --ink: #0f1f1b;
+  --muted: #667a73;
+  --line: #e0ebe6;
 
   /* dark sidebar rail */
-  --rail: #1e1f2e;
-  --rail-panel: #282a3c;
-  --rail-ink: #a9aec2;
+  --rail: #093c3d;
+  --rail-panel: #145052;
+  --rail-ink: #a3c2b9;
   --rail-ink-strong: #ffffff;
 
   /* primary */
-  --accent: #3b6ff6;
-  --accent-soft: #e7edfe;
-  --accent-ink: #ffffff;
-  --accent-2: #7cc2fb;
+  --accent: #12924f;
+  --accent-soft: #dcf5e6;
+  --accent-ink: #04291f;
+  --accent-2: #0c6955;
+  /* vivid leaf, for fills such as bars and progress; not for text */
+  --leaf: #47d480;
 
-  /* the amber count badge */
-  --vis: #f5a524;
-  --vis-ink: #241a05;
+  /* charts: the story series, the context series, and hairline grid (validated) */
+  --chart-1: #12924f;
+  --chart-2: #b3c7bf;
+  --chart-grid: #e6eeea;
+
+  /* the coral count badge */
+  --vis: #f07a45;
+  --vis-ink: #2a0e02;
+
+  /* secondary icon-tile tones */
+  --violet: #6d5bd0;
+  --violet-soft: #ece9fb;
+  --sky: #0f7f8c;
+  --sky-soft: #daf1f1;
+
+  /* the primary fill: a slight top-to-bottom lift rather than a flat block */
+  --accent-grad: linear-gradient(180deg, #5fe196 0%, #47d480 55%, #35c26f 100%);
+  --accent-glow: 0 8px 20px -6px rgba(53, 194, 111, 0.55);
 
   /* status */
-  --ok: #15a24a;
-  --ok-soft: #dcfce7;
-  --warn: #b45309;
-  --warn-soft: #fef3c7;
-  --bad: #e11d48;
-  --bad-soft: #ffe4ea;
+  --ok: #138a4a;
+  --ok-soft: #dcf5e6;
+  --warn: #b54a12;
+  --warn-soft: #fde9dc;
+  --bad: #d92d3f;
+  --bad-soft: #fde4e6;
 
   /* map */
-  --map-land: #e4e8f0;
-  --map-zone: #d4dae8;
+  --map-land: #e3ece8;
+  --map-zone: #d2e2db;
   --map-road: #ffffff;
-  --map-road-edge: #cad2e3;
-  --map-label: #5b6480;
+  --map-road-edge: #c7d8d1;
+  --map-label: #4f6660;
 
   /* elevation — diffuse and low-contrast, cards read as floating paper */
-  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 12px 32px -8px rgba(16, 24, 40, 0.1);
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --shadow-pop: 0 24px 64px -12px rgba(16, 24, 40, 0.28);
+  --shadow: 0 1px 2px rgba(6, 41, 41, 0.04), 0 12px 32px -8px rgba(6, 41, 41, 0.1);
+  --shadow-sm: 0 1px 2px rgba(6, 41, 41, 0.05);
+  --shadow-pop: 0 24px 64px -12px rgba(6, 41, 41, 0.3);
 
   /* radius */
   --r-card: 16px;
@@ -65,38 +87,50 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #14151f;
-    --panel: #1c1e2b;
-    --panel2: #242739;
-    --ink: #e7e9f2;
-    --muted: #8c93ac;
-    --line: #2b2f42;
+    --bg: #061a1b;
+    --panel: #0c2526;
+    --panel2: #123031;
+    --ink: #e4f1ec;
+    --muted: #88a59c;
+    --line: #1b3b3c;
 
-    --rail: #101119;
-    --rail-panel: #1e2030;
-    --rail-ink: #969db6;
+    --rail: #041415;
+    --rail-panel: #0f2e2f;
+    --rail-ink: #8fb0a6;
     --rail-ink-strong: #ffffff;
 
-    --accent: #5b87ff;
-    --accent-soft: #1f2a4d;
-    --accent-ink: #ffffff;
-    --accent-2: #6bb6f5;
+    --accent: #4fd88a;
+    --accent-soft: #10392a;
+    --accent-ink: #03251b;
+    --accent-2: #2fae8e;
+    --leaf: #4fd88a;
+    --chart-1: #2fae67;
+    --chart-2: #3f5f5c;
+    --chart-grid: #173839;
 
-    --vis: #f7b643;
-    --vis-ink: #241a05;
+    --vis: #f5874f;
+    --vis-ink: #2a0e02;
 
-    --ok: #3ecf78;
-    --ok-soft: #10301f;
-    --warn: #e0a02f;
-    --warn-soft: #362a10;
-    --bad: #fb6f8d;
-    --bad-soft: #3c1721;
+    --violet: #a898f5;
+    --violet-soft: #25214a;
+    --sky: #4cc3cf;
+    --sky-soft: #0d3236;
 
-    --map-land: #161824;
-    --map-zone: #202436;
-    --map-road: #2e3348;
-    --map-road-edge: #262b3d;
-    --map-label: #8e96b0;
+    --accent-grad: linear-gradient(180deg, #6ee6a1 0%, #4fd88a 55%, #3cc978 100%);
+    --accent-glow: 0 8px 22px -6px rgba(79, 216, 138, 0.35);
+
+    --ok: #4fd88a;
+    --ok-soft: #10392a;
+    --warn: #f59a62;
+    --warn-soft: #3a2012;
+    --bad: #fb6f7d;
+    --bad-soft: #3c161c;
+
+    --map-land: #0a2223;
+    --map-zone: #123233;
+    --map-road: #1f4344;
+    --map-road-edge: #183a3b;
+    --map-label: #8fb0a6;
 
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -8px rgba(0, 0, 0, 0.45);
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
@@ -106,38 +140,50 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #14151f;
-  --panel: #1c1e2b;
-  --panel2: #242739;
-  --ink: #e7e9f2;
-  --muted: #8c93ac;
-  --line: #2b2f42;
+  --bg: #061a1b;
+  --panel: #0c2526;
+  --panel2: #123031;
+  --ink: #e4f1ec;
+  --muted: #88a59c;
+  --line: #1b3b3c;
 
-  --rail: #101119;
-  --rail-panel: #1e2030;
-  --rail-ink: #969db6;
+  --rail: #041415;
+  --rail-panel: #0f2e2f;
+  --rail-ink: #8fb0a6;
   --rail-ink-strong: #ffffff;
 
-  --accent: #5b87ff;
-  --accent-soft: #1f2a4d;
-  --accent-ink: #ffffff;
-  --accent-2: #6bb6f5;
+  --accent: #4fd88a;
+  --accent-soft: #10392a;
+  --accent-ink: #03251b;
+  --accent-2: #2fae8e;
+  --leaf: #4fd88a;
+  --chart-1: #2fae67;
+  --chart-2: #3f5f5c;
+  --chart-grid: #173839;
 
-  --vis: #f7b643;
-  --vis-ink: #241a05;
+  --vis: #f5874f;
+  --vis-ink: #2a0e02;
 
-  --ok: #3ecf78;
-  --ok-soft: #10301f;
-  --warn: #e0a02f;
-  --warn-soft: #362a10;
-  --bad: #fb6f8d;
-  --bad-soft: #3c1721;
+  --violet: #a898f5;
+  --violet-soft: #25214a;
+  --sky: #4cc3cf;
+  --sky-soft: #0d3236;
 
-  --map-land: #161824;
-  --map-zone: #202436;
-  --map-road: #2e3348;
-  --map-road-edge: #262b3d;
-  --map-label: #8e96b0;
+  --accent-grad: linear-gradient(180deg, #6ee6a1 0%, #4fd88a 55%, #3cc978 100%);
+  --accent-glow: 0 8px 22px -6px rgba(79, 216, 138, 0.35);
+
+  --ok: #4fd88a;
+  --ok-soft: #10392a;
+  --warn: #f59a62;
+  --warn-soft: #3a2012;
+  --bad: #fb6f7d;
+  --bad-soft: #3c161c;
+
+  --map-land: #0a2223;
+  --map-zone: #123233;
+  --map-road: #1f4344;
+  --map-road-edge: #183a3b;
+  --map-label: #8fb0a6;
 
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -8px rgba(0, 0, 0, 0.45);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);

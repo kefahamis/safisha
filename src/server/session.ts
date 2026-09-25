@@ -19,10 +19,10 @@ export async function getSession(): Promise<Session | null> {
   if (!claims) return null;
 
   // The token is valid, but the account may have been suspended or deleted since.
-  const user = findUserById(claims.sub);
+  const user = await findUserById(claims.sub);
   if (!user || user.suspended) return null;
 
-  const role = findRole(user.roleId);
+  const role = await findRole(user.roleId);
 
   return {
     sub: user.id,
@@ -32,7 +32,8 @@ export async function getSession(): Promise<Session | null> {
     ws: role?.workspace ?? claims.ws,
     scope: user.scope,
     roleName: role?.name ?? user.roleId,
-    permissions: effectivePermissions(user),
+    lang: user.lang === "sw" ? "sw" : "en",
+    permissions: await effectivePermissions(user, role),
     allowed: role ? allowedWorkspaces(role) : [claims.ws],
   };
 }

@@ -1,9 +1,16 @@
 "use client";
 
+import { Braces, ChevronDown, CircleAlert, CircleCheck, FlaskConical, Zap } from "lucide-react";
 import { useState } from "react";
 import type { Company } from "@/lib/types";
-import { useActions } from "@/store/StoreProvider";
-import type { C2BResult } from "@/store/actions";
+import { useActions, useAppState } from "@/store/StoreProvider";
+
+interface C2BResult {
+  ok: boolean;
+  message: string;
+  receipt: string;
+  date: string;
+}
 
 /** Stands in for Safaricom's C2B confirmation callback hitting the platform. */
 export function C2BSimulator({
@@ -14,14 +21,25 @@ export function C2BSimulator({
   defaultAccount: string;
 }) {
   const actions = useActions();
+  const s = useAppState();
+  const live = s.integrations.mpesa[company.id]?.mode === "live";
   const [account, setAccount] = useState(defaultAccount);
   const [amount, setAmount] = useState("600");
   const [phone, setPhone] = useState("0712 345 678");
   const [result, setResult] = useState<C2BResult | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setResult(actions.payC2B(company.id, { account, amount: Number(amount), phone }));
+    setBusy(true);
+    const res = await actions.payC2B(company.id, { account, amount: Number(amount), phone });
+    setBusy(false);
+    if (!res.ok) {
+      setResult({ ok: false, message: res.error, receipt: "", date: "" });
+      return;
+    }
+    const data = (res.data ?? {}) as { matched?: boolean; date?: string };
+    setResult({ ok: Boolean(data.matched), message: res.message ?? "", receipt: res.id ?? "", date: data.date ?? "" });
   };
 
   const payload = result
@@ -29,7 +47,7 @@ export function C2BSimulator({
         {
           TransactionType: "Pay Bill",
           TransID: result.receipt,
-          TransTime: result.date.replace(/[-: ]/g, "") + "00",
+          TransTime: (result.date || "").replace(/[-: ]/g, "") + "00",
           TransAmount: String(amount),
           BusinessShortCode: company.paybill,
           BillRefNumber: account,
@@ -43,9 +61,14 @@ export function C2BSimulator({
 
   return (
     <div className="panel">
-      <h3>Simulate a Paybill payment</h3>
+      <h3 className="with-ico">
+        <FlaskConical size={17} strokeWidth={2.2} aria-hidden="true" />
+        Simulate a Paybill payment
+      </h3>
       <p className="hint" style={{ marginTop: 0 }}>
-        Stands in for Safaricom’s C2B confirmation callback. Try a typo in the account number.
+        {live
+          ? "Asks the Daraja sandbox to send a test payment to your Paybill. It posts here when Safaricom calls back."
+          : "Stands in for Safaricom’s C2B confirmation callback. Try a typo in the account number."}
       </p>
       <form className="stack" onSubmit={submit}>
         <label className="f">
@@ -73,21 +96,32 @@ export function C2BSimulator({
             <input required value={phone} onChange={(e) => setPhone(e.target.value)} />
           </label>
         </div>
-        <button className="btn primary">Send C2B payment</button>
+        <button className="btn primary" disabled={busy}>
+          <Zap size={16} strokeWidth={2.2} aria-hidden="true" />
+          {busy ? "Sending…" : live ? "Send sandbox payment" : "Send C2B payment"}
+        </button>
       </form>
 
       {result && (
         <div>
-          <p
-            className={result.ok ? undefined : "err"}
-            style={result.ok ? { color: "var(--ok)", fontWeight: 600 } : undefined}
-          >
+          <p className={`result ${result.ok ? "ok" : "bad"}`}>
+            {result.ok ? (
+              <CircleCheck size={16} strokeWidth={2.2} aria-hidden="true" />
+            ) : (
+              <CircleAlert size={16} strokeWidth={2.2} aria-hidden="true" />
+            )}
             {result.message}
           </p>
+          {result.receipt && (
           <details>
-            <summary>C2B confirmation payload</summary>
+            <summary>
+              <Braces size={15} strokeWidth={2.2} aria-hidden="true" />
+              C2B confirmation payload
+              <ChevronDown size={15} strokeWidth={2.2} className="chev" aria-hidden="true" />
+            </summary>
             <pre className="code">{payload}</pre>
           </details>
+          )}
         </div>
       )}
     </div>

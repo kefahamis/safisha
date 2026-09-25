@@ -121,21 +121,30 @@
 }
 
 .truck-dot {
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
   background: var(--truck);
   border: 2px solid var(--panel);
-  box-shadow: 0 2px 6px rgba(16, 24, 40, 0.35);
-  display: block;
+  box-shadow: 0 3px 8px rgba(6, 41, 41, 0.35);
+  display: grid;
+  place-items: center;
   position: relative;
+  color: #fff;
+}
+
+.truck-dot > svg {
+  width: 14px;
+  height: 14px;
+  position: relative;
+  z-index: 1;
 }
 
 .truck-dot::after {
   content: "";
   position: absolute;
-  inset: -6px;
-  border-radius: 10px;
+  inset: -7px;
+  border-radius: 12px;
   background: var(--truck);
   opacity: 0.35;
   animation: truck-pulse 1.8s ease-out infinite;
@@ -192,19 +201,28 @@
 }
 
 .home-pin {
-  width: 16px;
-  height: 16px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: var(--vis);
-  border: 3px solid var(--ink);
-  display: block;
-  box-shadow: 0 0 0 6px color-mix(in srgb, var(--vis) 35%, transparent);
+  color: var(--vis-ink);
+  border: 2px solid var(--panel);
+  display: grid;
+  place-items: center;
+  box-shadow:
+    0 0 0 6px color-mix(in srgb, var(--vis) 35%, transparent),
+    0 3px 8px rgba(6, 41, 41, 0.35);
+}
+
+.home-pin > svg {
+  width: 15px;
+  height: 15px;
 }
 
 .home-label {
   position: absolute;
-  left: 22px;
-  top: 1px;
+  left: 34px;
+  top: 6px;
   white-space: nowrap;
   font-size: 10px;
   font-weight: 700;
@@ -223,4 +241,24 @@
   font-size: 0.78rem;
   color: var(--muted);
   margin-top: 12px;
+}
+
+/* Legend swatches mirror how the map draws clients and estates. */
+.legend .dot.faded,
+.legend .dot.solid {
+  background: var(--muted);
+  box-shadow: 0 0 0 1.5px var(--panel);
+}
+
+.legend .dot.faded {
+  opacity: 0.5;
+}
+
+.legend .ring {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--muted);
+  display: inline-block;
+  flex: none;
 }

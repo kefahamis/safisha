@@ -1,5 +1,6 @@
 "use client";
 
+import { Map, Truck } from "lucide-react";
 import { CityMap, MapLegend } from "@/components/map/CityMap";
 import { TruckList } from "@/components/map/TruckList";
 import { PageHead, Panel } from "@/components/ui/Panel";
@@ -12,7 +13,7 @@ export function CompanyMap() {
 
   return (
     <>
-      <PageHead title="Fleet map">
+      <PageHead title="Fleet map" icon={Map}>
         {co.name} trucks and client locations. Dashed outlines show your service estates.
       </PageHead>
       <div className="grid g-main">
@@ -20,7 +21,7 @@ export function CompanyMap() {
           <CityMap companyId={co.id} />
           <MapLegend />
         </div>
-        <Panel title="Trucks">
+        <Panel title="Trucks" icon={Truck}>
           <TruckList companyId={co.id} />
         </Panel>
       </div>

@@ -1,4 +1,5 @@
 import { updateUser, type UserPatch } from "@/server/accessStore";
+import { audit } from "@/server/audit";
 import { errorResponse, requirePermission } from "@/server/session";
 
 type Params = { params: Promise<{ userId: string }> };
@@ -23,8 +24,15 @@ export async function PATCH(request: Request, { params }: Params) {
     if (Array.isArray(body.denies)) patch.denies = body.denies.map(String);
     if (typeof body.suspended === "boolean") patch.suspended = body.suspended;
 
-    const result = updateUser(userId, patch);
+    const result = await updateUser(userId, patch);
     if ("error" in result) return Response.json(result, { status: 400 });
+
+    await audit(session, {
+      action: "user.update",
+      target: userId,
+      company: result.scope.companyId ?? null,
+      detail: { user: result.name, ...patch },
+    });
 
     return Response.json({ user: result });
   } catch (err) {

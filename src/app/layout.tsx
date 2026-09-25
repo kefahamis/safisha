@@ -5,7 +5,7 @@ import { Providers } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Safisha Waste Hub",
+  title: "Zoa Waste Hub",
   description:
     "Prototype platform for Nairobi waste collection: client accounts, M-Pesa billing, live fleet tracking and customer care.",
 };
@@ -21,7 +21,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const session = await getSession();
 
   return (
-    <html lang="en">
+    <html lang={session?.lang === "sw" ? "sw" : "en"}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />

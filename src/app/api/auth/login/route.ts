@@ -1,9 +1,6 @@
-import { cookies } from "next/headers";
-import { allowedWorkspaces } from "@/lib/auth/defaultRoles";
-import { stamp } from "@/lib/format";
-import { findRole, findUserByEmail, recordLogin } from "@/server/accessStore";
-import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/server/jwt";
+import { findUserByEmail } from "@/server/accessStore";
 import { verifyPassword } from "@/server/password";
+import { issueSession } from "@/server/signin";
 
 // scrypt needs the Node runtime.
 export const runtime = "nodejs";
@@ -22,37 +19,12 @@ export async function POST(request: Request) {
     return Response.json({ error: "Enter an email and password." }, { status: 400 });
   }
 
-  const user = findUserByEmail(email);
+  const user = await findUserByEmail(email);
   // Same message either way — don't reveal which addresses have accounts.
   const invalid = Response.json({ error: "Email or password is incorrect." }, { status: 401 });
   if (!user || !verifyPassword(password, user.passwordHash)) return invalid;
 
-  if (user.suspended) {
-    return Response.json(
-      { error: "This account is suspended. Contact your administrator." },
-      { status: 403 },
-    );
-  }
-
-  const role = findRole(user.roleId);
-  if (!role) {
-    return Response.json({ error: "This account has no valid role." }, { status: 403 });
-  }
-
-  const token = await signSession({
-    sub: user.id,
-    name: user.name,
-    email: user.email,
-    roleId: user.roleId,
-    ws: role.workspace,
-    scope: user.scope,
-    allowed: allowedWorkspaces(role),
-  });
-
-  recordLogin(user.id, stamp(new Date()));
-
-  const jar = await cookies();
-  jar.set(SESSION_COOKIE, token, sessionCookieOptions);
-
-  return Response.json({ ok: true, workspace: role.workspace });
+  const signed = await issueSession(user);
+  if (!signed.ok) return Response.json({ error: signed.error }, { status: signed.status });
+  return Response.json({ ok: true, workspace: signed.workspace });
 }

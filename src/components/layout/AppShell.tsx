@@ -4,8 +4,9 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { roleFromPath } from "@/lib/navigation";
 import { StkModal } from "@/components/mpesa/StkModal";
-import { useFleetTicker } from "@/store/StoreProvider";
+import { useFleetTicker, useLiveSync } from "@/store/StoreProvider";
 import { ContextSwitcher } from "./ContextSwitcher";
+import { OfflineSupport } from "./OfflineSupport";
 import { RoleTabs } from "./RoleTabs";
 import { SideNav } from "./SideNav";
 import { UserMenu } from "./UserMenu";
@@ -15,6 +16,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const role = roleFromPath(pathname);
   useFleetTicker();
+  useLiveSync();
 
   return (
     <>
@@ -28,6 +30,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main>{children}</main>
       </div>
       <StkModal />
+      <OfflineSupport />
     </>
   );
 }

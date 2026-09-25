@@ -1,5 +1,6 @@
 "use client";
 
+import { LoaderCircle } from "lucide-react";
 import dynamic from "next/dynamic";
 import { COMPANIES } from "@/lib/reference/companies";
 import type { CityMapProps } from "./CityMapInner";
@@ -12,7 +13,10 @@ export const CityMap = dynamic<CityMapProps>(() => import("./CityMapInner"), {
   ssr: false,
   loading: () => (
     <div className="mapwrap mapwrap-loading" style={{ height: 520 }}>
-      <span className="hint">Loading map…</span>
+      <span className="hint with-ico">
+        <LoaderCircle size={16} strokeWidth={2.2} className="spin" aria-hidden="true" />
+        Loading map…
+      </span>
     </div>
   ),
 });
@@ -26,9 +30,15 @@ export function MapLegend() {
           {c.name}
         </span>
       ))}
-      <span>● faded dot = paid up client</span>
-      <span>● solid dot = balance due</span>
-      <span>Dashed circle = service estate</span>
+      <span className="co">
+        <span className="dot faded" /> Paid-up client
+      </span>
+      <span className="co">
+        <span className="dot solid" /> Balance due
+      </span>
+      <span className="co">
+        <span className="ring" /> Service estate
+      </span>
     </div>
   );
 }

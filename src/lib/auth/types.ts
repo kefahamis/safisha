@@ -26,9 +26,13 @@ export interface UserScope {
 export interface User {
   id: string;
   email: string;
+  /** Used for SMS sign-in codes and password resets. */
+  phone?: string;
   name: string;
   roleId: string;
   scope: UserScope;
+  /** Interface language: "en" or "sw". */
+  lang?: string;
   /** Permissions added on top of the role, for this person only. */
   grants: string[];
   /** Permissions withheld even though the role carries them. Deny wins. */
@@ -53,6 +57,7 @@ export interface SessionClaims {
 /** The resolved session handed to the app, permissions computed per request. */
 export interface Session extends SessionClaims {
   roleName: string;
+  lang: string;
   permissions: string[];
   /** Dashboards this session may open, including its home workspace. */
   allowed: Workspace[];

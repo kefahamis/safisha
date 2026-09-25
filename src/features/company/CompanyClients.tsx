@@ -1,5 +1,6 @@
 "use client";
 
+import { MapPin, MousePointerClick, Users } from "lucide-react";
 import { Can } from "@/components/auth/SessionProvider";
 import { AddClientForm } from "@/components/clients/AddClientForm";
 import { ClientSearch, ClientTable } from "@/components/clients/ClientTable";
@@ -16,7 +17,7 @@ export function CompanyClients() {
 
   return (
     <>
-      <PageHead title="Clients">
+      <PageHead title="Clients" icon={Users}>
         Every client gets a unique number: company · estate · sequence · check digit. The check
         digit lets Paybill catch mistyped account numbers.
       </PageHead>
@@ -28,21 +29,27 @@ export function CompanyClients() {
       <Panel>
         <div className="row" style={{ marginBottom: 12 }}>
           <ClientSearch id="cl-q" />
-          <select
-            aria-label="Estate"
-            value={s.estateFilter}
-            onChange={(e) => actions.setEstateFilter(e.target.value)}
-          >
-            <option value="">All estates</option>
-            {co.estates.map((code) => (
-              <option key={code} value={code}>
-                {estateName(code)}
-              </option>
-            ))}
-          </select>
+          <label className="select-ico">
+            <MapPin size={15} strokeWidth={2.2} aria-hidden="true" />
+            <select
+              aria-label="Estate"
+              value={s.estateFilter}
+              onChange={(e) => actions.setEstateFilter(e.target.value)}
+            >
+              <option value="">All estates</option>
+              {co.estates.map((code) => (
+                <option key={code} value={code}>
+                  {estateName(code)}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <ClientTable clients={clientsOf(s, co.id)} />
-        <p className="hint">Select a row to open the client’s statement.</p>
+        <p className="hint with-ico">
+          <MousePointerClick size={13} strokeWidth={2.2} aria-hidden="true" />
+          Select a row to open the client’s statement.
+        </p>
       </Panel>
     </>
   );
