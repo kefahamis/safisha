@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useTabStrip } from "@/components/ui/useTabStrip";
 import { Empty, PageHead, Panel } from "@/components/ui/Panel";
 import type { IntegrationKey, IntegrationView } from "@/lib/integrations";
 import { COMPANIES, companyById } from "@/lib/reference/companies";
@@ -53,6 +54,7 @@ type Tab = "payments" | "branding" | "platform-brand" | "messaging" | "translati
 export function SettingsCenter({ platform, companyId }: { platform: boolean; companyId?: string }) {
   const [company, setCompany] = useState(companyId ?? COMPANIES[0].id);
   const [tab, setTab] = useState<Tab>("payments");
+  const tabStrip = useTabStrip<HTMLDivElement>(tab);
   const [companyData, setCompanyData] = useState<ScopeData | null>(null);
   const [platformData, setPlatformData] = useState<ScopeData | null>(null);
   const [error, setError] = useState("");
@@ -132,7 +134,7 @@ export function SettingsCenter({ platform, companyId }: { platform: boolean; com
         Payments and third-party services. Keys are encrypted when saved and never shown again.
       </PageHead>
 
-      <div className="tabs" role="tablist" aria-label="Settings sections">
+      <div className="tabs" role="tablist" aria-label="Settings sections" ref={tabStrip}>
         {tabs
           .filter((t) => platform || !t.platformOnly)
           .map((t) => (

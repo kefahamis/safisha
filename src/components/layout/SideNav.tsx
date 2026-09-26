@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, Circle, FlaskConical, ShieldCheck } from "lucide-react";
+import { ChevronLeft, Circle, FlaskConical, Menu, ShieldCheck, X } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "@/components/auth/SessionProvider";
 import { NAV_ICONS } from "@/components/ui/icons";
@@ -16,18 +16,24 @@ import { PlatformIdentity, usePlatformBrand } from "./PlatformBrand";
 
 /**
  * The dark rail: brand, the sections this session may open, and a footnote.
- * Collapsed, it keeps only the icons; labels move into tooltips.
+ * Collapsed, it keeps only the icons; labels move into tooltips. On phones it
+ * becomes a slim header whose menu button slides the sections in from the left
+ * as a drawer, pushing the page aside.
  */
 export function SideNav({
   role,
   pathname,
   collapsed,
   onToggle,
+  menuOpen,
+  onMenu,
 }: {
   role: Role;
   pathname: string;
   collapsed: boolean;
   onToggle: () => void;
+  menuOpen: boolean;
+  onMenu: (open: boolean) => void;
 }) {
   const s = useAppState();
   const { session } = useSession();
@@ -85,48 +91,63 @@ export function SideNav({
         </span>
       </Link>
 
-      <div className="nav-label">{t("Menu")}</div>
-      <div className="nav-items">
-        {items.map((item) => {
-          const Icon = NAV_ICONS[item.href] ?? Circle;
-          return (
-            <Link
-              key={item.href}
-              className="nav-item"
-              href={item.href}
-              data-label={t(item.label)}
-              aria-current={pathname === item.href ? "page" : undefined}
-              prefetch={false}
-            >
-              <span className="nav-ico" aria-hidden="true">
-                <Icon size={18} strokeWidth={2} />
-              </span>
-              <span className="nav-text">{t(item.label)}</span>
-              {item.badge === "tickets" && openTickets > 0 && (
-                <span className="count">{openTickets}</span>
-              )}
-            </Link>
-          );
-        })}
-      </div>
+      <button
+        type="button"
+        className="nav-menu-btn"
+        onClick={() => onMenu(!menuOpen)}
+        aria-controls="nav-menu"
+        aria-expanded={menuOpen}
+        aria-label={t(menuOpen ? "Close menu" : "Open menu")}
+      >
+        {menuOpen ? <X size={20} strokeWidth={2.2} aria-hidden="true" /> : <Menu size={20} strokeWidth={2.2} aria-hidden="true" />}
+      </button>
 
-      <div className="foot" title={collapsed ? t(live ? "Live payments" : "Demo mode") : undefined}>
-        <span className="foot-ico" aria-hidden="true">
-          {live ? (
-            <ShieldCheck size={16} strokeWidth={2} />
-          ) : (
-            <FlaskConical size={16} strokeWidth={2} />
-          )}
-        </span>
-        <div>
-          <b>{t(live ? "Live payments" : "Demo mode")}</b>
-          <span>
-            {t(
-              live
-                ? "Payments are live on M-Pesa for this company."
-                : "Seed data. M-Pesa calls are simulated; no money moves.",
+      {/* The phone drawer. On wider screens it adds no box of its own. */}
+      <div className="nav-panel" id="nav-menu">
+        <div className="nav-label">{t("Menu")}</div>
+        {/* Choosing a section closes the phone menu, even when it is the current page. */}
+        <div className="nav-items" onClick={() => onMenu(false)}>
+          {items.map((item) => {
+            const Icon = NAV_ICONS[item.href] ?? Circle;
+            return (
+              <Link
+                key={item.href}
+                className="nav-item"
+                href={item.href}
+                data-label={t(item.label)}
+                aria-current={pathname === item.href ? "page" : undefined}
+                prefetch={false}
+              >
+                <span className="nav-ico" aria-hidden="true">
+                  <Icon size={18} strokeWidth={2} />
+                </span>
+                <span className="nav-text">{t(item.label)}</span>
+                {item.badge === "tickets" && openTickets > 0 && (
+                  <span className="count">{openTickets}</span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+
+        <div className="foot" title={collapsed ? t(live ? "Live payments" : "Demo mode") : undefined}>
+          <span className="foot-ico" aria-hidden="true">
+            {live ? (
+              <ShieldCheck size={16} strokeWidth={2} />
+            ) : (
+              <FlaskConical size={16} strokeWidth={2} />
             )}
           </span>
+          <div>
+            <b>{t(live ? "Live payments" : "Demo mode")}</b>
+            <span>
+              {t(
+                live
+                  ? "Payments are live on M-Pesa for this company."
+                  : "Seed data. M-Pesa calls are simulated; no money moves.",
+              )}
+            </span>
+          </div>
         </div>
       </div>
     </nav>

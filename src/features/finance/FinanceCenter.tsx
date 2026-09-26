@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useTabStrip } from "@/components/ui/useTabStrip";
 import { Empty, Kpi, PageHead, Panel } from "@/components/ui/Panel";
 import { useToast } from "@/components/ui/ToastProvider";
 import { balanceSheet, profitAndLoss, type JournalEntry, type Period } from "@/lib/accounting";
@@ -72,6 +73,7 @@ export function FinanceCenter() {
   const [canPost, setCanPost] = useState(false);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<Tab>("pl");
+  const tabStrip = useTabStrip<HTMLDivElement>(tab);
   const [preset, setPreset] = useState<Preset>("year");
   const [period, setPeriod] = useState<Period>(() => presetPeriod("year", today));
   const [account, setAccount] = useState("1000");
@@ -180,7 +182,7 @@ export function FinanceCenter() {
       )}
 
       <Panel>
-        <div className="tabs" role="tablist" aria-label="Reports">
+        <div className="tabs" role="tablist" aria-label="Reports" ref={tabStrip}>
           {TABS.map((x) => (
             <button
               key={x.id}

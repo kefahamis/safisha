@@ -224,6 +224,11 @@ main > *:nth-child(n + 4) {
   margin-bottom: -12px;
 }
 
+/* Wraps the sections so phones can slide them in as a drawer; no box here. */
+.nav-panel {
+  display: contents;
+}
+
 .nav-items {
   display: flex;
   flex-direction: column;

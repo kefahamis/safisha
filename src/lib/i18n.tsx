@@ -237,6 +237,8 @@ const SW: Record<string, string> = {
   Notifications: "Arifa",
   "Collapse sidebar": "Kunja upau wa pembeni",
   "Expand sidebar": "Panua upau wa pembeni",
+  "Open menu": "Fungua menyu",
+  "Close menu": "Funga menyu",
   "Mark all read": "Weka zote zimesomwa",
   "You're all caught up.": "Huna arifa mpya.",
   "Customer care replied": "Huduma kwa wateja wamejibu",
