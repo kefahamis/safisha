@@ -15,14 +15,18 @@ export function distanceMeters(a: LatLng, b: LatLng): number {
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h));
 }
 
+/** Real GPS older than this is ignored in favour of the simulated position. */
+export const GPS_FRESH_MS = 3 * 60_000;
+
 /**
  * Position along the truck's looping route, derived from distance travelled.
  * Segments are interpolated linearly in degrees: Nairobi sits within 1.4° of the
  * equator, where a degree of longitude is within 0.03% of a degree of latitude,
  * so the error over a few kilometres is far below map resolution.
  */
-export function truckPos(t: Truck): LatLng {
-  if (t.gps) return { lat: t.gps.lat, lng: t.gps.lng };
+export function truckPos(t: Truck, now = Date.now()): LatLng {
+  // Checked here too: a quiet poll keeps the last snapshot, so a fix can age in the browser.
+  if (t.gps && now - Date.parse(t.gps.at) < GPS_FRESH_MS) return { lat: t.gps.lat, lng: t.gps.lng };
   const pts = t.route.map((code) => ESTATES[code]);
   if (pts.length === 0) return { lat: 0, lng: 0 };
   if (pts.length < 2) return { lat: pts[0].lat, lng: pts[0].lng };

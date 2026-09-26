@@ -7,6 +7,7 @@ import { PlatformBrandProvider } from "@/components/layout/PlatformBrand";
 import type { Session } from "@/lib/auth/types";
 import type { Branding } from "@/lib/branding";
 import { LangProvider } from "@/lib/i18n";
+import { applyReference, type ReferenceData } from "@/lib/reference/registry";
 
 /**
  * One session and one toast queue for the whole app. The data store lives in
@@ -15,12 +16,16 @@ import { LangProvider } from "@/lib/i18n";
 export function Providers({
   session,
   platform,
+  reference,
   children,
 }: {
   session: Session | null;
   platform: Branding;
+  /** The companies and estates, loaded into the registry before anything below renders. */
+  reference: ReferenceData;
   children: ReactNode;
 }) {
+  applyReference(reference);
   return (
     <PlatformBrandProvider branding={platform}>
     <SessionProvider session={session}>

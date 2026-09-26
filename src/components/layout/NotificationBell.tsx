@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CheckCheck, MessageSquare, Recycle, Truck, Wallet, type LucideIcon } from "lucide-react";
+import { Bell, CheckCheck, MessageSquare, Recycle, Truck, Wallet, Wrench, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useSession } from "@/components/auth/SessionProvider";
@@ -15,6 +15,7 @@ const ICONS: Record<NotificationKind, LucideIcon> = {
   pickup: Truck,
   dumping: Recycle,
   payment: Wallet,
+  fleet: Wrench,
 };
 
 /** Only the newest ids are worth remembering; the feed itself is capped. */

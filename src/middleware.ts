@@ -32,12 +32,14 @@ export async function middleware(request: NextRequest) {
 
   const redirectTo = (path: string) => NextResponse.redirect(new URL(path, request.url));
 
+  // "/" is the public website, for everyone. Where a signed-in person starts is
+  // decided by /start, which knows the permissions (the token alone can't).
   if (pathname === "/login") {
-    return claims ? redirectTo(roleHome(claims.ws)) : NextResponse.next();
+    return claims ? redirectTo("/start") : NextResponse.next();
   }
 
-  if (pathname === "/") {
-    return redirectTo(claims ? roleHome(claims.ws) : "/login");
+  if (pathname === "/start") {
+    return claims ? NextResponse.next() : redirectTo("/login");
   }
 
   const required = workspaceFor(pathname);
@@ -46,6 +48,11 @@ export async function middleware(request: NextRequest) {
   if (!claims) {
     const next = encodeURIComponent(pathname + search);
     return redirectTo(`/login?next=${next}`);
+  }
+
+  // Held until two-step sign-in is set up: only their security page opens.
+  if (claims.setup && pathname !== `/${claims.ws}/security`) {
+    return redirectTo(`/${claims.ws}/security`);
   }
 
   // Signed in, but this dashboard is not theirs — send them to their own.
@@ -60,6 +67,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Everything except Next internals, the auth API and static files.
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|icon.svg|.*\\.png$|.*\\.webp$).*)",
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|icon.svg|.*\\.png$|.*\\.webp$|.*\\.jpg$|.*\\.svg$).*)",
   ],
 };

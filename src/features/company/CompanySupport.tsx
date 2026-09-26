@@ -1,6 +1,7 @@
 "use client";
 
-import { Clock3, Headset, MessagesSquare, PhoneCall } from "lucide-react";
+import { Clock3, Headset, MessagesSquare, PhoneCall, Ticket as TicketIcon } from "lucide-react";
+import Link from "next/link";
 import { useEffect } from "react";
 import { CareChat } from "@/components/support/CareChat";
 import { TicketList } from "@/components/support/TicketList";
@@ -36,7 +37,7 @@ export function CompanySupport() {
   return (
     <>
       <PageHead
-        title="Customer care"
+        title="Chat agent"
         icon={Headset}
         actions={
           <div className="care-card">
@@ -54,14 +55,22 @@ export function CompanySupport() {
           </div>
         }
       >
-        {co.name} inbox. Clients only see their own company’s desk.
+        {co.name}&rsquo;s live conversations with clients. Priority, owner and notes for each are under Tickets.
       </PageHead>
 
       <div className="support">
         <div className="stack">
-          <span className="label">
-            Inbox · {open} open of {list.length}
-          </span>
+          <div className="row between">
+            <span className="label">
+              Inbox · {open} open of {list.length}
+            </span>
+            {selected && (
+              <Link href={`/company/tickets?id=${encodeURIComponent(selected.id)}`} className="btn small ghost">
+                <TicketIcon size={14} strokeWidth={2.2} aria-hidden="true" />
+                {selected.id} details
+              </Link>
+            )}
+          </div>
           <TicketList tickets={list} secondary="client" />
         </div>
         {selected && client ? (

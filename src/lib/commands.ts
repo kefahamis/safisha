@@ -1,3 +1,5 @@
+import type { CheckAnswer, DocSubject, FleetSettings, IncidentKind, Vehicle, WorkOrderKind, WorkOrderStatus } from "./fleet";
+import type { TicketPriority } from "./tickets";
 import type {
   ClientType,
   DumpReport,
@@ -32,6 +34,26 @@ export type Command =
   | { type: "ticket.create"; client: string; cat: string; subject: string; message: string }
   | { type: "ticket.reply"; ticket: string; from: "client" | "agent"; text: string }
   | { type: "ticket.status"; ticket: string; status: TicketStatus }
+  | {
+      type: "ticket.update";
+      ticket: string;
+      priority?: TicketPriority;
+      /** A user id, or null to unassign. */
+      assignee?: string | null;
+      cat?: string;
+    }
+  | { type: "ticket.note"; ticket: string; text: string }
+  | {
+      type: "ticket.open";
+      client: string;
+      cat: string;
+      subject: string;
+      message: string;
+      priority: TicketPriority;
+      channel: string;
+      assignee?: string | null;
+    }
+  | { type: "invoice.send"; invoice: string }
   | {
       type: "client.add";
       company: string;
@@ -69,7 +91,73 @@ export type Command =
       photo?: string;
     }
   | { type: "dump.update"; id: string; status: DumpStatus; company?: string | null }
-  | { type: "user.lang"; lang: "en" | "sw" };
+  | { type: "user.lang"; lang: "en" | "sw" }
+  /* ---- fleet management ---- */
+  | {
+      type: "fleet.check";
+      truck: string;
+      odometerKm: number;
+      items: Record<string, CheckAnswer>;
+      notes: string;
+      photo?: string;
+    }
+  | {
+      type: "fleet.fuel";
+      truck: string;
+      litres: number;
+      amount: number;
+      odometerKm: number;
+      station: string;
+      paidFrom: string;
+      reference?: string;
+      photo?: string;
+    }
+  | {
+      type: "fleet.incident";
+      truck: string;
+      kind: IncidentKind;
+      severity: "minor" | "major";
+      description: string;
+      lat?: number;
+      lng?: number;
+      policeRef?: string;
+      photo?: string;
+    }
+  | { type: "fleet.incidentClose"; id: string; cost: number }
+  | {
+      type: "fleet.workOrder";
+      /** Omitted to open a new one. */
+      id?: string;
+      truck: string;
+      kind: WorkOrderKind;
+      title: string;
+      detail: string;
+      status: WorkOrderStatus;
+      vendor: string;
+      partsCost: number;
+      labourCost: number;
+      paidFrom: string;
+      odometerKm?: number;
+    }
+  | {
+      type: "fleet.document";
+      subjectType: DocSubject;
+      subject: string;
+      kind: string;
+      number: string;
+      expiresOn: string;
+      cost: number;
+      paidFrom: string;
+    }
+  | { type: "fleet.vehicle"; truck: string; patch: Partial<VehiclePatch> }
+  | { type: "fleet.assign"; truck: string; user: string }
+  | { type: "fleet.settings"; company: string; settings: FleetSettings };
+
+/** The register fields an office may edit; the rest follow from records. */
+export type VehiclePatch = Pick<
+  Vehicle,
+  "make" | "model" | "year" | "capacityKg" | "tankL" | "state" | "serviceEveryKm" | "serviceEveryDays" | "expectedKmPerL"
+>;
 
 export type CommandType = Command["type"];
 

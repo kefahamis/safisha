@@ -89,24 +89,31 @@ export function useFleetTicker() {
 }
 
 /**
- * Keeps the store in step with the server: a fresh snapshot every few seconds
- * while the tab is visible (so an M-Pesa callback shows up without a reload),
- * and a flush of any work queued while offline.
+ * Keeps the store in step with the server while the tab is visible (so an
+ * M-Pesa callback shows up without a reload), and flushes work queued offline.
+ *
+ * Each poll sends the version it holds and costs the server one small query
+ * when nothing changed. While things stay quiet the gap stretches from
+ * `intervalMs` to `maxMs`; any change, returning to the tab or coming back
+ * online snaps it back.
  */
-export function useLiveSync(intervalMs = 5000) {
+export function useLiveSync(intervalMs = 5000, maxMs = 20000) {
   const actions = useActions();
   useEffect(() => {
     let timer: number | undefined;
+    let gap = intervalMs;
     const loop = async () => {
       if (document.visibilityState === "visible") {
         await actions.flush();
-        await actions.refresh();
+        const changed = await actions.refresh();
+        gap = changed ? intervalMs : Math.min(maxMs, Math.round(gap * 1.5));
       }
-      timer = window.setTimeout(loop, intervalMs);
+      timer = window.setTimeout(loop, gap);
     };
-    timer = window.setTimeout(loop, intervalMs);
+    timer = window.setTimeout(loop, gap);
 
     const online = () => {
+      gap = intervalMs;
       void actions.flush().then(() => actions.refresh());
     };
     const visible = () => {
@@ -120,5 +127,5 @@ export function useLiveSync(intervalMs = 5000) {
       window.removeEventListener("online", online);
       document.removeEventListener("visibilitychange", visible);
     };
-  }, [actions, intervalMs]);
+  }, [actions, intervalMs, maxMs]);
 }

@@ -41,8 +41,16 @@ export const enqueue = (item: Queued) => tx("readwrite", (s) => s.add(item));
 export const list = () => tx<Queued[]>("readonly", (s) => s.getAll() as IDBRequest<Queued[]>);
 export const remove = (key: number) => tx("readwrite", (s) => s.delete(key));
 
-/** Commands worth keeping when offline: the collector's route and location. */
-export const QUEUEABLE = new Set<Command["type"]>(["route.mark", "route.undo", "fleet.setSharing", "fleet.gps"]);
+/** Commands worth keeping when offline: the collector's route, location and vehicle records. */
+export const QUEUEABLE = new Set<Command["type"]>([
+  "route.mark",
+  "route.undo",
+  "fleet.setSharing",
+  "fleet.gps",
+  "fleet.check",
+  "fleet.fuel",
+  "fleet.incident",
+]);
 
 /** True for a network failure rather than a server answer. */
 export const isNetworkError = (err: unknown) =>

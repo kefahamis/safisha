@@ -25,6 +25,8 @@ function secretKey(): Uint8Array {
 export interface TokenPayload extends SessionClaims {
   /** Dashboards this session may open, resolved from the role at sign-in. */
   allowed: Workspace[];
+  /** Signed in, but must set up two-step sign-in before doing anything else. */
+  setup?: boolean;
 }
 
 export async function signSession(payload: TokenPayload): Promise<string> {
@@ -61,3 +63,33 @@ export const sessionCookieOptions = {
   secure: process.env.NODE_ENV === "production",
   maxAge: SESSION_TTL_SECONDS,
 } as const;
+
+/*
+ * Short-lived tokens for one purpose each — a sign-in waiting on its second
+ * step, a remembered device, a passkey challenge. The purpose is the audience,
+ * so one can never be replayed as another (or as a session).
+ */
+
+export async function signPurpose(purpose: string, data: Record<string, unknown>, ttlSeconds: number): Promise<string> {
+  return new SignJWT({ ...data })
+    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .setIssuer(ISSUER)
+    .setAudience(`zoa-${purpose}`)
+    .setIssuedAt()
+    .setExpirationTime(`${ttlSeconds}s`)
+    .sign(secretKey());
+}
+
+export async function verifyPurpose<T extends Record<string, unknown>>(purpose: string, token: string | undefined): Promise<T | null> {
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, secretKey(), {
+      issuer: ISSUER,
+      audience: `zoa-${purpose}`,
+      algorithms: ["HS256"],
+    });
+    return payload as unknown as T;
+  } catch {
+    return null;
+  }
+}

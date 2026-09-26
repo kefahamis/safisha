@@ -271,7 +271,7 @@ function StkReceipt() {
           Body: {
             stkCallback: {
               MerchantRequestID: "29115-34620561-1",
-              CheckoutRequestID: `ws_CO_${Date.now()}`,
+              CheckoutRequestID: `ws_CO_${txn.id}`,
               ResultCode: 0,
               ResultDesc: "The service request is processed successfully.",
               CallbackMetadata: {

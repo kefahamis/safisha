@@ -1,5 +1,5 @@
 // Server-only. One database handle for the process.
-import { mkdirSync } from "node:fs";
+import { mkdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { drizzle as drizzlePostgres } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
@@ -14,19 +14,49 @@ import * as schema from "./schema";
 export type Db = ReturnType<typeof drizzlePostgres<typeof schema>>;
 
 const GLOBAL_KEY = Symbol.for("zoa.db");
-type GlobalWithDb = typeof globalThis & { [GLOBAL_KEY]?: Promise<Db> };
 
-const MIGRATIONS = path.join(process.cwd(), "drizzle");
+/** The connection, which version of the migrations list it was brought up to, and when the reference data was read. */
+interface Handle {
+  ready: Promise<Db>;
+  journal: number;
+  referenceAt?: number;
+}
+
+/** How long another instance's company or estate change may take to show here. */
+const REFERENCE_TTL_MS = 30_000;
+
+/** Postgres advisory lock key: one instance at a time migrates and seeds. */
+const MIGRATION_LOCK = 72_403_117;
+
+// Before handles carried a journal stamp, the global held the bare promise.
+type GlobalWithDb = typeof globalThis & { [GLOBAL_KEY]?: Handle | Promise<Db> };
+
+// turbopackIgnore: these are read at run time; without it the build traces the whole project.
+const MIGRATIONS = path.join(/*turbopackIgnore: true*/ process.cwd(), "drizzle");
+
+/** Runs `fn` while holding the migration lock, so cold starts on several instances don't race. */
+type Locker = (fn: () => Promise<void>) => Promise<void>;
+const lockers = new WeakMap<Db, Locker>();
 
 async function connect(): Promise<Db> {
   const url = process.env.DATABASE_URL;
 
   if (url) {
     const { default: postgres } = await import("postgres");
-    const { migrate } = await import("drizzle-orm/postgres-js/migrator");
-    const sql = postgres(url, { max: 10, onnotice: () => {} });
+    // Serverless instances each hold their own pool; keep it small there.
+    const sql = postgres(url, { max: process.env.VERCEL ? 5 : 10, onnotice: () => {} });
     const db = drizzlePostgres(sql, { schema });
-    await migrate(db, { migrationsFolder: MIGRATIONS });
+    lockers.set(db, async (fn) => {
+      // Session-level lock on one reserved connection; it is released if the instance dies.
+      const conn = await sql.reserve();
+      try {
+        await conn`select pg_advisory_lock(${MIGRATION_LOCK})`;
+        await fn();
+      } finally {
+        await conn`select pg_advisory_unlock(${MIGRATION_LOCK})`.catch(() => {});
+        conn.release();
+      }
+    });
     return db;
   }
 
@@ -38,35 +68,122 @@ async function connect(): Promise<Db> {
 
   const { PGlite } = await import("@electric-sql/pglite");
   const { drizzle: drizzleLite } = await import("drizzle-orm/pglite");
-  const { migrate } = await import("drizzle-orm/pglite/migrator");
-  const dir = path.resolve(process.env.PGLITE_DIR || path.join(process.cwd(), ".data", "pglite"));
+  const dir = path.resolve(process.env.PGLITE_DIR || path.join(/*turbopackIgnore: true*/ process.cwd(), ".data", "pglite"));
   // PGlite creates its own folder but not missing parents.
   mkdirSync(path.dirname(dir), { recursive: true });
   const client = new PGlite(dir);
-  const db = drizzleLite(client, { schema });
-  await migrate(db, { migrationsFolder: MIGRATIONS });
   // The query builders are the same; only the driver underneath differs.
-  return db as unknown as Db;
+  return drizzleLite(client, { schema }) as unknown as Db;
 }
 
-async function init(): Promise<Db> {
-  const db = await connect();
-  const { seedIfEmpty } = await import("./seed");
-  await seedIfEmpty(db);
-  return db;
+/**
+ * Applies any migrations not yet run (normally already done by the build; see
+ * scripts/migrate.mjs), makes sure the built-in roles and the first admin
+ * exist, and in demo mode fills whatever demo data is missing.
+ */
+async function migrateAndSeed(db: Db) {
+  const run = async () => {
+    if (process.env.DATABASE_URL) {
+      const { migrate } = await import("drizzle-orm/postgres-js/migrator");
+      await migrate(db, { migrationsFolder: MIGRATIONS });
+    } else {
+      const { migrate } = await import("drizzle-orm/pglite/migrator");
+      await migrate(db as unknown as Parameters<typeof migrate>[0], { migrationsFolder: MIGRATIONS });
+    }
+    const { ensureSystemRoles, seedTeamIfEmpty } = await import("./teamSeed");
+    await ensureSystemRoles(db);
+    const { bootstrapAdmin } = await import("./bootstrap");
+    await bootstrapAdmin(db);
+
+    const { demoMode } = await import("../demo");
+    if (demoMode()) {
+      const { seedDemoIfEmpty } = await import("./seed");
+      await seedDemoIfEmpty(db);
+      await loadReference(db);
+      // Separate, so databases seeded before fleet management still get its demo history.
+      const { seedFleetIfEmpty } = await import("./fleetSeed");
+      await seedFleetIfEmpty(db);
+      await seedTeamIfEmpty(db);
+    }
+  };
+  const lock = lockers.get(db);
+  await (lock ? lock(run) : run());
+  await loadReference(db);
 }
 
-/** The shared database, connected, migrated and seeded on first use. */
+async function loadReference(db: Db) {
+  const { loadReference: load } = await import("../reference");
+  await load(db);
+}
+
+/** When the list of migrations last changed. */
+function journalStamp(): number {
+  try {
+    return statSync(path.join(MIGRATIONS, "meta", "_journal.json")).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * The shared database, connected, migrated and seeded on first use.
+ *
+ * In development the connection outlives code reloads, so a migration added
+ * while the server runs would otherwise wait for a restart while the new code
+ * already queries its columns. There, a changed migrations list brings the live
+ * connection up to date before it's handed out.
+ */
 export function getDb(): Promise<Db> {
   const g = globalThis as GlobalWithDb;
-  if (!g[GLOBAL_KEY]) {
-    g[GLOBAL_KEY] = init().catch((err) => {
+  let h = g[GLOBAL_KEY];
+
+  // A connection opened by code from before this reload: adopt it (PGlite must
+  // not be opened twice) and check its migrations.
+  if (h instanceof Promise) h = g[GLOBAL_KEY] = { ready: h, journal: -1 };
+
+  if (!h) {
+    const journal = journalStamp();
+    const ready = connect().then(async (db) => {
+      await migrateAndSeed(db);
+      return db;
+    });
+    h = g[GLOBAL_KEY] = { ready, journal, referenceAt: Date.now() };
+    ready.catch(() => {
       // Let the next request retry rather than caching a failed connection.
-      delete g[GLOBAL_KEY];
-      throw err;
+      if (g[GLOBAL_KEY] === h) delete g[GLOBAL_KEY];
+    });
+    return ready;
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    const journal = journalStamp();
+    if (journal !== h.journal) {
+      const handle = h;
+      const base = handle.ready;
+      handle.journal = journal;
+      handle.ready = base.then(async (db) => {
+        await migrateAndSeed(db);
+        return db;
+      });
+      // If it fails, keep the working connection and try again on the next request.
+      handle.ready.catch(() => {
+        handle.journal = -1;
+        handle.ready = base;
+      });
+    }
+  }
+
+  // Companies and estates change rarely, but another instance may have changed them.
+  if (Date.now() - (h.referenceAt ?? 0) > REFERENCE_TTL_MS) {
+    const handle = h;
+    const base = handle.ready;
+    handle.referenceAt = Date.now();
+    handle.ready = base.then(async (db) => {
+      await loadReference(db).catch((err) => console.error("Could not refresh companies and estates", err));
+      return db;
     });
   }
-  return g[GLOBAL_KEY];
+  return h.ready;
 }
 
 export { schema };

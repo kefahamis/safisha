@@ -10,6 +10,7 @@ import {
   LoaderCircle,
   PlugZap,
   Save,
+  Send,
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -43,7 +44,7 @@ export function IntegrationCard({
   const toast = useToast();
   const [config, setConfig] = useState<Record<string, unknown>>(view.config);
   const [secrets, setSecrets] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState<"" | "save" | "test" | "register">("");
+  const [busy, setBusy] = useState<"" | "save" | "test" | "register" | "send">("");
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(
     view.statusDetail ? { ok: view.status === "ok", text: view.statusDetail } : null,
   );
@@ -90,6 +91,17 @@ export function IntegrationCard({
       const body = await res.json();
       setMessage({ ok: Boolean(body.ok), text: body.detail ?? body.error ?? "Test failed." });
       if (body.integration) onChange(body.integration);
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const sendTest = async () => {
+    setBusy("send");
+    try {
+      const res = await fetch(`${url}/send-test`, { method: "POST" });
+      const body = await res.json();
+      setMessage({ ok: Boolean(body.ok), text: body.detail ?? body.error ?? "The test message failed." });
     } finally {
       setBusy("");
     }
@@ -174,6 +186,16 @@ export function IntegrationCard({
                 <PlugZap size={14} strokeWidth={2.2} aria-hidden="true" />
               )}
               Test connection
+            </button>
+          )}
+          {(view.key === "sms" || view.key === "email") && view.scope === "platform" && view.status === "ok" && (
+            <button type="button" className="btn small" onClick={sendTest} disabled={busy !== "" || dirty}>
+              {busy === "send" ? (
+                <LoaderCircle size={14} strokeWidth={2.2} className="spin" aria-hidden="true" />
+              ) : (
+                <Send size={14} strokeWidth={2.2} aria-hidden="true" />
+              )}
+              {view.key === "sms" ? "Text me a test" : "Email me a test"}
             </button>
           )}
           {view.key === "mpesa" && view.status === "ok" && (

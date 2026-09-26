@@ -27,10 +27,10 @@ function digest(code: string) {
  * production we hand the code back so the demo still works; production never
  * reveals it.
  */
-const mayRevealCodes = () => process.env.NODE_ENV !== "production" || process.env.ALLOW_DEMO_CODES === "1";
+export const mayRevealCodes = () => process.env.NODE_ENV !== "production" || process.env.ALLOW_DEMO_CODES === "1";
 
 /** Stores a one-time secret: a 6-digit code by default, or a given token. */
-async function issueCode(
+export async function issueCode(
   purpose: string,
   user: User | null,
   target: string,
@@ -50,7 +50,7 @@ async function issueCode(
 }
 
 /** Checks a code; burns it on success, counts the attempt on failure. */
-async function consumeCode(purpose: string, target: string, code: string) {
+export async function consumeCode(purpose: string, target: string, code: string) {
   const db = await getDb();
   const [row] = await db
     .select()

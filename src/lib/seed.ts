@@ -46,13 +46,16 @@ const TRUCK_ROWS: Truck[] = [
   { id: "KCR 774L", company: "MZ", driver: "Ibrahim Said", route: ["EMB", "SOB"], d: 0, speed: 85, status: "offline", sharing: false, lastSeen: "2026-09-24 17:42" },
 ];
 
+type SeedTicket = Pick<Ticket, "id" | "client" | "company" | "cat" | "subject" | "status" | "msgs">;
+
 /** The demo world the database is seeded with. */
 export interface DemoWorld {
   seq: Record<string, number>;
   clients: Client[];
   trucks: Truck[];
   txns: Txn[];
-  tickets: Ticket[];
+  /** The desk fields (priority, channel, created) come from database defaults and the first message. */
+  tickets: SeedTicket[];
   pickups: Pickup[];
   suspense: SuspenseItem[];
 }
@@ -145,7 +148,7 @@ export function createInitialState(): DemoWorld {
 
   const byName = (name: string) => clients.find((c) => c.name === name)!.id;
 
-  const tickets: Ticket[] = [
+  const tickets: SeedTicket[] = [
     {
       id: "T-1042",
       client: byName("Wanjiku Kamau"),

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { BrandTheme } from "@/components/layout/CompanyBrand";
 import { identity } from "@/lib/branding";
 import { platformBranding } from "@/server/branding";
+import { referenceForClient } from "@/server/reference";
 import { getSession } from "@/server/session";
 import { Providers } from "./providers";
 import "./globals.css";
@@ -26,6 +27,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // Resolved per request so a role change takes effect without signing out.
   const session = await getSession();
   const platform = await platformBranding();
+  const reference = await referenceForClient();
 
   return (
     <html lang={session?.lang === "sw" ? "sw" : "en"} suppressHydrationWarning>
@@ -34,13 +36,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap"
         />
       </head>
       <body suppressHydrationWarning>
         {/* The platform look underneath everything; a company's brand layers on top. */}
         <BrandTheme branding={platform} />
-        <Providers session={session} platform={platform}>
+        <Providers session={session} platform={platform} reference={reference}>
           {children}
         </Providers>
       </body>

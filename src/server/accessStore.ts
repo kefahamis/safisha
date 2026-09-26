@@ -1,12 +1,12 @@
 // Server-only. Roles and user accounts, stored in the database.
 import { eq, sql } from "drizzle-orm";
 import { isPermissionId } from "@/lib/auth/permissions";
-import type { PublicUser, RoleDef, User, Workspace } from "@/lib/auth/types";
+import type { Department, PublicUser, RoleDef, User, Workspace } from "@/lib/auth/types";
 import { getDb, schema } from "./db";
 
 export { DEMO_PASSWORD } from "./db/seed";
 
-const { roles, users } = schema;
+const { departments, roles, users } = schema;
 
 const toRole = (r: typeof roles.$inferSelect): RoleDef => ({
   id: r.id,
@@ -196,19 +196,53 @@ export async function createUser(input: {
 }
 
 /**
- * Effective permissions: the role's set, plus personal grants, minus personal
- * denies. Deny always wins — that is what makes an override a safe way to pull
- * one capability from one person without forking the role.
+ * Effective permissions: the role's set, plus the department's (company staff),
+ * plus personal grants, minus personal denies. Deny always wins — that is what
+ * makes an override a safe way to pull one capability from one person without
+ * forking the role or the department.
  */
 export async function effectivePermissions(
-  user: Pick<User, "roleId" | "grants" | "denies">,
+  user: Pick<User, "roleId" | "grants" | "denies" | "scope">,
   role?: RoleDef,
+  department?: Department | null,
 ): Promise<string[]> {
   const r = role ?? (await findRole(user.roleId));
+  const dept = department === undefined ? await userDepartment(user) : department;
   const set = new Set(r ? r.permissions : []);
+  for (const p of dept?.permissions ?? []) set.add(p);
   for (const g of user.grants) set.add(g);
   for (const d of user.denies) set.delete(d);
   return [...set].sort();
+}
+
+/** The department a user belongs to, if it's one of their own company's. */
+export async function userDepartment(user: Pick<User, "scope">): Promise<Department | null> {
+  const id = user.scope.departmentId;
+  if (!id || !user.scope.companyId) return null;
+  const db = await getDb();
+  const [d] = await db.select().from(departments).where(eq(departments.id, id));
+  if (!d || d.company !== user.scope.companyId) return null;
+  return { ...d, permissions: [...d.permissions] };
+}
+
+/** A company's active users who hold a permission, by role, department and overrides. */
+export async function companyUsersWith(company: string, permission: string): Promise<{ id: string; name: string }[]> {
+  const db = await getDb();
+  const [userRows, roleRows, deptRows] = await Promise.all([
+    db.select().from(users).where(sql`${users.scope}->>'companyId' = ${company}`),
+    db.select().from(roles),
+    db.select().from(departments).where(eq(departments.company, company)),
+  ]);
+  const out: { id: string; name: string }[] = [];
+  for (const row of userRows) {
+    if (row.suspended) continue;
+    const u = toUser(row);
+    const role = roleRows.find((r) => r.id === u.roleId);
+    const dept = deptRows.find((d) => d.id === u.scope.departmentId);
+    const perms = await effectivePermissions(u, role ? toRole(role) : undefined, dept ? { ...dept, permissions: [...dept.permissions] } : null);
+    if (perms.includes(permission)) out.push({ id: u.id, name: u.name });
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** How many people would be affected by editing a role. */

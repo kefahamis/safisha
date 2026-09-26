@@ -1,7 +1,9 @@
 import {
+  bigint,
   boolean,
   customType,
   doublePrecision,
+  index,
   integer,
   jsonb,
   pgTable,
@@ -38,7 +40,7 @@ export const users = pgTable("users", {
   phone: text("phone"),
   name: text("name").notNull(),
   roleId: text("role_id").notNull(),
-  scope: jsonb("scope").$type<{ companyId?: string; clientId?: string; truckId?: string }>().notNull().default({}),
+  scope: jsonb("scope").$type<{ companyId?: string; clientId?: string; truckId?: string; departmentId?: string }>().notNull().default({}),
   grants: jsonb("grants").$type<string[]>().notNull().default([]),
   denies: jsonb("denies").$type<string[]>().notNull().default([]),
   suspended: boolean("suspended").notNull().default(false),
@@ -46,6 +48,31 @@ export const users = pgTable("users", {
   lang: text("lang").notNull().default("en"),
   createdAt: text("created_at").notNull(),
   lastLoginAt: text("last_login_at"),
+  /** Set once they've proved they can read mail at this address. */
+  emailVerifiedAt: text("email_verified_at"),
+  /** One-time codes for when every other method is lost; stored as digests. */
+  recoveryCodes: jsonb("recovery_codes").$type<string[]>().notNull().default([]),
+});
+
+/** A second step someone has set up: SMS, email, an authenticator app or a passkey. */
+export const userFactors = pgTable("user_factors", {
+  id: serial("id").primaryKey(),
+  user: text("user").notNull(),
+  method: text("method").notNull(), // sms | email | totp | passkey
+  label: text("label").notNull(),
+  /** Masked phone or email, or the device, for the list. */
+  detail: text("detail").notNull().default(""),
+  /** Authenticator secret, encrypted at rest. */
+  secret: text("secret"),
+  /** Passkey: credential id and public key (base64url), signature counter, transports. */
+  credentialId: text("credential_id"),
+  publicKey: text("public_key"),
+  counter: integer("counter").notNull().default(0),
+  transports: jsonb("transports").$type<string[]>().notNull().default([]),
+  /** Empty while being set up; a factor counts only once confirmed. */
+  verifiedAt: text("verified_at"),
+  createdAt: text("created_at").notNull(),
+  lastUsedAt: text("last_used_at"),
 });
 
 /** One-time codes: password resets, staff invites and phone sign-in. */
@@ -119,12 +146,31 @@ export const tickets = pgTable("tickets", {
   subject: text("subject").notNull(),
   status: text("status").notNull(),
   createdAt: text("created_at").notNull(),
+  priority: text("priority").notNull().default("normal"),
+  /** Where it came in: app, phone, ussd, walk_in, crew, email. */
+  channel: text("channel").notNull().default("app"),
+  /** The staff member handling it. */
+  assignee: text("assignee"),
+  resolvedAt: text("resolved_at"),
+});
+
+/** What happened to a ticket on the desk: assignment, priority, status. Clients never see these. */
+export const ticketEvents = pgTable("ticket_events", {
+  id: serial("id").primaryKey(),
+  ticket: text("ticket").notNull(),
+  at: text("at").notNull(),
+  actor: text("actor").notNull(),
+  actorName: text("actor_name").notNull(),
+  action: text("action").notNull(),
+  detail: jsonb("detail").$type<Record<string, unknown>>().notNull().default({}),
 });
 
 export const ticketMessages = pgTable("ticket_messages", {
   id: serial("id").primaryKey(),
   ticket: text("ticket").notNull(),
-  from: text("from").notNull(), // client | agent | sys
+  from: text("from").notNull(), // client | agent | sys | note (desk only)
+  /** The staff member who wrote an agent reply or a note. */
+  author: text("author"),
   text: text("text").notNull(),
   at: text("at").notNull(),
   photo: text("photo"),
@@ -224,7 +270,12 @@ export const dumpReports = pgTable("dump_reports", {
 export const files = pgTable("files", {
   id: text("id").primaryKey(),
   mime: text("mime").notNull(),
-  bytes: bytea("bytes").notNull(),
+  /** The bytes, when kept in the database ("db"); empty once moved to Blob storage. */
+  bytes: bytea("bytes"),
+  storage: text("storage").notNull().default("db"), // db | blob
+  /** The blob's pathname, for storage = "blob". */
+  location: text("location"),
+  size: integer("size"),
   owner: text("owner").notNull(),
   company: text("company"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -336,4 +387,220 @@ export const auditLog = pgTable("audit_log", {
   action: text("action").notNull(),
   target: text("target"),
   detail: jsonb("detail").$type<Record<string, unknown>>().notNull().default({}),
+  /** Where the request came from, as the proxy reported it. */
+  ip: text("ip"),
+});
+
+/* ---------------- fleet management ---------------- */
+
+/** The vehicle register: one row per truck, beside its live position in `trucks`. */
+export const vehicles = pgTable("vehicles", {
+  truck: text("truck").primaryKey(),
+  company: text("company").notNull(),
+  make: text("make").notNull(),
+  model: text("model").notNull(),
+  year: integer("year").notNull(),
+  capacityKg: integer("capacity_kg").notNull(),
+  fuel: text("fuel").notNull().default("diesel"),
+  tankL: integer("tank_l").notNull(),
+  odometerKm: doublePrecision("odometer_km").notNull(),
+  state: text("state").notNull().default("active"), // active | workshop | off_road
+  serviceEveryKm: integer("service_every_km").notNull(),
+  serviceEveryDays: integer("service_every_days").notNull(),
+  lastServiceKm: doublePrecision("last_service_km").notNull(),
+  lastServiceDate: text("last_service_date").notNull(),
+  expectedKmPerL: doublePrecision("expected_km_per_l").notNull(),
+  /** Where the GPS stream left off; see lib/telemetry. */
+  telemetry: jsonb("telemetry").$type<Record<string, unknown>>(),
+});
+
+/** Insurance, inspection and licences for vehicles and drivers. A renewal is a new row. */
+export const fleetDocuments = pgTable("fleet_documents", {
+  id: serial("id").primaryKey(),
+  company: text("company").notNull(),
+  subjectType: text("subject_type").notNull(), // vehicle | driver
+  subject: text("subject").notNull(), // plate or user id
+  subjectName: text("subject_name").notNull(),
+  kind: text("kind").notNull(),
+  number: text("number").notNull().default(""),
+  expiresOn: text("expires_on").notNull(),
+  cost: integer("cost").notNull().default(0),
+  paidFrom: text("paid_from").notNull().default("1010"),
+  recordedAt: text("recorded_at").notNull(),
+  recordedBy: text("recorded_by").notNull(),
+});
+
+/** The start-of-day walk-round. */
+export const inspections = pgTable("inspections", {
+  id: serial("id").primaryKey(),
+  company: text("company").notNull(),
+  truck: text("truck").notNull(),
+  driver: text("driver").notNull(),
+  at: text("at").notNull(),
+  odometerKm: doublePrecision("odometer_km").notNull(),
+  items: jsonb("items").$type<Record<string, string>>().notNull(),
+  notes: text("notes").notNull().default(""),
+  photo: text("photo"),
+  result: text("result").notNull(), // pass | defects
+});
+
+export const workOrders = pgTable("work_orders", {
+  id: text("id").primaryKey(), // WO-1001
+  company: text("company").notNull(),
+  truck: text("truck").notNull(),
+  kind: text("kind").notNull(), // service | repair | defect
+  title: text("title").notNull(),
+  detail: text("detail").notNull().default(""),
+  status: text("status").notNull(), // open | in_progress | done | cancelled
+  openedAt: text("opened_at").notNull(),
+  openedBy: text("opened_by").notNull(),
+  closedAt: text("closed_at"),
+  inspection: integer("inspection"),
+  /** Raised by a failed safety-critical check item: the truck stays off the road until it's done. */
+  critical: boolean("critical").notNull().default(false),
+  vendor: text("vendor").notNull().default(""),
+  partsCost: integer("parts_cost").notNull().default(0),
+  labourCost: integer("labour_cost").notNull().default(0),
+  paidFrom: text("paid_from").notNull().default("1010"),
+  odometerKm: doublePrecision("odometer_km"),
+});
+
+export const fuelLogs = pgTable("fuel_logs", {
+  id: text("id").primaryKey(), // F-1001
+  company: text("company").notNull(),
+  truck: text("truck").notNull(),
+  at: text("at").notNull(),
+  litres: doublePrecision("litres").notNull(),
+  amount: integer("amount").notNull(),
+  odometerKm: doublePrecision("odometer_km").notNull(),
+  station: text("station").notNull().default(""),
+  paidFrom: text("paid_from").notNull(),
+  reference: text("reference"),
+  driver: text("driver").notNull(),
+  photo: text("photo"),
+});
+
+export const incidents = pgTable("incidents", {
+  id: text("id").primaryKey(), // INC-1001
+  company: text("company").notNull(),
+  truck: text("truck").notNull(),
+  driver: text("driver").notNull(),
+  at: text("at").notNull(),
+  kind: text("kind").notNull(),
+  severity: text("severity").notNull(), // minor | major
+  description: text("description").notNull(),
+  lat: doublePrecision("lat"),
+  lng: doublePrecision("lng"),
+  photo: text("photo"),
+  policeRef: text("police_ref"),
+  status: text("status").notNull(), // open | closed
+  cost: integer("cost").notNull().default(0),
+});
+
+/** Every GPS fix a collector's phone sends, for trip playback. */
+export const gpsPings = pgTable("gps_pings", {
+  id: serial("id").primaryKey(),
+  truck: text("truck").notNull(),
+  at: timestamp("at", { withTimezone: true }).notNull(),
+  lat: doublePrecision("lat").notNull(),
+  lng: doublePrecision("lng").notNull(),
+  kmh: doublePrecision("kmh"),
+}, (t) => [index("gps_pings_truck_at").on(t.truck, t.at)]);
+
+/** Speeding, idling, after-hours movement and geofence crossings. */
+export const fleetEvents = pgTable("fleet_events", {
+  id: serial("id").primaryKey(),
+  company: text("company").notNull(),
+  truck: text("truck").notNull(),
+  driver: text("driver").notNull(),
+  at: timestamp("at", { withTimezone: true }).notNull(),
+  kind: text("kind").notNull(),
+  lat: doublePrecision("lat").notNull(),
+  lng: doublePrecision("lng").notNull(),
+  zone: text("zone"),
+  value: doublePrecision("value"),
+}, (t) => [index("fleet_events_company_at").on(t.company, t.at)]);
+
+/** Running totals per truck and day, kept as positions arrive. */
+export const fleetDays = pgTable(
+  "fleet_days",
+  {
+    truck: text("truck").notNull(),
+    day: text("day").notNull(),
+    company: text("company").notNull(),
+    driver: text("driver").notNull(),
+    km: doublePrecision("km").notNull().default(0),
+    movingMin: doublePrecision("moving_min").notNull().default(0),
+    idleMin: doublePrecision("idle_min").notNull().default(0),
+    maxKmh: doublePrecision("max_kmh").notNull().default(0),
+    dumpRuns: integer("dump_runs").notNull().default(0),
+    speeding: integer("speeding").notNull().default(0),
+    afterHours: integer("after_hours").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.truck, t.day] })],
+);
+
+/* ---------------- staff ---------------- */
+
+/** Teams inside a company. Staff in a department carry its permissions. */
+export const departments = pgTable("departments", {
+  id: text("id").primaryKey(),
+  company: text("company").notNull(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  permissions: jsonb("permissions").$type<string[]>().notNull().default([]),
+  createdAt: text("created_at").notNull(),
+});
+
+/* ---------------- reference ---------------- */
+
+/** Licensed collection companies, onboarded by the platform admin. */
+export const companies = pgTable("companies", {
+  /** Two-letter code, the client number prefix. Fixed once clients exist. */
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  paybill: text("paybill").notNull().default(""),
+  care: text("care").notNull().default(""),
+  hours: text("hours").notNull().default(""),
+  color: text("color").notNull().default("#0E7490"),
+  createdAt: text("created_at").notNull(),
+});
+
+/** Neighbourhoods served, each licensed to at most one company. */
+export const estates = pgTable("estates", {
+  /** Three-letter code used inside client numbers, e.g. KIL. */
+  code: text("code").primaryKey(),
+  name: text("name").notNull(),
+  lat: doublePrecision("lat").notNull(),
+  lng: doublePrecision("lng").notNull(),
+  radius: integer("radius").notNull().default(1500),
+  days: jsonb("days").$type<number[]>().notNull().default([]),
+  company: text("company"),
+  createdAt: text("created_at").notNull(),
+});
+
+/* ---------------- abuse limits ---------------- */
+
+/** Counters for rate limits, shared by every server instance. */
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  hits: integer("hits").notNull().default(0),
+  resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+});
+
+/** Sequences for prefixed ids, taken atomically so concurrent requests never share one. */
+export const counters = pgTable("counters", {
+  key: text("key").primaryKey(),
+  value: integer("value").notNull(),
+});
+
+/**
+ * A change counter per scope ("co:TS" a company, "cl:<id>" a client, "pub:TS"
+ * what every TS client sees, "*" everyone), bumped by triggers on every table
+ * the app's snapshot reads. A poll whose counters haven't moved is answered
+ * without rebuilding the snapshot.
+ */
+export const dataVersions = pgTable("data_versions", {
+  scope: text("scope").primaryKey(),
+  version: bigint("version", { mode: "number" }).notNull().default(0),
 });

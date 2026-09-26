@@ -23,6 +23,8 @@ export function AppShell({ children, sidebarCollapsed = false }: { children: Rea
   const role = roleFromPath(pathname);
   const s = useAppState();
   const [collapsed, setCollapsed] = useState(sidebarCollapsed);
+  // The phone menu; it only exists below the rail breakpoint.
+  const [menuOpen, setMenuOpen] = useState(false);
   useFleetTicker();
   useLiveSync();
 
@@ -45,12 +47,33 @@ export function AppShell({ children, sidebarCollapsed = false }: { children: Rea
     return () => window.removeEventListener("keydown", onKey);
   }, [toggleSidebar]);
 
+  // A new page closes the phone menu.
+  useEffect(() => setMenuOpen(false), [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
   return (
     <>
       {/* The platform layer comes from the root layout; this adds the company's on top. */}
       <BrandTheme branding={role === "admin" ? undefined : s.branding[s.companyId]} />
-      <div className="app" data-sidebar={collapsed ? "collapsed" : "expanded"}>
-        <SideNav role={role} pathname={pathname} collapsed={collapsed} onToggle={toggleSidebar} />
+      <div className="app" data-sidebar={collapsed ? "collapsed" : "expanded"} data-menu={menuOpen ? "open" : undefined}>
+        <SideNav
+          role={role}
+          pathname={pathname}
+          collapsed={collapsed}
+          onToggle={toggleSidebar}
+          menuOpen={menuOpen}
+          onMenu={setMenuOpen}
+        />
+        {/* Always present so it can fade out as the drawer closes. */}
+        <div className="nav-scrim" aria-hidden="true" onClick={() => setMenuOpen(false)} />
         <header className="top">
           <RoleTabs active={role} />
           <ContextSwitcher role={role} />

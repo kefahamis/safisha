@@ -2,7 +2,7 @@ import type { RoleDef, Workspace } from "./types";
 
 /**
  * The roles the platform ships with. An admin can edit their permission sets
- * and add roles of their own, but these five cannot be deleted — every seeded
+ * and add roles of their own, but these cannot be deleted — every seeded
  * account holds one of them.
  */
 export const DEFAULT_ROLES: RoleDef[] = [
@@ -30,7 +30,7 @@ export const DEFAULT_ROLES: RoleDef[] = [
     description: "A driver working today's route.",
     workspace: "collector",
     system: true,
-    permissions: ["route.view", "route.complete", "route.share_location", "fleet.view"],
+    permissions: ["route.view", "route.complete", "route.share_location", "fleet.view", "fleet.inspect"],
   },
   {
     id: "company_agent",
@@ -67,6 +67,7 @@ export const DEFAULT_ROLES: RoleDef[] = [
       "payments.reconcile",
       "reminders.manage",
       "fleet.view",
+      "fleet.manage",
       "tickets.view.company",
       "tickets.reply",
       "tickets.status",
@@ -77,7 +78,16 @@ export const DEFAULT_ROLES: RoleDef[] = [
       "audit.view",
       "finance.view",
       "finance.journal",
+      "staff.manage",
     ],
+  },
+  {
+    id: "company_staff",
+    name: "Company staff",
+    description: "A member of a company's staff. What they can do comes from their department, set by the company admin.",
+    workspace: "company",
+    system: true,
+    permissions: [],
   },
   {
     id: "platform_admin",
@@ -89,6 +99,7 @@ export const DEFAULT_ROLES: RoleDef[] = [
       "platform.overview",
       "platform.clients",
       "platform.fleet",
+      "platform.companies.manage",
       "access.roles.manage",
       "access.users.manage",
       "clients.view",

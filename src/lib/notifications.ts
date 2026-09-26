@@ -3,7 +3,7 @@ import { companyById } from "./reference/companies";
 import { clientById, nowIn } from "./selectors";
 import type { AppState, Role } from "./types";
 
-export type NotificationKind = "ticket" | "pickup" | "dumping" | "payment";
+export type NotificationKind = "ticket" | "pickup" | "dumping" | "payment" | "fleet";
 
 export interface AppNotification {
   /** Stable per event — a new ticket message or status change gets a new id. */
@@ -122,6 +122,9 @@ export function notificationsFor(s: AppState, role: Role): AppNotification[] {
         href: "/company/dumping",
       });
     }
+    for (const a of s.fleet.alerts) {
+      out.push({ id: `fleet:${a.id}`, kind: "fleet", title: a.title, body: a.body, at: a.at, href: "/company/fleet" });
+    }
     for (const p of s.suspense) {
       if (p.company !== co) continue;
       out.push({
@@ -150,6 +153,9 @@ export function notificationsFor(s: AppState, role: Role): AppNotification[] {
   }
 
   if (role === "collector") {
+    for (const a of s.fleet.alerts) {
+      out.push({ id: `fleet:${a.id}`, kind: "fleet", title: a.title, body: a.body, at: a.at, href: "/collector/vehicle" });
+    }
     for (const r of s.pickupRequests) {
       if (r.truck !== s.truckId || r.status !== "Scheduled") continue;
       out.push({

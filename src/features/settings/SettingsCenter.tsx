@@ -14,16 +14,19 @@ import {
   PhoneCall,
   RefreshCw,
   Settings,
+  ShieldCheck,
   Smartphone,
   Tags,
   type LucideIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useTabStrip } from "@/components/ui/useTabStrip";
 import { Empty, PageHead, Panel } from "@/components/ui/Panel";
 import type { IntegrationKey, IntegrationView } from "@/lib/integrations";
 import { COMPANIES, companyById } from "@/lib/reference/companies";
 import { PLATFORM } from "@/lib/branding";
 import { BrandingSettings } from "./BrandingSettings";
+import { SecurityPolicyPanel } from "./SecurityPolicy";
 import { IntegrationCard } from "./IntegrationCard";
 import { UssdTester } from "./UssdTester";
 
@@ -43,7 +46,16 @@ interface ScopeData {
   platform: { publicBaseUrl: string | null; sms: string; email: string; ai: string };
 }
 
-type Tab = "payments" | "branding" | "platform-brand" | "messaging" | "translation" | "billing" | "system" | "activity";
+type Tab =
+  | "payments"
+  | "branding"
+  | "platform-brand"
+  | "messaging"
+  | "translation"
+  | "billing"
+  | "system"
+  | "security"
+  | "activity";
 
 /**
  * Settings for everything third-party, in one place. A company admin manages
@@ -51,8 +63,9 @@ type Tab = "payments" | "branding" | "platform-brand" | "messaging" | "translati
  * email, translation and the public address — and any company's settings.
  */
 export function SettingsCenter({ platform, companyId }: { platform: boolean; companyId?: string }) {
-  const [company, setCompany] = useState(companyId ?? COMPANIES[0].id);
+  const [company, setCompany] = useState(companyId ?? COMPANIES[0]?.id ?? "");
   const [tab, setTab] = useState<Tab>("payments");
+  const tabStrip = useTabStrip<HTMLDivElement>(tab);
   const [companyData, setCompanyData] = useState<ScopeData | null>(null);
   const [platformData, setPlatformData] = useState<ScopeData | null>(null);
   const [error, setError] = useState("");
@@ -66,7 +79,8 @@ export function SettingsCenter({ platform, companyId }: { platform: boolean; com
       return body as ScopeData;
     };
     try {
-      const [c, p] = await Promise.all([get(company), platform ? get("platform") : Promise.resolve(null)]);
+      // With no company onboarded yet there are only platform settings.
+      const [c, p] = await Promise.all([company ? get(company) : Promise.resolve(null), platform ? get("platform") : Promise.resolve(null)]);
       setCompanyData(c);
       setPlatformData(p);
     } catch (err) {
@@ -103,6 +117,7 @@ export function SettingsCenter({ platform, companyId }: { platform: boolean; com
     { id: "messaging", label: "SMS, USSD & email", icon: MessageSquareText, platformOnly: true },
     { id: "translation", label: "Translation", icon: Languages, platformOnly: true },
     { id: "system", label: "Public address", icon: Globe, platformOnly: true },
+    { id: "security", label: "Sign-in security", icon: ShieldCheck, platformOnly: true },
     { id: "activity", label: "Activity", icon: Inbox },
   ];
 
@@ -132,7 +147,7 @@ export function SettingsCenter({ platform, companyId }: { platform: boolean; com
         Payments and third-party services. Keys are encrypted when saved and never shown again.
       </PageHead>
 
-      <div className="tabs" role="tablist" aria-label="Settings sections">
+      <div className="tabs" role="tablist" aria-label="Settings sections" ref={tabStrip}>
         {tabs
           .filter((t) => platform || !t.platformOnly)
           .map((t) => (
@@ -213,6 +228,8 @@ export function SettingsCenter({ platform, companyId }: { platform: boolean; com
       {platformData && tab === "system" && (
         <div className="settings-grid">{card(platformData, "app", setPlatformData)}</div>
       )}
+
+      {platform && tab === "security" && <SecurityPolicyPanel />}
 
       {companyData && tab === "activity" && <Outbox scope={platform ? "platform" : company} />}
     </>

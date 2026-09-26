@@ -5,6 +5,7 @@ import { kes } from "@/lib/format";
 import { companyById } from "@/lib/reference/companies";
 import { audit } from "./audit";
 import { randomToken } from "./crypto";
+import { demoMode } from "./demo";
 import { getDb, schema, type Db } from "./db";
 import {
   DarajaError,
@@ -132,6 +133,8 @@ export async function startStk(input: {
   const live = await liveMpesa(input.company);
 
   if (!live) {
+    // Without Daraja there's no money behind a prompt; only the demo pretends.
+    if (!demoMode()) return { ok: false, error: "M-Pesa isn't connected for this company yet. Pay to the Paybill instead." };
     const id = `SIM-${randomToken(9)}`;
     await db.insert(stkRequests).values({
       id,
@@ -402,10 +405,28 @@ export async function registerUrls(company: string, actor: { sub: string; name: 
 
 /**
  * The Paybill simulator. In sandbox with live keys it asks Safaricom to send a
- * real test payment to our URLs; otherwise it confirms one locally.
+ * real test payment to our URLs. Against production keys it refuses: only
+ * Safaricom may say money arrived. Without keys it confirms one locally, and
+ * only in demo mode.
  */
 export async function simulatePaybill(company: string, input: { account: string; amount: number; phone: string }) {
   const live = await liveMpesa(company);
+  if (live && live.config.environment !== "sandbox") {
+    return {
+      ok: false,
+      receipt: "",
+      message: "M-Pesa is live for this company, so payments can't be simulated. Real payments arrive from Safaricom.",
+      mode: "live" as const,
+    };
+  }
+  if (!live && !demoMode()) {
+    return {
+      ok: false,
+      receipt: "",
+      message: "The simulator only runs with Daraja sandbox keys, or in demo mode.",
+      mode: "simulated" as const,
+    };
+  }
   if (live && live.config.environment === "sandbox") {
     try {
       await simulateC2B(live.config, input);

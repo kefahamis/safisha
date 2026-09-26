@@ -1,7 +1,9 @@
 // Server-only. The slice of the database one session may see.
-import { and, desc, eq, inArray, or } from "drizzle-orm";
+import { createHash } from "node:crypto";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import type { Session } from "@/lib/auth/types";
+import { GPS_FRESH_MS } from "@/lib/geo";
 import { COMPANIES } from "@/lib/reference/companies";
 import type {
   AppData,
@@ -14,8 +16,11 @@ import type {
   Truck,
   WasteStream,
 } from "@/lib/types";
+import { companyUsersWith } from "./accessStore";
 import { brandingFor } from "./branding";
+import { checksToday, fleetAlerts } from "./fleet";
 import { getDb, schema } from "./db";
+import { demoMode } from "./demo";
 import { smsLive } from "./integrations/messaging";
 import { translateAvailable } from "./integrations/translate";
 import { liveMpesa } from "./payments";
@@ -36,8 +41,65 @@ export function simDistance(row: { d: number; speed: number; status: string; sha
   return row.d + (row.speed * (now - SIM_EPOCH)) / 1000;
 }
 
-/** Real GPS older than this is ignored in favour of the simulated position. */
-const GPS_FRESH_MS = 3 * 60_000;
+
+/**
+ * What a member of staff receives, by permission. The menus already hide what
+ * someone can't open; this keeps the data itself out of their browser too, so
+ * the workshop never downloads client phone numbers and the care desk never
+ * downloads the books. Clients and collectors are limited by who they are.
+ */
+export function staffShares(permissions: string[]) {
+  const any = (...ids: string[]) => ids.some((p) => permissions.includes(p));
+  return {
+    /** Client records at all (names, estates, gate locations). */
+    clients: any(
+      "clients.view", "payments.view", "statements.view", "finance.view", "reminders.manage", "tickets.view.company",
+      "pickups.manage", "dumping.manage", "fleet.view", "fleet.manage", "platform.clients", "platform.overview", "platform.fleet",
+    ),
+    /** Phone numbers. */
+    contact: any("clients.view", "tickets.view.company", "reminders.manage", "pickups.manage", "platform.clients"),
+    /** Plans, charges and payments. */
+    money: any("clients.view", "payments.view", "statements.view", "finance.view", "reminders.manage", "platform.clients", "platform.overview"),
+    tickets: any("tickets.view.company"),
+    suspense: any("payments.view", "payments.reconcile"),
+    /** Collection history, today's stops and route plans. */
+    collections: any("clients.view", "fleet.view", "fleet.manage", "pickups.manage", "platform.fleet", "platform.overview"),
+    requests: any("pickups.manage", "clients.view", "platform.overview"),
+    dumping: any("dumping.manage", "clients.view", "platform.overview"),
+  };
+}
+
+const EVERYTHING: ReturnType<typeof staffShares> = {
+  clients: true, contact: true, money: true, tickets: true, suspense: true, collections: true, requests: true, dumping: true,
+};
+
+/** Clients and collectors are already limited to their own slice; staff by permission. */
+const sharesFor = (session: Session) => (session.ws === "company" || session.ws === "admin" ? staffShares(session.permissions) : EVERYTHING);
+
+/**
+ * A token for everything the snapshot depends on: the counters of the scopes
+ * this session reads (bumped by database triggers on every write), the day,
+ * and who is asking with what permissions. Same token, same snapshot.
+ */
+export async function snapshotVersion(session: Session, companies?: string[] | null): Promise<string> {
+  const db = await getDb();
+  const visible = companies === undefined ? await visibleCompanies(session) : companies;
+  let scopes: string[] | null;
+  if (session.ws === "client") {
+    scopes = ["*", `cl:${session.scope.clientId ?? ""}`, `pub:${visible?.[0] ?? ""}`];
+  } else {
+    scopes = visible === null ? null : ["*", ...visible.map((c) => `co:${c}`)];
+  }
+  const [row] = await db
+    .select({ v: sql<string>`coalesce(sum(${t.dataVersions.version}), 0)::text` })
+    .from(t.dataVersions)
+    .where(scopes ? inArray(t.dataVersions.scope, scopes) : undefined);
+  const who = createHash("sha256")
+    .update(JSON.stringify([session.sub, session.ws, session.scope, [...session.permissions].sort(), demoMode()]))
+    .digest("base64url")
+    .slice(0, 12);
+  return `${today()}.${who}.${row?.v ?? "0"}`;
+}
 
 /** Which companies this session can see; null means all of them. */
 export async function visibleCompanies(session: Session): Promise<string[] | null> {
@@ -56,15 +118,20 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
   const now = Date.now();
   const day = today();
   const companies = await visibleCompanies(session);
+  // Read before the data, so a write landing mid-build makes the next poll fetch again.
+  const version = await snapshotVersion(session, companies);
+  const share = sharesFor(session);
   const clientOnly = session.ws === "client" ? session.scope.clientId ?? "__none__" : null;
   const inCompanies = (col: AnyPgColumn) =>
     companies === null ? undefined : inArray(col, companies.length ? companies : ["__none__"]);
 
   // Clients: a client sees only themselves; a collector the clients on their truck's route.
-  let clientRows = await db
-    .select()
-    .from(t.clients)
-    .where(clientOnly ? eq(t.clients.id, clientOnly) : inCompanies(t.clients.company));
+  let clientRows = share.clients
+    ? await db
+        .select()
+        .from(t.clients)
+        .where(clientOnly ? eq(t.clients.id, clientOnly) : inCompanies(t.clients.company))
+    : [];
 
   const truckRows = await db.select().from(t.trucks).where(inCompanies(t.trucks.company));
 
@@ -75,46 +142,58 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
   }
   const clientIds = clientRows.map((c) => c.id);
   const ids = clientIds.length ? clientIds : ["__none__"];
+  const truckIds = truckRows.map((x) => x.id).concat("__none__");
 
   const [txnRows, ticketRows, pickupRows, suspenseRows, stopRows, orderRows, requestRows, dumpRows] =
     await Promise.all([
-      db.select().from(t.txns).where(inArray(t.txns.client, ids)),
-      session.ws === "collector"
+      share.money ? db.select().from(t.txns).where(inArray(t.txns.client, ids)) : Promise.resolve([]),
+      session.ws === "collector" || !share.tickets
         ? Promise.resolve([])
         : db.select().from(t.tickets).where(
             clientOnly ? eq(t.tickets.client, clientOnly) : inCompanies(t.tickets.company),
           ),
-      db.select().from(t.pickups).where(inArray(t.pickups.client, ids)).orderBy(desc(t.pickups.when)),
-      clientOnly || session.ws === "collector"
+      share.collections
+        ? db.select().from(t.pickups).where(inArray(t.pickups.client, ids)).orderBy(desc(t.pickups.when))
+        : Promise.resolve([]),
+      clientOnly || session.ws === "collector" || !share.suspense
         ? Promise.resolve([])
         : db.select().from(t.suspense).where(inCompanies(t.suspense.company)),
-      db
-        .select()
-        .from(t.stops)
-        .where(
-          and(eq(t.stops.day, day), inArray(t.stops.truck, truckRows.map((x) => x.id).concat("__none__"))),
-        ),
-      db.select().from(t.routeOrders).where(eq(t.routeOrders.day, day)),
-      db
-        .select()
-        .from(t.pickupRequests)
-        .where(clientOnly ? eq(t.pickupRequests.client, clientOnly) : inCompanies(t.pickupRequests.company))
-        .orderBy(desc(t.pickupRequests.createdAt)),
-      db
-        .select()
-        .from(t.dumpReports)
-        .where(
-          clientOnly
-            ? eq(t.dumpReports.reporter, clientOnly)
-            : companies === null
-              ? undefined
-              : // Reports in the company's estates, plus any its own clients filed elsewhere.
-                or(
-                  inArray(t.dumpReports.company, companies.length ? companies : ["__none__"]),
-                  inArray(t.dumpReports.reporter, ids),
-                ),
-        )
-        .orderBy(desc(t.dumpReports.createdAt)),
+      share.collections
+        ? db
+            .select()
+            .from(t.stops)
+            .where(and(eq(t.stops.day, day), inArray(t.stops.truck, truckIds)))
+        : Promise.resolve([]),
+      share.collections
+        ? db
+            .select()
+            .from(t.routeOrders)
+            .where(and(eq(t.routeOrders.day, day), inArray(t.routeOrders.truck, truckIds)))
+        : Promise.resolve([]),
+      share.requests
+        ? db
+            .select()
+            .from(t.pickupRequests)
+            .where(clientOnly ? eq(t.pickupRequests.client, clientOnly) : inCompanies(t.pickupRequests.company))
+            .orderBy(desc(t.pickupRequests.createdAt))
+        : Promise.resolve([]),
+      share.dumping
+        ? db
+            .select()
+            .from(t.dumpReports)
+            .where(
+              clientOnly
+                ? eq(t.dumpReports.reporter, clientOnly)
+                : companies === null
+                  ? undefined
+                  : // Reports in the company's estates, plus any its own clients filed elsewhere.
+                    or(
+                      inArray(t.dumpReports.company, companies.length ? companies : ["__none__"]),
+                      inArray(t.dumpReports.reporter, ids),
+                    ),
+            )
+            .orderBy(desc(t.dumpReports.createdAt))
+        : Promise.resolve([]),
     ]);
 
   const msgRows = ticketRows.length
@@ -131,8 +210,8 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
     estate: c.estate,
     name: c.name,
     type: c.type as Client["type"],
-    plan: c.plan,
-    phone: c.phone,
+    plan: share.money ? c.plan : 0,
+    phone: share.contact ? c.phone : "",
     joined: c.joined,
     lat: c.lat,
     lng: c.lng,
@@ -154,23 +233,58 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
         : undefined,
   }));
 
-  const tickets: Ticket[] = ticketRows.map((tk) => ({
-    id: tk.id,
-    client: tk.client,
-    company: tk.company,
-    cat: tk.cat,
-    subject: tk.subject,
-    status: tk.status as Ticket["status"],
-    msgs: msgRows
-      .filter((m) => m.ticket === tk.id)
-      .map((m) => ({
-        id: m.id,
-        from: m.from as Ticket["msgs"][number]["from"],
-        text: m.text,
-        at: m.at,
-        photo: m.photo ?? undefined,
-      })),
-  }));
+  // The desk sees internal notes, history and who has each ticket; a client sees only the conversation.
+  const desk = session.ws !== "client";
+  const eventRows =
+    desk && ticketRows.length
+      ? await db
+          .select()
+          .from(t.ticketEvents)
+          .where(inArray(t.ticketEvents.ticket, ticketRows.map((x) => x.id)))
+          .orderBy(t.ticketEvents.id)
+      : [];
+  const assigneeIds = [...new Set(ticketRows.map((x) => x.assignee).filter((x): x is string => Boolean(x)))];
+  const assigneeRows =
+    desk && assigneeIds.length
+      ? await db.select({ id: t.users.id, name: t.users.name }).from(t.users).where(inArray(t.users.id, assigneeIds))
+      : [];
+
+  const tickets: Ticket[] = ticketRows.map((tk) => {
+    const mine = msgRows.filter((m) => m.ticket === tk.id);
+    return {
+      id: tk.id,
+      client: tk.client,
+      company: tk.company,
+      cat: tk.cat,
+      subject: tk.subject,
+      status: tk.status as Ticket["status"],
+      createdAt: tk.createdAt,
+      priority: tk.priority as Ticket["priority"],
+      channel: tk.channel,
+      resolvedAt: tk.resolvedAt ?? undefined,
+      msgs: mine
+        .filter((m) => m.from !== "note")
+        .map((m) => ({
+          id: m.id,
+          from: m.from as Ticket["msgs"][number]["from"],
+          text: m.text,
+          at: m.at,
+          photo: m.photo ?? undefined,
+        })),
+      ...(desk
+        ? {
+            assignee: tk.assignee ?? undefined,
+            assigneeName: assigneeRows.find((u) => u.id === tk.assignee)?.name,
+            notes: mine
+              .filter((m) => m.from === "note")
+              .map((m) => ({ id: m.id, by: m.author ?? "Staff", text: m.text, at: m.at })),
+            events: eventRows
+              .filter((e) => e.ticket === tk.id)
+              .map((e) => ({ id: e.id, at: e.at, actorName: e.actorName, action: e.action, detail: e.detail })),
+          }
+        : {}),
+    };
+  });
 
   const stops: AppData["stops"] = {};
   const proofs: AppData["proofs"] = {};
@@ -229,6 +343,23 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
   }));
 
   const companyIds = companies ?? COMPANIES.map((c) => c.id);
+
+  const agents =
+    session.ws === "company" && companies?.length === 1 && session.permissions.includes("tickets.view.company")
+      ? await companyUsersWith(companies[0], "tickets.view.company")
+      : [];
+
+  // Fleet: managers see their company's alerts; a driver sees their own truck's.
+  const fleet: AppData["fleet"] = { checks: {}, alerts: [] };
+  if (session.ws === "collector" && session.scope.truckId && session.scope.companyId) {
+    fleet.checks = await checksToday([session.scope.truckId]);
+    fleet.alerts = (await fleetAlerts(session.scope.companyId, session.scope.truckId)).filter(
+      (a) => a.kind !== "fuel" && a.kind !== "driving",
+    );
+  } else if (session.ws === "company" && companies?.length === 1 && session.permissions.includes("fleet.manage")) {
+    fleet.checks = await checksToday(truckRows.map((x) => x.id));
+    fleet.alerts = await fleetAlerts(companies[0]);
+  }
   const pricing: AppData["pricing"] = {};
   const mpesa: AppData["integrations"]["mpesa"] = {};
   for (const id of companyIds) {
@@ -274,8 +405,12 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
       mpesa,
       sms: (await smsLive()) ? "live" : "simulated",
       translate: await translateAvailable(),
+      demo: demoMode(),
     },
+    fleet,
+    agents,
     branding: await brandingFor(companyIds),
     serverNow: now,
+    version,
   };
 }

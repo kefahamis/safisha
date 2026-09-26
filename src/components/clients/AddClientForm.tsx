@@ -14,7 +14,7 @@ export function AddClientForm({ company }: { company: Company }) {
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [estate, setEstate] = useState(company.estates[0]);
+  const [estate, setEstate] = useState(company.estates[0] ?? "");
   const [type, setType] = useState<ClientType>("Household");
   const [plan, setPlan] = useState(600);
   const [error, setError] = useState("");
