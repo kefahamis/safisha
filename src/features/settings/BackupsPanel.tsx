@@ -7,9 +7,9 @@ import { Panel } from "@/components/ui/Panel";
 import { useToast } from "@/components/ui/ToastProvider";
 
 interface Backup {
-  pathname: string;
+  name: string;
   size: number;
-  uploadedAt: string;
+  takenAt: string;
 }
 
 interface State {
@@ -76,19 +76,19 @@ export function BackupsPanel() {
               Set <span className="mono">BACKUP_ENCRYPTION_KEY</span> (64 hex characters, kept somewhere safe outside this deployment).{" "}
             </>
           )}
-          {!state.ready.blob && <>Connect a Vercel Blob store to hold them.</>}
+          {!state.ready.blob && <>They&rsquo;re kept in Netlify Blobs, which this server can&rsquo;t reach (it can once deployed on Netlify).</>}
         </div>
       )}
       {state && ready && (
         state.backups.length ? (
           <div className="list">
             {state.backups.map((b) => (
-              <div className="li" key={b.pathname}>
+              <div className="li" key={b.name}>
                 <div>
-                  <div className="t">{when(b.uploadedAt)}</div>
+                  <div className="t">{b.takenAt ? when(b.takenAt) : b.name}</div>
                   <div className="sub">{mb(b.size)} · encrypted</div>
                 </div>
-                <a className="btn small ghost" href={`/api/admin/backups/download?path=${encodeURIComponent(b.pathname)}`}>
+                <a className="btn small ghost" href={`/api/admin/backups/download?name=${encodeURIComponent(b.name)}`}>
                   <Download size={14} strokeWidth={2.2} aria-hidden="true" />
                   Download
                 </a>

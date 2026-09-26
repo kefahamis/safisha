@@ -1,6 +1,7 @@
 import { audit } from "@/server/audit";
-import { BACKUP_PREFIX } from "@/server/backup";
+import { isBackupName } from "@/server/backup";
 import { errorResponse, HttpError, requirePermission } from "@/server/session";
+import { blobStore } from "@/server/storage";
 
 export const runtime = "nodejs";
 
@@ -8,16 +9,15 @@ export const runtime = "nodejs";
 export async function GET(request: Request) {
   try {
     const session = await requirePermission("settings.platform.manage");
-    const pathname = new URL(request.url).searchParams.get("path") ?? "";
-    if (!pathname.startsWith(BACKUP_PREFIX) || pathname.includes("..")) throw new HttpError(400, "Not a backup.");
-    const { get } = await import("@vercel/blob");
-    const blob = await get(pathname, { access: "private" });
-    if (!blob?.stream) throw new HttpError(404, "That backup is gone.");
-    await audit(session, { action: "backup.download", target: pathname });
-    return new Response(blob.stream, {
+    const name = new URL(request.url).searchParams.get("name") ?? "";
+    if (!isBackupName(name)) throw new HttpError(400, "Not a backup.");
+    const stream = await (await blobStore("backups")).get(name, { type: "stream" });
+    if (!stream) throw new HttpError(404, "That backup is gone.");
+    await audit(session, { action: "backup.download", target: name });
+    return new Response(stream, {
       headers: {
         "Content-Type": "application/octet-stream",
-        "Content-Disposition": `attachment; filename="${pathname.slice(BACKUP_PREFIX.length)}"`,
+        "Content-Disposition": `attachment; filename="${name}"`,
         "Cache-Control": "no-store",
       },
     });

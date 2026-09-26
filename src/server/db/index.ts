@@ -1,11 +1,12 @@
 // Server-only. One database handle for the process.
-import { mkdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { drizzle as drizzlePostgres } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
 
 /*
- * PostgreSQL via Drizzle. With DATABASE_URL set, we connect to that server.
+ * PostgreSQL via Drizzle. With DATABASE_URL (or Netlify DB's NETLIFY_DATABASE_URL)
+ * set, we connect to that server.
  * Without it (local development), we run PGlite — real Postgres compiled to
  * WebAssembly — in-process, stored under .data/pglite, so the app works with no
  * database to install. The schema and every query are the same for both.
@@ -38,13 +39,19 @@ const MIGRATIONS = path.join(/*turbopackIgnore: true*/ process.cwd(), "drizzle")
 type Locker = (fn: () => Promise<void>) => Promise<void>;
 const lockers = new WeakMap<Db, Locker>();
 
+/** The Postgres to use: DATABASE_URL, or the one Netlify DB (Neon) provides. */
+export const databaseUrl = () => process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL || "";
+
+/** Serverless platforms run many small instances; each keeps a small pool. */
+const serverless = () => Boolean(process.env.VERCEL || process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
 async function connect(): Promise<Db> {
-  const url = process.env.DATABASE_URL;
+  const url = databaseUrl();
 
   if (url) {
     const { default: postgres } = await import("postgres");
     // Serverless instances each hold their own pool; keep it small there.
-    const sql = postgres(url, { max: process.env.VERCEL ? 5 : 10, onnotice: () => {} });
+    const sql = postgres(url, { max: serverless() ? 5 : 10, onnotice: () => {} });
     const db = drizzlePostgres(sql, { schema });
     lockers.set(db, async (fn) => {
       // Session-level lock on one reserved connection; it is released if the instance dies.
@@ -62,7 +69,7 @@ async function connect(): Promise<Db> {
 
   if (process.env.NODE_ENV === "production" && !process.env.ALLOW_EMBEDDED_DB) {
     throw new Error(
-      "DATABASE_URL must be set in production (or set ALLOW_EMBEDDED_DB=1 to use the embedded database).",
+      "DATABASE_URL (or Netlify DB's NETLIFY_DATABASE_URL) must be set in production, or ALLOW_EMBEDDED_DB=1 to use the embedded database.",
     );
   }
 
@@ -83,9 +90,15 @@ async function connect(): Promise<Db> {
  */
 async function migrateAndSeed(db: Db) {
   const run = async () => {
-    if (process.env.DATABASE_URL) {
-      const { migrate } = await import("drizzle-orm/postgres-js/migrator");
-      await migrate(db, { migrationsFolder: MIGRATIONS });
+    if (databaseUrl()) {
+      // The build has already migrated (scripts/migrate.mjs). If the host didn't
+      // ship the migration files with the server, trust that rather than fail.
+      if (existsSync(path.join(MIGRATIONS, "meta", "_journal.json"))) {
+        const { migrate } = await import("drizzle-orm/postgres-js/migrator");
+        await migrate(db, { migrationsFolder: MIGRATIONS });
+      } else {
+        console.warn(`Migrations not found at ${MIGRATIONS}; relying on the build's migration step.`);
+      }
     } else {
       const { migrate } = await import("drizzle-orm/pglite/migrator");
       await migrate(db as unknown as Parameters<typeof migrate>[0], { migrationsFolder: MIGRATIONS });

@@ -1,14 +1,11 @@
-// Server-only. Nightly encrypted exports of the database, kept in Blob storage.
+// Server-only. Nightly encrypted exports of the database, kept in Netlify Blobs.
 import { createCipheriv, randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { gzipSync } from "node:zlib";
 import { getTableName, is, sql } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { getDb } from "./db";
 import * as schema from "./db/schema";
-import { blobConfigured } from "./storage";
-import { today } from "./time";
+import { blobConfigured, blobStore } from "./storage";
 
 /*
  * Neon keeps point-in-time history (restore to any second in the retention
@@ -25,8 +22,10 @@ import { today } from "./time";
 
 /** Kept out: short-lived codes and counters that mean nothing after a restore. */
 const SKIP = new Set(["auth_codes", "rate_limits", "data_versions"]);
-export const BACKUP_PREFIX = "backups/";
 const KEEP = 14;
+/** Backup names sort by when they were taken: zoa-2026-09-26T23-30-00-000Z.bak */
+const NAME = /^zoa-[0-9TZ-]+\.bak$/;
+export const isBackupName = (name: string) => NAME.test(name);
 const MAGIC = Buffer.from("ZOABAK1");
 
 export const backupKey = (): Buffer | null => {
@@ -46,18 +45,19 @@ function tableNames() {
 export async function exportDatabase() {
   const db = await getDb();
   const tables: Record<string, unknown> = {};
+  const rowsOf = <T>(res: unknown) => (Array.isArray(res) ? res : (res as { rows: unknown[] }).rows) as T[];
   for (const name of tableNames()) {
     const res = await db.execute(sql`select coalesce(json_agg(t), '[]'::json)::text as j from ${sql.identifier(name)} t`);
-    const rows = (Array.isArray(res) ? res : (res as { rows: unknown[] }).rows) as { j: string }[];
-    tables[name] = JSON.parse(rows[0].j);
+    tables[name] = JSON.parse(rowsOf<{ j: string }>(res)[0].j);
   }
-  const journal = JSON.parse(readFileSync(path.join(/*turbopackIgnore: true*/ process.cwd(), "drizzle", "meta", "_journal.json"), "utf8")) as {
-    entries: { tag: string }[];
-  };
+  // The release, as the database records it: the restore script matches it to a migration.
+  const [applied] = rowsOf<{ at: string | number | null }>(
+    await db.execute(sql`select max(created_at) as at from drizzle.__drizzle_migrations`),
+  );
   return {
     format: 1,
     takenAt: new Date().toISOString(),
-    migration: journal.entries.at(-1)?.tag ?? null,
+    migratedAt: applied?.at === null || applied?.at === undefined ? null : Number(applied.at),
     tables,
   };
 }
@@ -70,13 +70,22 @@ export function sealBackup(data: unknown, key: Buffer) {
   return Buffer.concat([MAGIC, iv, cipher.getAuthTag(), body]);
 }
 
+/** The stored backups, newest first. */
 export async function listBackups() {
   if (!blobConfigured()) return [];
-  const { list } = await import("@vercel/blob");
-  const { blobs } = await list({ prefix: BACKUP_PREFIX, limit: 1000 });
-  return blobs
-    .map((b) => ({ pathname: b.pathname, size: b.size, uploadedAt: b.uploadedAt.toISOString() }))
-    .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
+  const store = await blobStore("backups");
+  const { blobs } = await store.list();
+  const names = blobs
+    .map((b) => b.key)
+    .filter(isBackupName)
+    .sort()
+    .reverse();
+  return Promise.all(
+    names.map(async (name) => {
+      const meta = (await store.getMetadata(name))?.metadata ?? {};
+      return { name, size: Number(meta.size ?? 0), takenAt: String(meta.takenAt ?? "") };
+    }),
+  );
 }
 
 export class BackupUnavailable extends Error {}
@@ -85,22 +94,17 @@ export class BackupUnavailable extends Error {}
 export async function runBackup() {
   const key = backupKey();
   if (!key) throw new BackupUnavailable("Set BACKUP_ENCRYPTION_KEY (64 hex characters) to turn on backups.");
-  if (!blobConfigured()) throw new BackupUnavailable("Connect a Vercel Blob store to keep backups.");
+  if (!blobConfigured()) throw new BackupUnavailable("Backups are kept in Netlify Blobs, which this server can't reach.");
 
   const data = await exportDatabase();
   const sealed = sealBackup(data, key);
-  const { put, del } = await import("@vercel/blob");
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const saved = await put(`${BACKUP_PREFIX}zoa-${today()}-${stamp}.bak`, sealed, {
-    access: "private",
-    contentType: "application/octet-stream",
-    addRandomSuffix: true,
-  });
+  const store = await blobStore("backups");
+  const name = `zoa-${data.takenAt.replace(/[:.]/g, "-")}.bak`;
+  await store.set(name, new Blob([new Uint8Array(sealed)]), { metadata: { size: sealed.length, takenAt: data.takenAt } });
 
-  const all = await listBackups();
-  const old = all.slice(KEEP).map((b) => b.pathname);
-  if (old.length) await del(old);
+  const old = (await listBackups()).slice(KEEP).map((b) => b.name);
+  for (const n of old) await store.delete(n);
 
   const rows = Object.values(data.tables).reduce<number>((n, rs) => n + (rs as unknown[]).length, 0);
-  return { pathname: saved.pathname, bytes: sealed.length, tables: Object.keys(data.tables).length, rows, pruned: old.length };
+  return { name, bytes: sealed.length, tables: Object.keys(data.tables).length, rows, pruned: old.length };
 }

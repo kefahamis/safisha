@@ -2,7 +2,7 @@
 import { timingSafeEqual } from "node:crypto";
 
 /**
- * Vercel Cron (and any other scheduler) calls with
+ * The Netlify scheduled functions (and any other scheduler) call with
  *   Authorization: Bearer <CRON_SECRET>
  * Returns a response to send back when the caller isn't allowed, or null.
  */
