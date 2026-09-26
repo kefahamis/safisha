@@ -14,6 +14,7 @@ import {
   PhoneCall,
   RefreshCw,
   Settings,
+  ShieldCheck,
   Smartphone,
   Tags,
   type LucideIcon,
@@ -25,6 +26,7 @@ import type { IntegrationKey, IntegrationView } from "@/lib/integrations";
 import { COMPANIES, companyById } from "@/lib/reference/companies";
 import { PLATFORM } from "@/lib/branding";
 import { BrandingSettings } from "./BrandingSettings";
+import { SecurityPolicyPanel } from "./SecurityPolicy";
 import { IntegrationCard } from "./IntegrationCard";
 import { UssdTester } from "./UssdTester";
 
@@ -44,7 +46,16 @@ interface ScopeData {
   platform: { publicBaseUrl: string | null; sms: string; email: string; ai: string };
 }
 
-type Tab = "payments" | "branding" | "platform-brand" | "messaging" | "translation" | "billing" | "system" | "activity";
+type Tab =
+  | "payments"
+  | "branding"
+  | "platform-brand"
+  | "messaging"
+  | "translation"
+  | "billing"
+  | "system"
+  | "security"
+  | "activity";
 
 /**
  * Settings for everything third-party, in one place. A company admin manages
@@ -105,6 +116,7 @@ export function SettingsCenter({ platform, companyId }: { platform: boolean; com
     { id: "messaging", label: "SMS, USSD & email", icon: MessageSquareText, platformOnly: true },
     { id: "translation", label: "Translation", icon: Languages, platformOnly: true },
     { id: "system", label: "Public address", icon: Globe, platformOnly: true },
+    { id: "security", label: "Sign-in security", icon: ShieldCheck, platformOnly: true },
     { id: "activity", label: "Activity", icon: Inbox },
   ];
 
@@ -215,6 +227,8 @@ export function SettingsCenter({ platform, companyId }: { platform: boolean; com
       {platformData && tab === "system" && (
         <div className="settings-grid">{card(platformData, "app", setPlatformData)}</div>
       )}
+
+      {platform && tab === "security" && <SecurityPolicyPanel />}
 
       {companyData && tab === "activity" && <Outbox scope={platform ? "platform" : company} />}
     </>

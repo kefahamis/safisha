@@ -1,4 +1,5 @@
-import { updateUser, type UserPatch } from "@/server/accessStore";
+import { findUserById, updateUser, type UserPatch } from "@/server/accessStore";
+import { resetFactors } from "@/server/mfa";
 import { audit } from "@/server/audit";
 import { errorResponse, requirePermission } from "@/server/session";
 
@@ -16,6 +17,20 @@ export async function PATCH(request: Request, { params }: Params) {
         { error: "You cannot change your own role or suspend yourself." },
         { status: 400 },
       );
+    }
+
+    // Someone locked out of every second step: clear them so they can set up again.
+    if (body.resetTwoStep === true) {
+      const user = await findUserById(userId);
+      if (!user) return Response.json({ error: "No such user." }, { status: 404 });
+      await resetFactors(userId);
+      await audit(session, {
+        action: "security.reset",
+        target: userId,
+        company: user.scope.companyId ?? null,
+        detail: { user: user.name },
+      });
+      return Response.json({ ok: true });
     }
 
     const patch: UserPatch = {};

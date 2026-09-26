@@ -1,4 +1,5 @@
 import type { CheckAnswer, DocSubject, FleetSettings, IncidentKind, Vehicle, WorkOrderKind, WorkOrderStatus } from "./fleet";
+import type { TicketPriority } from "./tickets";
 import type {
   ClientType,
   DumpReport,
@@ -33,6 +34,26 @@ export type Command =
   | { type: "ticket.create"; client: string; cat: string; subject: string; message: string }
   | { type: "ticket.reply"; ticket: string; from: "client" | "agent"; text: string }
   | { type: "ticket.status"; ticket: string; status: TicketStatus }
+  | {
+      type: "ticket.update";
+      ticket: string;
+      priority?: TicketPriority;
+      /** A user id, or null to unassign. */
+      assignee?: string | null;
+      cat?: string;
+    }
+  | { type: "ticket.note"; ticket: string; text: string }
+  | {
+      type: "ticket.open";
+      client: string;
+      cat: string;
+      subject: string;
+      message: string;
+      priority: TicketPriority;
+      channel: string;
+      assignee?: string | null;
+    }
+  | { type: "invoice.send"; invoice: string }
   | {
       type: "client.add";
       company: string;

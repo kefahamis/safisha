@@ -75,6 +75,8 @@ export interface Session extends SessionClaims {
   permissions: string[];
   /** Dashboards this session may open, including its home workspace. */
   allowed: Workspace[];
+  /** The platform requires two-step sign-in and this person hasn't set it up yet. */
+  setupRequired?: boolean;
 }
 
 export type PublicUser = Omit<User, "passwordHash">;

@@ -37,13 +37,20 @@ export async function getSession(): Promise<Session | null> {
     lang: user.lang === "sw" ? "sw" : "en",
     permissions: await effectivePermissions(user, role, department),
     allowed: role ? allowedWorkspaces(role) : [claims.ws],
+    setupRequired: claims.setup ? true : undefined,
   };
 }
 
-/** Throws if there is no session — for route handlers that must be signed in. */
-export async function requireSession(): Promise<Session> {
+/**
+ * Throws if there is no session — for route handlers that must be signed in.
+ * Someone held for two-step setup can reach only what's marked `allowSetup`.
+ */
+export async function requireSession(opts: { allowSetup?: boolean } = {}): Promise<Session> {
   const session = await getSession();
   if (!session) throw new HttpError(401, "Not signed in");
+  if (session.setupRequired && !opts.allowSetup) {
+    throw new HttpError(403, "Set up two-step sign-in first, on your Security page.");
+  }
   return session;
 }
 

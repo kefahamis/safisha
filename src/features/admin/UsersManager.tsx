@@ -9,6 +9,7 @@ import {
   Plus,
   RotateCcw,
   Save,
+  ShieldOff,
   SlidersHorizontal,
   Users,
   X,
@@ -237,6 +238,19 @@ function OverrideEditor({
     return map;
   });
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
+
+  /** For someone who lost every second step: they set up again at next sign-in. */
+  const resetTwoStep = async () => {
+    if (!window.confirm(`Reset two-step sign-in for ${user.name}? Their passkeys, authenticator, SMS and email methods and recovery codes are removed. Only do this once you're sure it's them.`)) return;
+    const res = await fetch(`/api/admin/users/${user.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ resetTwoStep: true }),
+    });
+    const body = await res.json().catch(() => ({}));
+    toast(res.ok ? `Two-step sign-in reset for ${user.name}.` : (body.error ?? "Couldn't reset."));
+  };
 
   const roleHas = (id: string) => role?.permissions.includes(id) ?? false;
   const effective = (id: string) =>
@@ -266,10 +280,16 @@ function OverrideEditor({
             person; deny takes it away even if the role carries it.
           </div>
         </div>
-        <button type="button" className="btn primary small" onClick={save} disabled={busy}>
-          <Save size={14} strokeWidth={2.2} aria-hidden="true" />
-          {busy ? "Saving…" : "Save overrides"}
-        </button>
+        <div className="row" style={{ gap: 8 }}>
+          <button type="button" className="btn ghost small" onClick={resetTwoStep}>
+            <ShieldOff size={14} strokeWidth={2.2} aria-hidden="true" />
+            Reset two-step
+          </button>
+          <button type="button" className="btn primary small" onClick={save} disabled={busy}>
+            <Save size={14} strokeWidth={2.2} aria-hidden="true" />
+            {busy ? "Saving…" : "Save overrides"}
+          </button>
+        </div>
       </div>
 
       {GROUPS.map(({ group, items }) => (

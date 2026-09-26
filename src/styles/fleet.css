@@ -454,3 +454,435 @@ tr.flagged td {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ---------- tickets ---------- */
+
+.tk-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.tk-toolbar select {
+  width: auto;
+}
+
+.tk-toolbar .segmented .num {
+  opacity: 0.6;
+  margin-left: 2px;
+}
+
+.tk-detail-head {
+  margin-bottom: -8px;
+}
+
+.tk-props {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.tk-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.tk-facts dt {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.tk-facts dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  font-size: 0.86rem;
+}
+
+.tk-note {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--warn-soft) 70%, var(--panel));
+  font-size: 0.86rem;
+}
+
+.tk-note-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tk-note-form textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.tk-note-form .btn {
+  justify-self: end;
+}
+
+/* ---------- invoices ---------- */
+
+.invoice-doc {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+}
+
+.invoice-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.invoice-head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.invoice-title {
+  text-align: right;
+}
+
+.invoice-title .mono {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.invoice-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.invoice-meta dl {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 4px 16px;
+  margin: 0;
+}
+
+.invoice-meta dl > div {
+  display: contents;
+}
+
+.invoice-meta dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.invoice-meta dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+}
+
+.invoice-lines tr.invoice-paid td {
+  color: var(--ok);
+  font-size: 0.84rem;
+}
+
+.invoice-lines tr.invoice-total td {
+  font-weight: 800;
+  font-size: 1rem;
+  border-top: 2px solid var(--ink);
+}
+
+.invoice-pay {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel2);
+  font-size: 0.88rem;
+  display: grid;
+  gap: 4px;
+}
+
+.invoice-pay.paid {
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-weight: 700;
+}
+
+/* Printing an invoice prints the invoice alone, on white. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .invoice-doc,
+  .invoice-doc * {
+    visibility: visible;
+    color: #000 !important;
+  }
+
+  .invoice-modal {
+    position: absolute;
+    inset: 0;
+    background: none;
+    backdrop-filter: none;
+    display: block;
+    padding: 0;
+  }
+
+  .invoice-modal .sheet {
+    box-shadow: none;
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .invoice-doc {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: 0;
+    background: #fff;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .tk-toolbar,
+  .tk-toolbar > .row {
+    align-items: stretch;
+  }
+
+  .tk-toolbar > .row {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .tk-toolbar .search {
+    flex: 1 1 100%;
+  }
+
+  .tk-toolbar .segmented {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  .tk-toolbar .segmented button {
+    flex: none;
+  }
+
+  .invoice-doc {
+    padding: 16px;
+  }
+}
+
+/* ---------- sign-in security ---------- */
+
+.banner.ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.usermenu-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.usermenu-link:hover {
+  background: var(--panel2);
+}
+
+.sec-methods {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(420px, 100%), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.panel.sec-method.on {
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ok) 35%, transparent), var(--shadow);
+}
+
+.sec-method-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sec-method-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.sec-factors {
+  margin-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.sec-setup {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.totp-setup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.totp-setup img {
+  border-radius: 12px;
+  background: #fff;
+  padding: 6px;
+  flex: none;
+}
+
+.totp-setup .stack {
+  flex: 1;
+  min-width: 200px;
+}
+
+.sec-steps {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.sec-secret {
+  font-family: var(--mono);
+  font-size: 0.92rem;
+  letter-spacing: 0.06em;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--panel2);
+  word-break: break-all;
+}
+
+.sec-codes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--panel2);
+  font-size: 1rem;
+  text-align: center;
+}
+
+.policy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.policy-grid .segmented {
+  margin: 6px 0 4px;
+}
+
+.policy-methods {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.policy-methods:disabled {
+  opacity: 0.45;
+}
+
+.policy-methods legend {
+  margin-bottom: 6px;
+}
+
+/* The second step at sign-in */
+.twostep-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.twostep-remember input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.twostep-error {
+  margin-top: 12px;
+}
+
+.twostep-alt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+/* Security switches */
+.sec-method-head .toggle {
+  margin-top: 2px;
+}
+
+.panel.sec-method.pending {
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 45%, transparent), var(--shadow);
+}
+
+.sec-add {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+
+.policy-method {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: var(--panel2);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.policy-method.on {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.policy-method .t {
+  font-weight: 600;
+  font-size: 0.88rem;
+}

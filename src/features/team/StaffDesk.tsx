@@ -59,8 +59,8 @@ export function StaffDesk() {
       icon: Headset,
       count: waiting.length,
       unit: "conversations",
-      href: "/company/support",
-      cta: "Open the care inbox",
+      href: "/company/tickets",
+      cta: "Open tickets",
       rows: waiting.slice(0, 4).map((t) => ({
         id: t.id,
         title: t.subject,

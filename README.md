@@ -189,6 +189,49 @@ A company admin runs their own team under **Staff & departments**
   the full pages. Staff land there after signing in; company admins land on the
   company dashboard.
 
+## Customer care, invoices and the audit trail
+
+- **Chat agent** is the live conversation with clients. **Tickets** is the same
+  desk as a ticketing system: every request has a priority that sets its
+  deadline (urgent 4 h, high 8 h, normal 24 h, low 3 days), an owner, a channel
+  (app, phone, walk-in, USSD, crew, email), internal notes the client never
+  sees, and a history of status, priority and owner changes. Queues: open,
+  mine, unassigned, overdue, resolved. Staff can open a ticket for a caller or
+  walk-in (the client gets an SMS with the number); an unassigned ticket goes to
+  whoever replies first.
+- **Invoices** (under Financial reports) are the charges on each account —
+  monthly fees and on-demand pickups — with payments applied oldest first, due
+  10 days after issue. Each prints as a document with the Paybill details, and
+  can be sent to the client by SMS.
+- **Audit log** entries carry the IP address the request came from (the first
+  hop of `X-Forwarded-For` behind Vercel or another proxy), and staff sign-ins
+  are logged. Search works on IPs too.
+
+## Two-step sign-in
+
+Everyone has a **Security** page (user menu → Security) where they turn on a
+second step after their password:
+
+- **Passkey** — fingerprint, face or screen lock (WebAuthn, via
+  `@simplewebauthn`). Passkeys are tied to the site's domain.
+- **Authenticator app** — standard 6-digit TOTP codes (Google/Microsoft
+  Authenticator and the like), set up from a QR code.
+- **SMS code** and **email code** — the phone or email is verified with a code
+  first.
+
+Turning on the first method gives ten one-time **recovery codes**. At sign-in
+the person picks any method they have, and can tick "remember this device".
+
+The platform admin sets the rules per kind of account — clients, collectors,
+company admins & staff, platform admins — under **Settings → Sign-in security**:
+two-step off, optional or required; which methods are offered; how long a device
+is remembered. *Required* holds people on their Security page (no data, no
+actions) until they set a method up. A platform admin can reset someone's
+methods from **Users** if they're locked out.
+
+Five wrong codes end a sign-in attempt. The count is kept per server instance,
+so on a multi-instance deployment it is a speed bump rather than a hard limit.
+
 ## Security model
 
 - **Sessions** are HS256 JWTs in an httpOnly, SameSite=Lax cookie; passwords are

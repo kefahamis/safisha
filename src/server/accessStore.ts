@@ -225,6 +225,26 @@ export async function userDepartment(user: Pick<User, "scope">): Promise<Departm
   return { ...d, permissions: [...d.permissions] };
 }
 
+/** A company's active users who hold a permission, by role, department and overrides. */
+export async function companyUsersWith(company: string, permission: string): Promise<{ id: string; name: string }[]> {
+  const db = await getDb();
+  const [userRows, roleRows, deptRows] = await Promise.all([
+    db.select().from(users).where(sql`${users.scope}->>'companyId' = ${company}`),
+    db.select().from(roles),
+    db.select().from(departments).where(eq(departments.company, company)),
+  ]);
+  const out: { id: string; name: string }[] = [];
+  for (const row of userRows) {
+    if (row.suspended) continue;
+    const u = toUser(row);
+    const role = roleRows.find((r) => r.id === u.roleId);
+    const dept = deptRows.find((d) => d.id === u.scope.departmentId);
+    const perms = await effectivePermissions(u, role ? toRole(role) : undefined, dept ? { ...dept, permissions: [...dept.permissions] } : null);
+    if (perms.includes(permission)) out.push({ id: u.id, name: u.name });
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 /** How many people would be affected by editing a role. */
 export async function roleUsage(): Promise<Record<string, number>> {
   const db = await getDb();

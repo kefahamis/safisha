@@ -3,7 +3,9 @@ import { and, eq, like, sql } from "drizzle-orm";
 import type { Session } from "@/lib/auth/types";
 import { luhn, normalisePhone, KE_MOBILE } from "@/lib/clientNumber";
 import type { Command, CommandResult } from "@/lib/commands";
-import { kes, MONTHS, pad } from "@/lib/format";
+import { fmtDate, kes, MONTHS, pad } from "@/lib/format";
+import { INVOICE_STATUS_LABEL, invoicesFor } from "@/lib/invoices";
+import { CHANNELS, PRIORITIES, priorityLabel } from "@/lib/tickets";
 import {
   DOC_KINDS,
   defectsOf,
@@ -19,6 +21,7 @@ import { companyById, companyForEstate } from "@/lib/reference/companies";
 import { ESTATES } from "@/lib/reference/estates";
 import { optimiseRoute, tourLength } from "@/lib/routeOpt";
 import type { Truck } from "@/lib/types";
+import { companyUsersWith } from "./accessStore";
 import { audit } from "./audit";
 import {
   cleanCheckItems,
@@ -78,6 +81,19 @@ async function requireTruckRecords(session: Session, truck: { id: string; compan
 const isPaymentAccount = (code: string) => PAYMENT_ACCOUNTS.some((a) => a.code === code);
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
 const int = (n: unknown) => (typeof n === "number" && Number.isFinite(n) ? Math.round(n) : NaN);
+
+/** A line in a ticket's desk history. */
+async function ticketEvent(db: Db, ticket: string, actor: { sub: string; name: string }, action: string, detail: Record<string, unknown> = {}) {
+  await db.insert(t.ticketEvents).values({ ticket, at: nowStamp(), actor: actor.sub, actorName: actor.name, action, detail });
+}
+
+/** Someone on this company's desk: they must be able to see its tickets. */
+async function requireAgent(company: string, user: string) {
+  const agents = await companyUsersWith(company, "tickets.view.company");
+  const agent = agents.find((a) => a.id === user);
+  if (!agent) deny("Pick someone on the care desk.");
+  return agent!;
+}
 
 async function getClient(db: Db, id: string) {
   const [c] = await db.select().from(t.clients).where(eq(t.clients.id, id));
@@ -208,6 +224,7 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
           subject: "Crew could not access your gate",
           status: "Open",
           createdAt: at,
+          channel: "crew",
         });
         await tx.insert(t.ticketMessages).values({
           ticket: id,
@@ -308,6 +325,7 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
           },
         ]);
       });
+      await ticketEvent(db, id, { sub: session.sub, name: client.name }, "created", { channel: "app" });
       return { ok: true, id };
     }
 
@@ -324,14 +342,25 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
       const text = cmd.text.trim().slice(0, 2000);
       if (!text) return { ok: false, error: "Write a message first." };
 
-      await db.insert(t.ticketMessages).values({ ticket: ticket.id, from: cmd.from, text, at });
+      await db
+        .insert(t.ticketMessages)
+        .values({ ticket: ticket.id, from: cmd.from, text, at, author: cmd.from === "agent" ? session.name : null });
+      if (cmd.from === "agent" && !ticket.assignee && session.permissions.includes("tickets.view.company")) {
+        await db.update(t.tickets).set({ assignee: session.sub }).where(eq(t.tickets.id, ticket.id));
+        await ticketEvent(db, ticket.id, session, "assign", { to: session.name, auto: true });
+      }
       const status =
         cmd.from === "agent" && ticket.status === "Open"
           ? "Pending"
           : cmd.from === "client" && ticket.status === "Resolved"
             ? "Open"
             : ticket.status;
-      if (status !== ticket.status) await db.update(t.tickets).set({ status }).where(eq(t.tickets.id, ticket.id));
+      if (status !== ticket.status) {
+        await db
+          .update(t.tickets)
+          .set({ status, resolvedAt: status === "Resolved" ? at : null })
+          .where(eq(t.tickets.id, ticket.id));
+      }
 
       if (cmd.from === "agent") {
         const client = await getClient(db, ticket.client);
@@ -353,14 +382,138 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
       if (!ticket) return { ok: false, error: "No such conversation." };
       await requireCompany(session, ticket.company);
       if (!["Open", "Pending", "Resolved"].includes(cmd.status)) return { ok: false, error: "Unknown status." };
-      await db.update(t.tickets).set({ status: cmd.status }).where(eq(t.tickets.id, ticket.id));
+      if (cmd.status === ticket.status) return { ok: true };
+      await db
+        .update(t.tickets)
+        .set({ status: cmd.status, resolvedAt: cmd.status === "Resolved" ? at : null })
+        .where(eq(t.tickets.id, ticket.id));
       await db.insert(t.ticketMessages).values({
         ticket: ticket.id,
         from: "sys",
         text: `Status changed to ${cmd.status}`,
         at,
       });
+      await ticketEvent(db, ticket.id, session, "status", { from: ticket.status, to: cmd.status });
       return { ok: true };
+    }
+
+    case "ticket.update": {
+      need(session, "tickets.status");
+      const [ticket] = await db.select().from(t.tickets).where(eq(t.tickets.id, cmd.ticket));
+      if (!ticket) return { ok: false, error: "No such ticket." };
+      await requireCompany(session, ticket.company);
+      const set: Partial<typeof t.tickets.$inferInsert> = {};
+      const events: [string, Record<string, unknown>][] = [];
+      if (cmd.priority !== undefined && cmd.priority !== ticket.priority) {
+        if (!PRIORITIES.some((p) => p.key === cmd.priority)) return { ok: false, error: "Unknown priority." };
+        set.priority = cmd.priority;
+        events.push(["priority", { from: priorityLabel(ticket.priority), to: priorityLabel(cmd.priority) }]);
+      }
+      if (cmd.assignee !== undefined && cmd.assignee !== ticket.assignee) {
+        if (cmd.assignee === null) {
+          set.assignee = null;
+          events.push(["assign", { to: null }]);
+        } else {
+          const agent = await requireAgent(ticket.company, cmd.assignee);
+          set.assignee = agent.id;
+          events.push(["assign", { to: agent.name }]);
+        }
+      }
+      if (cmd.cat !== undefined && cmd.cat.trim() && cmd.cat !== ticket.cat) {
+        set.cat = cmd.cat.trim().slice(0, 40);
+        events.push(["category", { from: ticket.cat, to: set.cat }]);
+      }
+      if (!events.length) return { ok: true };
+      await db.update(t.tickets).set(set).where(eq(t.tickets.id, ticket.id));
+      for (const [action, detail] of events) await ticketEvent(db, ticket.id, session, action, detail);
+      return { ok: true, message: `${ticket.id} updated.` };
+    }
+
+    case "ticket.note": {
+      need(session, "tickets.reply", "tickets.view.company");
+      const [ticket] = await db.select().from(t.tickets).where(eq(t.tickets.id, cmd.ticket));
+      if (!ticket) return { ok: false, error: "No such ticket." };
+      await requireCompany(session, ticket.company);
+      const text = cmd.text.trim().slice(0, 2000);
+      if (!text) return { ok: false, error: "Write the note first." };
+      // Stored beside the conversation but never sent to the client.
+      await db.insert(t.ticketMessages).values({ ticket: ticket.id, from: "note", text, at, author: session.name });
+      return { ok: true, message: "Note added. Only staff can see it." };
+    }
+
+    case "ticket.open": {
+      need(session, "tickets.reply", "tickets.view.company");
+      const client = await getClient(db, cmd.client);
+      if (!client) return { ok: false, error: "Pick the client." };
+      await requireCompany(session, client.company);
+      const subject = cmd.subject.trim().slice(0, 80);
+      const message = cmd.message.trim().slice(0, 2000);
+      if (!subject || !message) return { ok: false, error: "Give the ticket a subject and describe the request." };
+      if (!PRIORITIES.some((p) => p.key === cmd.priority)) return { ok: false, error: "Pick a priority." };
+      if (!CHANNELS.some((c) => c.key === cmd.channel)) return { ok: false, error: "Pick how they got in touch." };
+      const agent = cmd.assignee ? await requireAgent(client.company, cmd.assignee) : null;
+      const channel = CHANNELS.find((c) => c.key === cmd.channel)!.label.toLowerCase();
+      let id = "";
+      await db.transaction(async (tx) => {
+        id = await nextTicketId(tx as unknown as Db);
+        await tx.insert(t.tickets).values({
+          id,
+          client: client.id,
+          company: client.company,
+          cat: cmd.cat.trim().slice(0, 40) || "Other",
+          subject,
+          status: "Open",
+          createdAt: at,
+          priority: cmd.priority,
+          channel: cmd.channel,
+          assignee: agent?.id ?? null,
+        });
+        // What the client said, as the desk took it down.
+        await tx.insert(t.ticketMessages).values([
+          { ticket: id, from: "client", text: message, at, author: session.name },
+          { ticket: id, from: "sys", text: `Ticket ${id} opened by ${session.name} from a ${channel}.`, at },
+        ]);
+      });
+      await ticketEvent(db, id, session, "created", { channel: cmd.channel, priority: cmd.priority });
+      if (agent) await ticketEvent(db, id, session, "assign", { to: agent.name });
+      await sendSms({
+        to: client.phone,
+        company: client.company,
+        purpose: "care-ticket",
+        body: `${companyById(client.company).name}: we've logged your request as ${id} ("${subject}"). Reply in the app or call ${companyById(client.company).care}.`,
+      });
+      return { ok: true, id, message: `${id} opened for ${client.name}.` };
+    }
+
+    case "invoice.send": {
+      need(session, "reminders.manage");
+      const [charge] = await db.select().from(t.txns).where(eq(t.txns.id, cmd.invoice));
+      if (!charge || charge.kind !== "charge") return { ok: false, error: "No such invoice." };
+      const client = await getClient(db, charge.client);
+      if (!client) return { ok: false, error: "No such client." };
+      await requireCompany(session, client.company);
+      const txns = (await db.select().from(t.txns).where(eq(t.txns.client, client.id))).map((x) => ({
+        ...x,
+        kind: x.kind as "charge" | "payment",
+        channel: x.channel ?? undefined,
+        payer: x.payer ?? undefined,
+      }));
+      const inv = invoicesFor(txns, [client], today()).find((i) => i.id === charge.id)!;
+      if (inv.balance <= 0) return { ok: false, error: `${inv.id} is already paid.` };
+      const co = companyById(client.company);
+      await sendSms({
+        to: client.phone,
+        company: client.company,
+        purpose: "invoice",
+        body: `${co.name} invoice ${inv.id}: ${inv.description}, ${kes(inv.balance)} ${inv.status === "overdue" ? "overdue since" : "due"} ${fmtDate(inv.due)}. Pay via M-Pesa Paybill ${co.paybill}, account ${client.id}.`,
+      });
+      await audit(session, {
+        action: "invoice.send",
+        target: inv.id,
+        company: client.company,
+        detail: { client: client.id, balance: inv.balance, status: INVOICE_STATUS_LABEL[inv.status] },
+      });
+      return { ok: true, message: `Invoice sent to ${client.name} by SMS.` };
     }
 
     /* ---------------- clients ---------------- */

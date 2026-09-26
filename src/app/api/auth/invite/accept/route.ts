@@ -15,5 +15,5 @@ export async function POST(request: Request) {
   );
   const signed = await issueSession(res.user);
   if (!signed.ok) return Response.json({ error: signed.error }, { status: signed.status });
-  return Response.json({ ok: true, workspace: signed.workspace });
+  return Response.json({ ok: true, workspace: signed.workspace, mfa: signed.mfa });
 }

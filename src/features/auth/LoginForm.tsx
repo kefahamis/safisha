@@ -68,7 +68,9 @@ export function LoginForm({
         return;
       }
       // A `next` from the gate only counts if it stays inside the app.
-      const target = next?.startsWith("/") ? next : "/";
+      // A second step first, when the account has one; it carries `next` on.
+      const safeNext = next?.startsWith("/") ? next : undefined;
+      const target = data.mfa ? `/login/verify${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}` : (safeNext ?? "/");
       router.replace(target);
       router.refresh();
     } catch {

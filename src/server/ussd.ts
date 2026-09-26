@@ -166,6 +166,7 @@ export async function ussdReply(input: { phone: string; text: string }): Promise
         subject: "Missed pickup (reported by USSD)",
         status: "Open",
         createdAt: at,
+        channel: "ussd",
       });
       await db.insert(t.ticketMessages).values({
         ticket: id,

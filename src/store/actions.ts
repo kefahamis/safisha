@@ -1,5 +1,6 @@
 import type { Command, CommandResult, StopProofInput, VehiclePatch } from "@/lib/commands";
 import type { FleetSettings } from "@/lib/fleet";
+import type { TicketPriority } from "@/lib/tickets";
 import type { AppData, ClientType, DumpReport, PickupRequestStatus, StatementPeriod, StopStatus, TicketStatus, Txn } from "@/lib/types";
 import type { AppStore } from "./appStore";
 import { enqueue, isNetworkError, list, QUEUEABLE, remove } from "./outbox";
@@ -339,6 +340,15 @@ export function createActions(store: AppStore) {
       send({ type: "ticket.reply", ticket, from, text }),
 
     setTicketStatus: (ticket: string, status: TicketStatus) => send({ type: "ticket.status", ticket, status }),
+
+    updateTicket: (ticket: string, patch: { priority?: TicketPriority; assignee?: string | null; cat?: string }) =>
+      send({ type: "ticket.update", ticket, ...patch }),
+
+    addTicketNote: (ticket: string, text: string) => send({ type: "ticket.note", ticket, text }),
+
+    openTicket: (input: Omit<Extract<Command, { type: "ticket.open" }>, "type">) => send({ type: "ticket.open", ...input }),
+
+    sendInvoice: (invoice: string) => send({ type: "invoice.send", invoice }),
 
     async createTicket(client: string, cat: string, subject: string, message: string) {
       const result = await send({ type: "ticket.create", client, cat, subject, message });

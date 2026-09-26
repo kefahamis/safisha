@@ -14,6 +14,7 @@ import type {
   Truck,
   WasteStream,
 } from "@/lib/types";
+import { companyUsersWith } from "./accessStore";
 import { brandingFor } from "./branding";
 import { checksToday, fleetAlerts } from "./fleet";
 import { getDb, schema } from "./db";
@@ -155,23 +156,58 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
         : undefined,
   }));
 
-  const tickets: Ticket[] = ticketRows.map((tk) => ({
-    id: tk.id,
-    client: tk.client,
-    company: tk.company,
-    cat: tk.cat,
-    subject: tk.subject,
-    status: tk.status as Ticket["status"],
-    msgs: msgRows
-      .filter((m) => m.ticket === tk.id)
-      .map((m) => ({
-        id: m.id,
-        from: m.from as Ticket["msgs"][number]["from"],
-        text: m.text,
-        at: m.at,
-        photo: m.photo ?? undefined,
-      })),
-  }));
+  // The desk sees internal notes, history and who has each ticket; a client sees only the conversation.
+  const desk = session.ws !== "client";
+  const eventRows =
+    desk && ticketRows.length
+      ? await db
+          .select()
+          .from(t.ticketEvents)
+          .where(inArray(t.ticketEvents.ticket, ticketRows.map((x) => x.id)))
+          .orderBy(t.ticketEvents.id)
+      : [];
+  const assigneeIds = [...new Set(ticketRows.map((x) => x.assignee).filter((x): x is string => Boolean(x)))];
+  const assigneeRows =
+    desk && assigneeIds.length
+      ? await db.select({ id: t.users.id, name: t.users.name }).from(t.users).where(inArray(t.users.id, assigneeIds))
+      : [];
+
+  const tickets: Ticket[] = ticketRows.map((tk) => {
+    const mine = msgRows.filter((m) => m.ticket === tk.id);
+    return {
+      id: tk.id,
+      client: tk.client,
+      company: tk.company,
+      cat: tk.cat,
+      subject: tk.subject,
+      status: tk.status as Ticket["status"],
+      createdAt: tk.createdAt,
+      priority: tk.priority as Ticket["priority"],
+      channel: tk.channel,
+      resolvedAt: tk.resolvedAt ?? undefined,
+      msgs: mine
+        .filter((m) => m.from !== "note")
+        .map((m) => ({
+          id: m.id,
+          from: m.from as Ticket["msgs"][number]["from"],
+          text: m.text,
+          at: m.at,
+          photo: m.photo ?? undefined,
+        })),
+      ...(desk
+        ? {
+            assignee: tk.assignee ?? undefined,
+            assigneeName: assigneeRows.find((u) => u.id === tk.assignee)?.name,
+            notes: mine
+              .filter((m) => m.from === "note")
+              .map((m) => ({ id: m.id, by: m.author ?? "Staff", text: m.text, at: m.at })),
+            events: eventRows
+              .filter((e) => e.ticket === tk.id)
+              .map((e) => ({ id: e.id, at: e.at, actorName: e.actorName, action: e.action, detail: e.detail })),
+          }
+        : {}),
+    };
+  });
 
   const stops: AppData["stops"] = {};
   const proofs: AppData["proofs"] = {};
@@ -231,6 +267,11 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
 
   const companyIds = companies ?? COMPANIES.map((c) => c.id);
 
+  const agents =
+    session.ws === "company" && companies?.length === 1 && session.permissions.includes("tickets.view.company")
+      ? await companyUsersWith(companies[0], "tickets.view.company")
+      : [];
+
   // Fleet: managers see their company's alerts; a driver sees their own truck's.
   const fleet: AppData["fleet"] = { checks: {}, alerts: [] };
   if (session.ws === "collector" && session.scope.truckId && session.scope.companyId) {
@@ -289,6 +330,7 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
       translate: await translateAvailable(),
     },
     fleet,
+    agents,
     branding: await brandingFor(companyIds),
     serverNow: now,
   };

@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronDown, LoaderCircle, LogOut } from "lucide-react";
+import { ChevronDown, LoaderCircle, LogOut, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { useSession } from "@/components/auth/SessionProvider";
@@ -125,6 +126,11 @@ export function UserMenu() {
             ))}
           </div>
         </div>
+
+        <Link href={`/${session.ws}/security`} className="usermenu-link" onClick={() => setOpen(false)}>
+          <ShieldCheck size={17} strokeWidth={2.2} aria-hidden="true" />
+          {t("Security")}
+        </Link>
 
         <button type="button" className="usermenu-signout" onClick={signOut} disabled={busy}>
           {busy ? (

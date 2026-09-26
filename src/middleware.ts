@@ -50,6 +50,11 @@ export async function middleware(request: NextRequest) {
     return redirectTo(`/login?next=${next}`);
   }
 
+  // Held until two-step sign-in is set up: only their security page opens.
+  if (claims.setup && pathname !== `/${claims.ws}/security`) {
+    return redirectTo(`/${claims.ws}/security`);
+  }
+
   // Signed in, but this dashboard is not theirs — send them to their own.
   const allowed = claims.allowed?.length ? claims.allowed : [claims.ws];
   if (!allowed.includes(required)) {

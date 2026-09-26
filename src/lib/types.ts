@@ -1,5 +1,6 @@
 import type { Branding } from "./branding";
 import type { FleetAlert, Inspection } from "./fleet";
+import type { TicketPriority } from "./tickets";
 
 export type Role = "client" | "company" | "collector" | "admin";
 
@@ -100,7 +101,40 @@ export interface Ticket {
   cat: string;
   subject: string;
   status: TicketStatus;
+  /** The conversation with the client. */
   msgs: TicketMessage[];
+  /** "YYYY-MM-DD HH:mm" */
+  createdAt: string;
+  priority: TicketPriority;
+  channel: string;
+  /** The staff member handling it (user id), and their name. */
+  assignee?: string;
+  assigneeName?: string;
+  resolvedAt?: string;
+  /** Desk only: notes the client never sees, and what happened to the ticket. */
+  notes?: TicketNote[];
+  events?: TicketEvent[];
+}
+
+export interface TicketNote {
+  id?: number;
+  by: string;
+  text: string;
+  at: string;
+}
+
+export interface TicketEvent {
+  id: number;
+  at: string;
+  actorName: string;
+  action: string;
+  detail: Record<string, unknown>;
+}
+
+/** Someone who can take tickets, for the assignee picker. */
+export interface CareAgent {
+  id: string;
+  name: string;
 }
 
 export type WasteStream = "mixed" | "recyclable" | "organic" | "residual";
@@ -228,6 +262,8 @@ export interface AppData {
   dumpReports: DumpReport[];
   pricing: Record<string, PriceItem[]>;
   integrations: IntegrationStatus;
+  /** Staff who can take tickets, for assigning them; empty outside the care desk. */
+  agents: CareAgent[];
   /** Today's vehicle checks and what needs attention, for fleet managers and drivers. */
   fleet: {
     /** truckId -> today's latest check. */

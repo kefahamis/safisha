@@ -7,7 +7,7 @@ import { useState, type ReactNode } from "react";
 import { PlatformIdentity } from "@/components/layout/PlatformBrand";
 
 /** The centred card the account flows share. */
-function AuthCard({ title, lead, children }: { title: string; lead: ReactNode; children: ReactNode }) {
+export function AuthCard({ title, lead, children }: { title: string; lead: ReactNode; children: ReactNode }) {
   return (
     <div className="authflow">
       <div className="authflow-card">
@@ -30,7 +30,7 @@ function AuthCard({ title, lead, children }: { title: string; lead: ReactNode; c
   );
 }
 
-function Field({
+export function Field({
   icon: Icon,
   label,
   ...input
@@ -46,7 +46,7 @@ function Field({
   );
 }
 
-function Submit({ busy, children }: { busy: boolean; children: ReactNode }) {
+export function Submit({ busy, children }: { busy: boolean; children: ReactNode }) {
   return (
     <button className="signin-submit" disabled={busy}>
       {busy && <LoaderCircle size={17} strokeWidth={2.2} className="spin" aria-hidden="true" />}
@@ -57,7 +57,7 @@ function Submit({ busy, children }: { busy: boolean; children: ReactNode }) {
 }
 
 /** Shown only when no SMS/email provider could deliver the code (never in production). */
-function DemoCode({ code }: { code?: string }) {
+export function DemoCode({ code }: { code?: string }) {
   if (!code) return null;
   return (
     <div className="demo-code" role="status">
@@ -110,7 +110,7 @@ export function ForgotPassword() {
     const { ok, body } = await post("/api/auth/reset", { identifier, code, password });
     setBusy(false);
     if (!ok) return setError(body.error ?? "That didn't work.");
-    router.replace("/");
+    router.replace(body.mfa ? "/login/verify" : "/");
     router.refresh();
   };
 
@@ -193,7 +193,7 @@ export function PhoneSignIn() {
     const { ok, body } = await post("/api/auth/otp/verify", { phone, code });
     setBusy(false);
     if (!ok) return setError(body.error ?? "That code didn't work.");
-    router.replace("/");
+    router.replace(body.mfa ? "/login/verify" : "/");
     router.refresh();
   };
 
@@ -257,7 +257,7 @@ export function AcceptInvite({ email, token }: { email: string; token: string })
     const { ok, body } = await post("/api/auth/invite/accept", { email, token, password });
     setBusy(false);
     if (!ok) return setError(body.error ?? "That didn't work.");
-    router.replace("/");
+    router.replace(body.mfa ? "/login/verify" : "/");
     router.refresh();
   };
 

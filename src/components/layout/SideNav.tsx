@@ -137,6 +137,9 @@ export function SideNav({
                     <Icon size={18} strokeWidth={2} />
                   </span>
                   <span className="nav-text">{t(item.label)}</span>
+                  {!expanded && item.children.some((c) => c.badge === "tickets") && openTickets > 0 && (
+                    <span className="count">{openTickets}</span>
+                  )}
                   <ChevronDown size={16} strokeWidth={2.2} className="nav-chev" aria-hidden="true" />
                 </button>
                 <div className="nav-sub" id={id} hidden={!expanded}>

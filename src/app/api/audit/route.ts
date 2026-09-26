@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
     const scope = session.scope.companyId ? eq(a.company, session.scope.companyId) : undefined;
     const search = q
-      ? or(ilike(a.action, `%${q}%`), ilike(a.actorName, `%${q}%`), ilike(a.target, `%${q}%`))
+      ? or(ilike(a.action, `%${q}%`), ilike(a.actorName, `%${q}%`), ilike(a.target, `%${q}%`), ilike(a.ip, `%${q}%`))
       : undefined;
 
     const rows = await db

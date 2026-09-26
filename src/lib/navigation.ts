@@ -55,6 +55,7 @@ export const NAV: Record<Role, NavItem[]> = {
       requires: [],
       children: [
         { href: "/company/finance", label: "Reports", requires: ["finance.view"] },
+        { href: "/company/invoices", label: "Invoices", requires: ["statements.view"] },
         { href: "/company/payments", label: "M-Pesa payments", requires: ["payments.view"] },
         { href: "/company/statements", label: "Statements", requires: ["statements.view"] },
       ],
@@ -63,10 +64,13 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/company/dumping", label: "Dumping reports", requires: ["dumping.manage"] },
     { href: "/company/impact", label: "Recycling", requires: ["clients.view"] },
     {
-      href: "/company/support",
+      href: "group:care",
       label: "Customer care",
-      requires: ["tickets.view.company"],
-      badge: "tickets",
+      requires: [],
+      children: [
+        { href: "/company/support", label: "Chat agent", requires: ["tickets.view.company"], badge: "tickets" },
+        { href: "/company/tickets", label: "Tickets", requires: ["tickets.view.company"] },
+      ],
     },
     {
       href: "group:team",

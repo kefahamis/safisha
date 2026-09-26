@@ -47,6 +47,31 @@ export const users = pgTable("users", {
   lang: text("lang").notNull().default("en"),
   createdAt: text("created_at").notNull(),
   lastLoginAt: text("last_login_at"),
+  /** Set once they've proved they can read mail at this address. */
+  emailVerifiedAt: text("email_verified_at"),
+  /** One-time codes for when every other method is lost; stored as digests. */
+  recoveryCodes: jsonb("recovery_codes").$type<string[]>().notNull().default([]),
+});
+
+/** A second step someone has set up: SMS, email, an authenticator app or a passkey. */
+export const userFactors = pgTable("user_factors", {
+  id: serial("id").primaryKey(),
+  user: text("user").notNull(),
+  method: text("method").notNull(), // sms | email | totp | passkey
+  label: text("label").notNull(),
+  /** Masked phone or email, or the device, for the list. */
+  detail: text("detail").notNull().default(""),
+  /** Authenticator secret, encrypted at rest. */
+  secret: text("secret"),
+  /** Passkey: credential id and public key (base64url), signature counter, transports. */
+  credentialId: text("credential_id"),
+  publicKey: text("public_key"),
+  counter: integer("counter").notNull().default(0),
+  transports: jsonb("transports").$type<string[]>().notNull().default([]),
+  /** Empty while being set up; a factor counts only once confirmed. */
+  verifiedAt: text("verified_at"),
+  createdAt: text("created_at").notNull(),
+  lastUsedAt: text("last_used_at"),
 });
 
 /** One-time codes: password resets, staff invites and phone sign-in. */
@@ -120,12 +145,31 @@ export const tickets = pgTable("tickets", {
   subject: text("subject").notNull(),
   status: text("status").notNull(),
   createdAt: text("created_at").notNull(),
+  priority: text("priority").notNull().default("normal"),
+  /** Where it came in: app, phone, ussd, walk_in, crew, email. */
+  channel: text("channel").notNull().default("app"),
+  /** The staff member handling it. */
+  assignee: text("assignee"),
+  resolvedAt: text("resolved_at"),
+});
+
+/** What happened to a ticket on the desk: assignment, priority, status. Clients never see these. */
+export const ticketEvents = pgTable("ticket_events", {
+  id: serial("id").primaryKey(),
+  ticket: text("ticket").notNull(),
+  at: text("at").notNull(),
+  actor: text("actor").notNull(),
+  actorName: text("actor_name").notNull(),
+  action: text("action").notNull(),
+  detail: jsonb("detail").$type<Record<string, unknown>>().notNull().default({}),
 });
 
 export const ticketMessages = pgTable("ticket_messages", {
   id: serial("id").primaryKey(),
   ticket: text("ticket").notNull(),
-  from: text("from").notNull(), // client | agent | sys
+  from: text("from").notNull(), // client | agent | sys | note (desk only)
+  /** The staff member who wrote an agent reply or a note. */
+  author: text("author"),
   text: text("text").notNull(),
   at: text("at").notNull(),
   photo: text("photo"),
@@ -337,6 +381,8 @@ export const auditLog = pgTable("audit_log", {
   action: text("action").notNull(),
   target: text("target"),
   detail: jsonb("detail").$type<Record<string, unknown>>().notNull().default({}),
+  /** Where the request came from, as the proxy reported it. */
+  ip: text("ip"),
 });
 
 /* ---------------- fleet management ---------------- */

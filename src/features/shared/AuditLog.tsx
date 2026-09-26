@@ -12,6 +12,7 @@ interface Entry {
   action: string;
   target: string | null;
   detail: Record<string, unknown>;
+  ip: string | null;
 }
 
 const ACTION: Record<string, string> = {
@@ -34,6 +35,21 @@ const ACTION: Record<string, string> = {
   "journal.reverse": "Reversed journal entry",
   "branding.update": "Updated branding",
   "branding.reset": "Reset branding",
+  "user.signin": "Signed in",
+  "invoice.send": "Sent invoice",
+  "staff.invite": "Invited staff",
+  "staff.update": "Changed staff access",
+  "department.create": "Created department",
+  "department.update": "Changed department",
+  "department.delete": "Deleted department",
+  "fleet.workorder.open": "Opened work order",
+  "fleet.workorder.update": "Updated work order",
+  "fleet.document": "Recorded fleet document",
+  "fleet.vehicle": "Changed vehicle",
+  "fleet.assign": "Assigned driver",
+  "fleet.settings": "Changed fleet rules",
+  "fleet.incident": "Reported incident",
+  "fleet.incident.close": "Closed incident",
 };
 
 /** Summarises the detail object without dumping raw JSON on people. */
@@ -69,7 +85,7 @@ export function AuditLog() {
         <div className="row" style={{ marginBottom: 12 }}>
           <label className="search" style={{ flex: 1, minWidth: 180 }}>
             <Search size={16} strokeWidth={2.2} aria-hidden="true" />
-            <input type="search" placeholder="Search action, person or target" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input type="search" placeholder="Search action, person, target or IP" value={q} onChange={(e) => setQ(e.target.value)} />
           </label>
         </div>
         {entries === null ? (
@@ -86,6 +102,7 @@ export function AuditLog() {
                   <th>What</th>
                   <th>Target</th>
                   <th>Details</th>
+                  <th>IP address</th>
                 </tr>
               </thead>
               <tbody>
@@ -99,6 +116,9 @@ export function AuditLog() {
                     <td className="mono">{e.target ?? "—"}</td>
                     <td className="hint" style={{ maxWidth: 420 }}>
                       {describe(e.detail)}
+                    </td>
+                    <td className="mono hint" style={{ whiteSpace: "nowrap" }} title={e.ip ?? undefined}>
+                      {e.ip === "::1" || e.ip === "127.0.0.1" ? "This computer" : (e.ip ?? "—")}
                     </td>
                   </tr>
                 ))}
