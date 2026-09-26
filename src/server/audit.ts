@@ -14,14 +14,16 @@ export interface AuditEntry {
 type Actor = Pick<Session, "sub" | "name" | "scope"> | { sub: string; name: string; scope?: undefined };
 
 /**
- * The caller's address. Behind Vercel or another proxy the client is the first
- * hop of x-forwarded-for; outside a request (a script, a job) there is none.
+ * The caller's address; outside a request (a script, a job) there is none.
+ * Netlify's own header comes first: Netlify sets it, so a caller can't forge
+ * it, which matters because rate limits count per address. The first hop of
+ * x-forwarded-for is the fallback behind other proxies.
  */
 export async function requestIp(): Promise<string | null> {
   try {
     const h = await headers();
     const forwarded = h.get("x-forwarded-for")?.split(",")[0]?.trim();
-    const ip = forwarded || h.get("x-real-ip") || h.get("cf-connecting-ip");
+    const ip = h.get("x-nf-client-connection-ip") || forwarded || h.get("x-real-ip") || h.get("cf-connecting-ip");
     if (!ip) return null;
     // IPv4 carried in IPv6 form, as local servers report it.
     return ip.replace(/^::ffff:/, "").slice(0, 64);

@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 /**
- * The nightly housekeeping job (vercel.json): back up the database, move any
+ * The nightly housekeeping job (netlify/functions/cron-maintenance.mts): back up the database, move any
  * photos still in the database into Blob storage, and forget old rate-limit
  * counters. Each step runs even if an earlier one fails; a failure is reported
  * (and so reaches Sentry) after the rest have had their turn.

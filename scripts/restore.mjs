@@ -47,7 +47,10 @@ try {
 }
 
 const counts = Object.entries(backup.tables).map(([name, rows]) => `${name} ${rows.length}`);
-console.log(`restore: backup taken ${backup.takenAt} at migration ${backup.migration}`);
+const journal = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8"));
+// Backups record when their last migration was made; this checkout's journal names it.
+const taken = backup.migration ?? journal.entries.find((e) => e.when === backup.migratedAt)?.tag ?? "a newer release";
+console.log(`restore: backup taken ${backup.takenAt} at migration ${taken}`);
 console.log(`restore: ${counts.join(", ")}`);
 
 const out = option("out");
@@ -57,13 +60,12 @@ if (out) {
   process.exit(0);
 }
 
-const journal = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8"));
 const release = journal.entries.at(-1)?.tag;
-if (backup.migration !== release && !flag("force")) {
-  fail(`the backup is from migration ${backup.migration} but this checkout is at ${release}. Check out the matching release, or pass --force.`);
+if (taken !== release && !flag("force")) {
+  fail(`the backup is from migration ${taken} but this checkout is at ${release}. Check out the matching release, or pass --force.`);
 }
 
-const url = process.env.DATABASE_URL;
+const url = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL;
 if (!url) fail("set DATABASE_URL to the database to restore into.");
 if (!flag("yes")) fail("this replaces everything in that database. Run again with --yes to go ahead.");
 

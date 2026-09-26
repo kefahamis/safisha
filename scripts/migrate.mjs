@@ -8,9 +8,10 @@ import postgres from "postgres";
 // The same key the app takes at start-up, so the two never migrate at once.
 const MIGRATION_LOCK = 72_403_117;
 
-const url = process.env.DATABASE_URL;
+// Netlify DB (Neon) provides NETLIFY_DATABASE_URL; anywhere else, DATABASE_URL.
+const url = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL;
 if (!url) {
-  console.log("migrate: no DATABASE_URL, skipping (the embedded database migrates at start-up).");
+  console.log("migrate: no DATABASE_URL or NETLIFY_DATABASE_URL, skipping (the embedded database migrates at start-up).");
   process.exit(0);
 }
 

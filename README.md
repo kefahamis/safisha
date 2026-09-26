@@ -61,8 +61,8 @@ all use the password `zoa12345`.
 | M-Pesa sandbox keys | Paybill simulator asks Safaricom's sandbox | Same |
 | M-Pesa production keys | Simulator refused | Simulator refused |
 
-For a test deployment on Vercel (a preview, or a demo site), set `DEMO_DATA=1`
-on that environment. Never set it on the database real clients use: the demo
+For a test deployment on Netlify (a deploy preview, or a demo site), set
+`DEMO_DATA=1` in that site's environment variables. Never set it on the database real clients use: the demo
 accounts share a published password.
 
 A real deployment starts empty. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` (12+
@@ -151,15 +151,37 @@ company, before taking real money:
    receipt SMS, the statement and the M-Pesa payments page, and reverse it in
    the company's books if it was only a test.
 
+## Deploying on Netlify
+
+`netlify.toml` builds with `npm run build`, which migrates the database first,
+and Netlify's Next.js runtime serves the app. Set these in Site configuration →
+Environment variables:
+
+| Variable | |
+| --- | --- |
+| `DATABASE_URL` | Your Postgres (Neon). Not needed with **Netlify DB**, whose `NETLIFY_DATABASE_URL` is read automatically. |
+| `SESSION_SECRET` | Required. 64 hex characters. |
+| `CRON_SECRET` | Required for the scheduled jobs. |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | First platform admin of a real deployment. |
+| `DEMO_DATA` | `1` for a demo or test site only. |
+| `BACKUP_ENCRYPTION_KEY` | Turns on nightly backups. |
+| `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` | Optional error reporting. |
+
+The two scheduled jobs are Netlify scheduled functions in
+`netlify/functions/`: billing daily at 08:00 and maintenance at 02:30
+(Nairobi). Each calls its `/api/cron/…` route on the site with `CRON_SECRET`.
+Netlify's function time limit applies to those routes, which is ample for a
+pilot's data; watch the maintenance run's duration in the function logs as the
+database grows.
+
 ## Photos, monitoring and backups
 
 - **Photos** (proofs of collection, dumping reports, logos) go to
-  [Vercel Blob](https://vercel.com/docs/vercel-blob) as private files once a
-  Blob store is connected to the project (Storage → Blob sets
-  `BLOB_READ_WRITE_TOKEN`). They're only ever served through `/api/files/…`,
-  after the same access check as before. Without a store they stay in the
-  database, and the nightly job moves any left there across once one is
-  connected.
+  [Netlify Blobs](https://docs.netlify.com/blobs/overview/), which every
+  Netlify site has with no setup and which are private to the site. They're
+  only ever served through `/api/files/…`, after the same access check as
+  before. Where blobs aren't available (local development) they stay in the
+  database; the nightly job moves any left there into Blobs.
 - **Errors** go to [Sentry](https://sentry.io) when `SENTRY_DSN` (server) and
   `NEXT_PUBLIC_SENTRY_DSN` (browser) are set: every unhandled error in a page,
   API route, cron job or callback, with no cookies, headers, bodies or query
@@ -169,7 +191,7 @@ company, before taking real money:
 - **Backups:** Neon keeps point-in-time history; restore from its console to
   any moment in the retention window. On top of that, the nightly job
   (`/api/cron/maintenance`, 02:30 Nairobi) exports every table, encrypts it
-  with `BACKUP_ENCRYPTION_KEY` and keeps the last 14 in Blob. They're listed
+  with `BACKUP_ENCRYPTION_KEY` and keeps the last 14 in Netlify Blobs. They're listed
   under Admin → Settings → Backups, with *Back up now* and download. To
   restore one into a fresh database (a new Neon branch is ideal):
 
@@ -177,7 +199,7 @@ company, before taking real money:
   BACKUP_ENCRYPTION_KEY=... DATABASE_URL=postgres://... node scripts/restore.mjs zoa-2026-09-26.bak --yes
   ```
 
-  Keep the key somewhere other than Vercel (a password manager): a backup
+  Keep the key somewhere other than Netlify (a password manager): a backup
   without its key can't be read, which is the point.
 
 ## Scheduled billing
@@ -297,7 +319,7 @@ A company admin runs their own team under **Staff & departments**
   10 days after issue. Each prints as a document with the Paybill details, and
   can be sent to the client by SMS.
 - **Audit log** entries carry the IP address the request came from (the first
-  hop of `X-Forwarded-For` behind Vercel or another proxy), and staff sign-ins
+  `x-nf-client-connection-ip` on Netlify, which callers can't forge), and staff sign-ins
   are logged. Search works on IPs too.
 
 ## Two-step sign-in

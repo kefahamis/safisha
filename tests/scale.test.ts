@@ -164,7 +164,10 @@ describe("backups", () => {
     const names = Object.keys(data.tables);
     expect(names).toContain("clients");
     expect(names).not.toContain("rate_limits");
-    expect(data.migration).toMatch(/^\d{4}_/);
+    // The release, as recorded by the database: the last migration's timestamp from the journal.
+    const { readFileSync } = await import("node:fs");
+    const journal = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8")) as { entries: { when: number }[] };
+    expect(data.migratedAt).toBe(journal.entries.at(-1)!.when);
 
     // Sealed with the key; only the key opens it. Same layout scripts/restore.mjs reads.
     const key = randomBytes(32);

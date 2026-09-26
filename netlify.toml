@@ -1,0 +1,12 @@
+# Netlify builds the Next.js app with its Next.js runtime (added automatically).
+[build]
+  # Migrates the database first (scripts/migrate.mjs), then builds.
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Scheduled jobs (billing, nightly maintenance) live here; they call /api/cron/*.
+[functions]
+  directory = "netlify/functions"
