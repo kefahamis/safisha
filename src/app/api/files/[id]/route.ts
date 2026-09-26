@@ -3,6 +3,7 @@ import { PLATFORM } from "@/lib/branding";
 import { getDb, schema } from "@/server/db";
 import { visibleCompanies } from "@/server/snapshot";
 import { errorResponse, requireSession } from "@/server/session";
+import { openFile } from "@/server/storage";
 
 export const runtime = "nodejs";
 
@@ -20,7 +21,9 @@ export async function GET(_request: Request, { params }: Params) {
     if (!file) return new Response("Not found", { status: 404 });
 
     if (file.company === PLATFORM) {
-      return new Response(new Uint8Array(file.bytes), {
+      const body = await openFile(file);
+      if (!body) return new Response("Not found", { status: 404 });
+      return new Response(body, {
         headers: { "Content-Type": file.mime, "Cache-Control": "public, max-age=86400, immutable" },
       });
     }
@@ -34,7 +37,10 @@ export async function GET(_request: Request, { params }: Params) {
       (file.company !== null && companies.includes(file.company));
     if (!allowed) return new Response("Not found", { status: 404 });
 
-    return new Response(new Uint8Array(file.bytes), {
+    // Stored in Blob or the database; either way it only leaves through this check.
+    const body = await openFile(file);
+    if (!body) return new Response("Not found", { status: 404 });
+    return new Response(body, {
       headers: {
         "Content-Type": file.mime,
         "Cache-Control": "private, max-age=86400, immutable",

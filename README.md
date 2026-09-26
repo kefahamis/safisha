@@ -125,6 +125,61 @@ Daraja's STK query.
 | Email | Resend | Password resets and staff invitations. |
 | Translation | Anthropic Claude | Chat translation between English, Kiswahili and Sheng. |
 
+Once SMS or email is connected, **Text me a test** / **Email me a test** sends a
+real message to the admin's own phone or inbox: *Test connection* proves the
+keys sign in, this proves a message arrives.
+
+### Pilot checklist: proving the integrations
+
+The request and callback formats are covered by contract tests
+(`tests/integrations.test.ts`, against the payloads in each provider's
+documentation), but only real traffic proves a deployment. With one pilot
+company, before taking real money:
+
+1. **Daraja sandbox.** Enter the sandbox keys, *Test connection*, *Register
+   Paybill URLs*. On Payments, run the Paybill simulator: Safaricom's sandbox
+   calls back and the payment appears against the client. Start an STK prompt
+   to a sandbox test number and approve it.
+2. **SMS.** Connect Africa's Talking (sandbox first, using their simulator
+   app), *Text me a test*, then trigger a receipt and a sign-in code and check
+   Settings → Activity shows them *sent*.
+3. **Email.** Verify the sending domain in Resend, *Email me a test*, then send
+   a password reset to yourself.
+4. **Production keys.** Swap the Daraja environment to production with the
+   company's own short code and keys, *Test connection*, *Register Paybill
+   URLs*, and pay KES 10 from a real phone by Paybill and by STK. Check the
+   receipt SMS, the statement and the M-Pesa payments page, and reverse it in
+   the company's books if it was only a test.
+
+## Photos, monitoring and backups
+
+- **Photos** (proofs of collection, dumping reports, logos) go to
+  [Vercel Blob](https://vercel.com/docs/vercel-blob) as private files once a
+  Blob store is connected to the project (Storage → Blob sets
+  `BLOB_READ_WRITE_TOKEN`). They're only ever served through `/api/files/…`,
+  after the same access check as before. Without a store they stay in the
+  database, and the nightly job moves any left there across once one is
+  connected.
+- **Errors** go to [Sentry](https://sentry.io) when `SENTRY_DSN` (server) and
+  `NEXT_PUBLIC_SENTRY_DSN` (browser) are set: every unhandled error in a page,
+  API route, cron job or callback, with no cookies, headers, bodies or query
+  data attached. Set alerts in Sentry.
+- **Uptime:** point a monitor (Better Stack, UptimeRobot) at `/api/health`,
+  which answers 200 while the database is reachable and 503 when it isn't.
+- **Backups:** Neon keeps point-in-time history; restore from its console to
+  any moment in the retention window. On top of that, the nightly job
+  (`/api/cron/maintenance`, 02:30 Nairobi) exports every table, encrypts it
+  with `BACKUP_ENCRYPTION_KEY` and keeps the last 14 in Blob. They're listed
+  under Admin → Settings → Backups, with *Back up now* and download. To
+  restore one into a fresh database (a new Neon branch is ideal):
+
+  ```bash
+  BACKUP_ENCRYPTION_KEY=... DATABASE_URL=postgres://... node scripts/restore.mjs zoa-2026-09-26.bak --yes
+  ```
+
+  Keep the key somewhere other than Vercel (a password manager): a backup
+  without its key can't be read, which is the point.
+
 ## Scheduled billing
 
 `POST /api/cron/billing` with `Authorization: Bearer $CRON_SECRET` raises the
@@ -279,7 +334,14 @@ so on a multi-instance deployment it is a speed bump rather than a hard limit.
   (a client only their account, a collector only their truck, a company only its
   own data) before touching the database. UI checks are a convenience only.
 - **Reads are scoped too.** `/api/state` returns only the session's slice: a
-  client never receives other clients' data.
+  client never receives other clients' data, and staff receive only what their
+  permissions cover (the workshop gets no phone numbers, balances or care
+  conversations). Each poll sends the version it holds; database triggers keep
+  a change counter per company and client, so an unchanged poll is answered
+  with an empty 304 instead of rebuilding the snapshot, and quiet tabs poll
+  less often.
+- **Ids can't collide.** Ticket, pickup, work-order and client numbers come
+  from counters taken in one atomic statement.
 - **Permissions, not roles, are checked.** A role bundles `resource.action`
   permissions; users can have personal grants and denies (deny wins). Managed at
   `/admin/access` and `/admin/users`, where staff can also be invited by email.

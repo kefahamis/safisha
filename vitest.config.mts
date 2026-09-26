@@ -9,5 +9,8 @@ export default defineConfig({
     // Database tests seed an embedded Postgres; give them room on a slow machine.
     testTimeout: 60_000,
     hookTimeout: 180_000,
+    // Each database test file runs its own embedded Postgres (WebAssembly, a few
+    // hundred MB); more than two at once runs a laptop or CI runner out of memory.
+    maxWorkers: 2,
   },
 });

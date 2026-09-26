@@ -279,6 +279,8 @@ export interface AppData {
   branding: Record<string, Branding>;
   /** Server time when this snapshot was taken (epoch ms). */
   serverNow: number;
+  /** Changes whenever anything in this snapshot could have; polls send it back to skip unchanged ones. */
+  version?: string;
 }
 
 export interface AppState extends AppData {

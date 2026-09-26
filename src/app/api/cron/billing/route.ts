@@ -1,7 +1,6 @@
-import { timingSafeEqual } from "node:crypto";
 import { SYSTEM_ACTOR, audit } from "@/server/audit";
 import { runBillingCycle } from "@/server/billing";
-import { sweepLimits } from "@/server/rateLimit";
+import { refuseCron } from "@/server/cron";
 
 export const runtime = "nodejs";
 
@@ -12,18 +11,10 @@ export const runtime = "nodejs";
  *   Authorization: Bearer <CRON_SECRET>
  */
 export async function POST(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return Response.json({ error: "Set CRON_SECRET to enable the billing job." }, { status: 503 });
-
-  const given = Buffer.from(request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "");
-  const expected = Buffer.from(secret);
-  if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const refused = refuseCron(request, "billing");
+  if (refused) return refused;
 
   const result = await runBillingCycle();
-  // Housekeeping rides along with the daily job.
-  await sweepLimits().catch((err) => console.error("Could not sweep rate limits", err));
   await audit(SYSTEM_ACTOR, { action: "billing.cycle", detail: result });
   return Response.json(result);
 }

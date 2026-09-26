@@ -57,6 +57,13 @@
       "when": 1790429525997,
       "tag": "0007_reference_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790430572644,
+      "tag": "0008_files_blob_versions",
+      "breakpoints": true
     }
   ]
 }

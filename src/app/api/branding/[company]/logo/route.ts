@@ -1,7 +1,6 @@
-import { randomToken } from "@/server/crypto";
-import { getDb, schema } from "@/server/db";
 import { errorResponse, HttpError } from "@/server/session";
 import { requireSettingsScope } from "@/server/settingsAccess";
+import { saveFile } from "@/server/storage";
 
 export const runtime = "nodejs";
 
@@ -23,9 +22,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
     if (bytes.length > MAX_BYTES) throw new HttpError(413, "The processed logo must be under 1 MB.");
     if (!PNG.every((b, i) => bytes[i] === b)) throw new HttpError(415, "Logos are uploaded as PNG.");
 
-    const id = `F-${randomToken(12)}`;
-    const db = await getDb();
-    await db.insert(schema.files).values({ id, mime: "image/png", bytes, owner: session.sub, company });
+    const id = await saveFile({ bytes, mime: "image/png", owner: session.sub, company });
     return Response.json({ id }, { status: 201 });
   } catch (err) {
     return errorResponse(err);

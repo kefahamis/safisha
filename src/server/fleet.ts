@@ -32,6 +32,7 @@ import {
 import { companyById } from "@/lib/reference/companies";
 import { nairobiDay, step, type TelemetryState } from "@/lib/telemetry";
 import { getDb, schema, type Db } from "./db";
+import { nextPrefixedId } from "./ids";
 import { HttpError } from "./session";
 import { nowStamp, today } from "./time";
 
@@ -209,10 +210,7 @@ export async function nextFleetId(
   prefix: string,
   start: number,
 ) {
-  const [{ n }] = await db
-    .select({ n: sql<number>`coalesce(max(substring(${table.id} from ${sql.raw(String(prefix.length + 1))})::int), ${start})` })
-    .from(table);
-  return `${prefix}${n + 1}`;
+  return nextPrefixedId(db, table, prefix, start);
 }
 
 /* ---------------- telemetry ---------------- */

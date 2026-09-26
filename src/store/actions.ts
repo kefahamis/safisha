@@ -170,23 +170,36 @@ export function createActions(store: AppStore) {
     }
   }
 
-  async function refresh() {
+  /** Fetches the latest snapshot. Resolves true if anything changed, false if the server said "same as before". */
+  async function refresh(): Promise<boolean> {
     try {
-      const res = await fetch("/api/state", { cache: "no-store" });
+      const held = getState().version;
+      const res = await fetch("/api/state", { cache: "no-store", headers: held ? { "If-None-Match": held } : {} });
       if (res.status === 401) {
         window.location.href = "/login";
-        return;
+        return false;
+      }
+      if (res.status === 304) {
+        if (!getState().online) {
+          update((s) => {
+            s.online = true;
+          });
+        }
+        return false;
       }
       if (res.ok) {
         receive(await res.json());
         update((s) => {
           s.online = true;
         });
+        return true;
       }
+      return false;
     } catch {
       update((s) => {
         s.online = false;
       });
+      return false;
     }
   }
 

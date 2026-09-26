@@ -1,4 +1,5 @@
 import {
+  bigint,
   boolean,
   customType,
   doublePrecision,
@@ -269,7 +270,12 @@ export const dumpReports = pgTable("dump_reports", {
 export const files = pgTable("files", {
   id: text("id").primaryKey(),
   mime: text("mime").notNull(),
-  bytes: bytea("bytes").notNull(),
+  /** The bytes, when kept in the database ("db"); empty once moved to Blob storage. */
+  bytes: bytea("bytes"),
+  storage: text("storage").notNull().default("db"), // db | blob
+  /** The blob's pathname, for storage = "blob". */
+  location: text("location"),
+  size: integer("size"),
   owner: text("owner").notNull(),
   company: text("company"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -580,4 +586,21 @@ export const rateLimits = pgTable("rate_limits", {
   key: text("key").primaryKey(),
   hits: integer("hits").notNull().default(0),
   resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+});
+
+/** Sequences for prefixed ids, taken atomically so concurrent requests never share one. */
+export const counters = pgTable("counters", {
+  key: text("key").primaryKey(),
+  value: integer("value").notNull(),
+});
+
+/**
+ * A change counter per scope ("co:TS" a company, "cl:<id>" a client, "pub:TS"
+ * what every TS client sees, "*" everyone), bumped by triggers on every table
+ * the app's snapshot reads. A poll whose counters haven't moved is answered
+ * without rebuilding the snapshot.
+ */
+export const dataVersions = pgTable("data_versions", {
+  scope: text("scope").primaryKey(),
+  version: bigint("version", { mode: "number" }).notNull().default(0),
 });

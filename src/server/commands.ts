@@ -1,5 +1,5 @@
 // Server-only. Applies one command for one session, after checking it's allowed.
-import { and, eq, like, sql } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 import type { Session } from "@/lib/auth/types";
 import { luhn, normalisePhone, KE_MOBILE } from "@/lib/clientNumber";
 import type { Command, CommandResult } from "@/lib/commands";
@@ -36,6 +36,7 @@ import { getDb, schema, type Db } from "./db";
 import { HttpError } from "./session";
 import { sendSms } from "./integrations/messaging";
 import { demoMode } from "./demo";
+import { nextClientSeq, nextPrefixedId } from "./ids";
 import { settleStk, simulatePaybill, startStk } from "./payments";
 import { priceList } from "./settings";
 import { SIM_EPOCH, simDistance, visibleCompanies } from "./snapshot";
@@ -106,19 +107,7 @@ async function getTruck(db: Db, id: string) {
   return x ?? null;
 }
 
-async function nextTicketId(db: Db) {
-  const [{ n }] = await db
-    .select({ n: sql<number>`coalesce(max(substring(${t.tickets.id} from 3)::int), 1045)` })
-    .from(t.tickets);
-  return `T-${n + 1}`;
-}
-
-async function nextId(db: Db, table: typeof t.pickupRequests | typeof t.dumpReports, prefix: string, start: number) {
-  const [{ n }] = await db
-    .select({ n: sql<number>`coalesce(max(substring(${table.id} from ${sql.raw(String(prefix.length + 1))})::int), ${start})` })
-    .from(table);
-  return `${prefix}${n + 1}`;
-}
+const nextTicketId = (db: Db) => nextPrefixedId(db, t.tickets, "T-", 1045);
 
 const truckPosition = (row: typeof t.trucks.$inferSelect) =>
   row.gpsLat !== null && row.gpsLng !== null && row.gpsAt && Date.now() - row.gpsAt.getTime() < 3 * 60_000
@@ -536,13 +525,7 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
       let id = "";
       await db.transaction(async (tx) => {
         const key = cmd.company + cmd.estate;
-        const [row] = await tx.select().from(t.clientSeq).where(eq(t.clientSeq.key, key));
-        const next = (row?.value ?? 100 + Math.floor(Math.random() * 300)) + 1;
-        await tx
-          .insert(t.clientSeq)
-          .values({ key, value: next })
-          .onConflictDoUpdate({ target: t.clientSeq.key, set: { value: next } });
-        const n = pad(next, 4);
+        const n = pad(await nextClientSeq(tx as unknown as Db, key), 4);
         id = `${cmd.company}-${cmd.estate}-${n}${luhn(n)}`;
 
         const spread = estate.radius * 0.62;
@@ -691,7 +674,7 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
         return { ok: false, error: "Pick a date from today onwards." };
       }
       const price = (await priceList(client.company))[kind.key];
-      const id = await nextId(db, t.pickupRequests, "P-", 3000);
+      const id = await nextPrefixedId(db, t.pickupRequests, "P-", 3000);
       await db.transaction(async (tx) => {
         await tx.insert(t.pickupRequests).values({
           id,
@@ -779,7 +762,7 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
       // Outside every estate, the reporter's own company picks it up rather than no one.
       const reporterCompany = session.scope.clientId ? ((await getClient(db, session.scope.clientId))?.company ?? null) : null;
       const company = estate ? (companyForEstate(estate)?.id ?? reporterCompany) : reporterCompany;
-      const id = await nextId(db, t.dumpReports, "D-", 2001);
+      const id = await nextPrefixedId(db, t.dumpReports, "D-", 2001);
       await db.insert(t.dumpReports).values({
         id,
         reporter,

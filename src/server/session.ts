@@ -1,7 +1,7 @@
 // Server-only. Resolves the signed token into a live session.
 import { cookies } from "next/headers";
 import { allowedWorkspaces } from "@/lib/auth/defaultRoles";
-import type { Session } from "@/lib/auth/types";
+import type { Session, User, Workspace } from "@/lib/auth/types";
 import { effectivePermissions, findRole, findUserById, userDepartment } from "./accessStore";
 import { SESSION_COOKIE, verifySession } from "./jwt";
 
@@ -21,7 +21,11 @@ export async function getSession(): Promise<Session | null> {
   // The token is valid, but the account may have been suspended or deleted since.
   const user = await findUserById(claims.sub);
   if (!user || user.suspended) return null;
+  return sessionForUser(user, { ws: claims.ws, setup: claims.setup });
+}
 
+/** A user's live session: their role, department and permissions as they stand now. */
+export async function sessionForUser(user: User, token: { ws: Workspace; setup?: boolean }): Promise<Session> {
   const role = await findRole(user.roleId);
   const department = await userDepartment(user);
 
@@ -30,14 +34,14 @@ export async function getSession(): Promise<Session | null> {
     name: user.name,
     email: user.email,
     roleId: user.roleId,
-    ws: role?.workspace ?? claims.ws,
+    ws: role?.workspace ?? token.ws,
     scope: user.scope,
     roleName: role?.name ?? user.roleId,
     department: department ? { id: department.id, name: department.name } : undefined,
     lang: user.lang === "sw" ? "sw" : "en",
     permissions: await effectivePermissions(user, role, department),
-    allowed: role ? allowedWorkspaces(role) : [claims.ws],
-    setupRequired: claims.setup ? true : undefined,
+    allowed: role ? allowedWorkspaces(role) : [token.ws],
+    setupRequired: token.setup ? true : undefined,
   };
 }
 

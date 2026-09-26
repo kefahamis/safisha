@@ -1,7 +1,6 @@
-import { randomToken } from "@/server/crypto";
-import { getDb, schema } from "@/server/db";
 import { visibleCompanies } from "@/server/snapshot";
 import { errorResponse, requireSession } from "@/server/session";
+import { saveFile } from "@/server/storage";
 
 export const runtime = "nodejs";
 
@@ -23,15 +22,7 @@ export async function POST(request: Request) {
     if (bytes.length > MAX_BYTES) return Response.json({ error: "Photos must be under 3 MB." }, { status: 413 });
 
     const companies = await visibleCompanies(session);
-    const id = `F-${randomToken(12)}`;
-    const db = await getDb();
-    await db.insert(schema.files).values({
-      id,
-      mime,
-      bytes,
-      owner: session.sub,
-      company: companies?.length === 1 ? companies[0] : null,
-    });
+    const id = await saveFile({ bytes, mime, owner: session.sub, company: companies?.length === 1 ? companies[0] : null });
     return Response.json({ id }, { status: 201 });
   } catch (err) {
     return errorResponse(err);
