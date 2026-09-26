@@ -1,8 +1,11 @@
 // Server-only. Resolves the signed token into a live session.
+import { randomBytes } from "node:crypto";
+import * as Sentry from "@sentry/nextjs";
 import { cookies } from "next/headers";
 import { allowedWorkspaces } from "@/lib/auth/defaultRoles";
 import type { Session, User, Workspace } from "@/lib/auth/types";
 import { effectivePermissions, findRole, findUserById, userDepartment } from "./accessStore";
+import { ConfigError } from "./configError";
 import { SESSION_COOKIE, verifySession } from "./jwt";
 
 /**
@@ -77,10 +80,21 @@ export class HttpError extends Error {
   }
 }
 
-/** Turns a thrown HttpError into a JSON response; rethrows anything else. */
+/**
+ * Turns a thrown error into a JSON response the app's screens can show. An
+ * HttpError carries its own status and message; a missing setting says which;
+ * anything else is logged and reported to Sentry, and the person gets a
+ * reference to quote rather than a bare error page.
+ */
 export function errorResponse(err: unknown): Response {
   if (err instanceof HttpError) {
     return Response.json({ error: err.message }, { status: err.status });
   }
-  throw err;
+  const ref = randomBytes(4).toString("hex").toUpperCase();
+  console.error(`Unhandled error ${ref}`, err);
+  Sentry.captureException(err, { tags: { ref } });
+  if (err instanceof ConfigError) {
+    return Response.json({ error: err.message, ref }, { status: 503 });
+  }
+  return Response.json({ error: `Something went wrong on the server (ref ${ref}). Try again; if it keeps happening, quote the ref.`, ref }, { status: 500 });
 }

@@ -63,7 +63,12 @@ export function LoginForm({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
+      if (!data) {
+        // The server answered, but not with the app's own reply: a crash or a proxy page.
+        setError(`The server had a problem (HTTP ${res.status}). Try again in a moment.`);
+        return;
+      }
       if (!res.ok) {
         setError(data.error ?? "Could not sign in.");
         return;

@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { missingSettings } from "@/server/configError";
 import { databaseUrl, DbSetupError, getDb } from "@/server/db";
 
 export const runtime = "nodejs";
@@ -89,10 +90,29 @@ export async function GET() {
     return Response.json({ ok: false, db: "down", ...failure, release: release() }, { status: 503, headers });
   }
 
+  // Settings the app can't do without; named, never shown.
+  const missing = missingSettings();
+  const settings = missing.length ? { missing: missing.map((m) => `${m.name}: ${m.effect}`) } : {};
+  const signInBroken = missing.some((m) => m.name === "SESSION_SECRET");
+
   try {
     const db = await getDb();
     await db.execute(sql`select 1`);
-    return Response.json({ ok: true, db: "up", ms: Date.now() - started, source, release: release() }, { headers });
+    if (signInBroken) {
+      return Response.json(
+        {
+          ok: false,
+          db: "up",
+          reason: "not-configured",
+          fix: "SESSION_SECRET doesn't reach the server. Set it in the site's environment variables with the Functions scope, then redeploy.",
+          ...settings,
+          source,
+          release: release(),
+        },
+        { status: 503, headers },
+      );
+    }
+    return Response.json({ ok: true, db: "up", ms: Date.now() - started, ...settings, source, release: release() }, { headers });
   } catch (err) {
     console.error("Health check failed", err);
     // Only now, on failure, open a separate connection to see which kind it is.
