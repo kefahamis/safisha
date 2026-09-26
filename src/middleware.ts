@@ -32,13 +32,13 @@ export async function middleware(request: NextRequest) {
 
   const redirectTo = (path: string) => NextResponse.redirect(new URL(path, request.url));
 
-  // Signed in, "/" is resolved by the home page, which knows the permissions and
-  // so can send staff to their own dashboard; the token alone can't.
+  // "/" is the public website, for everyone. Where a signed-in person starts is
+  // decided by /start, which knows the permissions (the token alone can't).
   if (pathname === "/login") {
-    return claims ? redirectTo("/") : NextResponse.next();
+    return claims ? redirectTo("/start") : NextResponse.next();
   }
 
-  if (pathname === "/") {
+  if (pathname === "/start") {
     return claims ? NextResponse.next() : redirectTo("/login");
   }
 
@@ -67,6 +67,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Everything except Next internals, the auth API and static files.
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|icon.svg|.*\\.png$|.*\\.webp$).*)",
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|icon.svg|.*\\.png$|.*\\.webp$|.*\\.jpg$|.*\\.svg$).*)",
   ],
 };

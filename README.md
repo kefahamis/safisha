@@ -12,6 +12,16 @@ recycling tracking and USSD for clients without smartphones.
 | **Collector** | Today's route (optimised order), proof of collection (photo, GPS, weight, waste type), on-demand jobs, GPS sharing, start-of-day vehicle check, fuel and incident reports — works offline |
 | **Admin** | City overview and trends, all clients, all fleets, dumping reports, roles and users (with invitations), platform settings, audit log |
 
+## Public website
+
+`/` is the public site: services, how it works, an estate lookup for collection
+days, recycling figures and the licensed companies, with every number taken
+from the live data (`server/siteStats.ts`). Its colours come from the platform
+brand tokens, so a rebrand in Settings carries through. Photos are from Unsplash
+(free licence) in `public/site/`, credited in the footer; replace them with the
+same file names to use your own. Signed-in visitors get "Open dashboard";
+`/start` sends each person to their own workspace.
+
 ## Running it
 
 ```bash

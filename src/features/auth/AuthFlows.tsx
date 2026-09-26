@@ -110,7 +110,7 @@ export function ForgotPassword() {
     const { ok, body } = await post("/api/auth/reset", { identifier, code, password });
     setBusy(false);
     if (!ok) return setError(body.error ?? "That didn't work.");
-    router.replace(body.mfa ? "/login/verify" : "/");
+    router.replace(body.mfa ? "/login/verify" : "/start");
     router.refresh();
   };
 
@@ -193,7 +193,7 @@ export function PhoneSignIn() {
     const { ok, body } = await post("/api/auth/otp/verify", { phone, code });
     setBusy(false);
     if (!ok) return setError(body.error ?? "That code didn't work.");
-    router.replace(body.mfa ? "/login/verify" : "/");
+    router.replace(body.mfa ? "/login/verify" : "/start");
     router.refresh();
   };
 
@@ -257,7 +257,7 @@ export function AcceptInvite({ email, token }: { email: string; token: string })
     const { ok, body } = await post("/api/auth/invite/accept", { email, token, password });
     setBusy(false);
     if (!ok) return setError(body.error ?? "That didn't work.");
-    router.replace(body.mfa ? "/login/verify" : "/");
+    router.replace(body.mfa ? "/login/verify" : "/start");
     router.refresh();
   };
 

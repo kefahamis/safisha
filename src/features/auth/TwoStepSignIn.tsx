@@ -57,7 +57,7 @@ export function TwoStepSignIn() {
         `You have ${body.recoveryLeft} recovery code${body.recoveryLeft === 1 ? "" : "s"} left. Make new ones on your Security page.`,
       );
     }
-    router.replace(next?.startsWith("/") ? next : "/");
+    router.replace(next?.startsWith("/") ? next : "/start");
     router.refresh();
   };
 

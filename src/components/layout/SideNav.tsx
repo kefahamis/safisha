@@ -84,7 +84,7 @@ export function SideNav({
         <ChevronLeft size={15} strokeWidth={2.4} aria-hidden="true" />
       </button>
 
-      <Link href="/" className="brand" prefetch={false} aria-label={collapsed ? brandName : undefined}>
+      <Link href="/start" className="brand" prefetch={false} aria-label={collapsed ? brandName : undefined}>
         <span className="brand-full">
           {own && branding ? (
             <CompanyLogo
