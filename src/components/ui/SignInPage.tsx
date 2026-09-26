@@ -127,12 +127,15 @@ export function SignInPage({
               </div>
             )}
 
-            <button className="signin-submit signin-in d5" disabled={busy}>
-              {busy && (
-                <LoaderCircle size={17} strokeWidth={2.2} className="spin" aria-hidden="true" />
-              )}
-              {busy ? "Signing in…" : "Sign in"}
-              {!busy && <ArrowRight size={17} strokeWidth={2.2} aria-hidden="true" />}
+            <button className="signin-submit signin-in d5" disabled={busy} aria-busy={busy || undefined}>
+              <span className="signin-submit-label">{busy ? "Signing in…" : "Sign in"}</span>
+              <span className="signin-submit-chip" aria-hidden="true">
+                {busy ? (
+                  <LoaderCircle size={18} strokeWidth={2.4} className="spin" />
+                ) : (
+                  <ArrowRight size={18} strokeWidth={2.4} />
+                )}
+              </span>
             </button>
           </form>
           {formFooter && <div className="signin-links signin-in d5">{formFooter}</div>}

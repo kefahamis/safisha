@@ -63,7 +63,7 @@ type Tab =
  * email, translation and the public address — and any company's settings.
  */
 export function SettingsCenter({ platform, companyId }: { platform: boolean; companyId?: string }) {
-  const [company, setCompany] = useState(companyId ?? COMPANIES[0].id);
+  const [company, setCompany] = useState(companyId ?? COMPANIES[0]?.id ?? "");
   const [tab, setTab] = useState<Tab>("payments");
   const tabStrip = useTabStrip<HTMLDivElement>(tab);
   const [companyData, setCompanyData] = useState<ScopeData | null>(null);
@@ -79,7 +79,8 @@ export function SettingsCenter({ platform, companyId }: { platform: boolean; com
       return body as ScopeData;
     };
     try {
-      const [c, p] = await Promise.all([get(company), platform ? get("platform") : Promise.resolve(null)]);
+      // With no company onboarded yet there are only platform settings.
+      const [c, p] = await Promise.all([company ? get(company) : Promise.resolve(null), platform ? get("platform") : Promise.resolve(null)]);
       setCompanyData(c);
       setPlatformData(p);
     } catch (err) {

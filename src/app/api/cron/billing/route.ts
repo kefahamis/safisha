@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { SYSTEM_ACTOR, audit } from "@/server/audit";
 import { runBillingCycle } from "@/server/billing";
+import { sweepLimits } from "@/server/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -21,6 +22,8 @@ export async function POST(request: Request) {
   }
 
   const result = await runBillingCycle();
+  // Housekeeping rides along with the daily job.
+  await sweepLimits().catch((err) => console.error("Could not sweep rate limits", err));
   await audit(SYSTEM_ACTOR, { action: "billing.cycle", detail: result });
   return Response.json(result);
 }

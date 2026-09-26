@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { LoginForm } from "@/features/auth/LoginForm";
 import { DEMO_PASSWORD, listRoles, listUsers } from "@/server/accessStore";
+import { demoMode } from "@/server/demo";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -9,6 +10,14 @@ export const metadata: Metadata = { title: "Sign in" };
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
+  // A real deployment never lists who has an account.
+  if (!demoMode()) {
+    return (
+      <Suspense>
+        <LoginForm accounts={[]} />
+      </Suspense>
+    );
+  }
   const roles = await listRoles();
   const accounts = (await listUsers())
     .filter((u) => !u.suspended)

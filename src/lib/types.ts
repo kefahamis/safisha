@@ -23,6 +23,8 @@ export interface Estate {
   radius: number;
   /** Collection weekdays, 0 = Sunday. */
   days: number[];
+  /** The company licensed to collect here, if any yet. */
+  company?: string | null;
 }
 
 export interface Company {
@@ -33,6 +35,7 @@ export interface Company {
   care: string;
   hours: string;
   color: string;
+  /** Estate codes served, derived from each estate's company. */
   estates: string[];
 }
 
@@ -213,6 +216,8 @@ export interface IntegrationStatus {
   mpesa: Record<string, { mode: "live" | "simulated"; environment?: string; shortcode?: string }>;
   sms: "live" | "simulated";
   translate: boolean;
+  /** Demo mode: seeded data, and payments simulated when M-Pesa isn't connected. */
+  demo: boolean;
 }
 
 export interface SuspenseItem {

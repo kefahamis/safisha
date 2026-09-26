@@ -1,13 +1,12 @@
-// Server-only. Built-in roles for older databases, and each company's starting departments.
+// Server-only. The built-in roles, each company's starting departments, and the demo staff.
 import { sql } from "drizzle-orm";
 import { DEFAULT_ROLES } from "@/lib/auth/defaultRoles";
 import { COMPANIES } from "@/lib/reference/companies";
 import { hashPassword } from "../password";
 import { nowStamp } from "../time";
+import { DEMO_PASSWORD } from "./demoPassword";
 import type { Db } from "./index";
 import * as t from "./schema";
-
-const DEMO_PASSWORD = "zoa12345";
 
 /** The starting departments every company gets; admins rename, reshape or add to them. */
 const DEPARTMENTS: { key: string; name: string; description: string; permissions: string[] }[] = [
@@ -37,32 +36,42 @@ const DEPARTMENTS: { key: string; name: string; description: string; permissions
   },
 ];
 
-/** Roles added in later releases, so a database seeded earlier still has them. */
+/** The built-in roles, including any added in later releases. Every database needs them. */
 export async function ensureSystemRoles(db: Db) {
-  const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(t.roles);
-  if (n === 0) return; // an empty database gets every role from the main seed
   await db
     .insert(t.roles)
     .values(DEFAULT_ROLES.map((r) => ({ ...r, permissions: [...r.permissions] })))
     .onConflictDoNothing();
 }
 
+/** A newly onboarded company's departments, ready for its admin to reshape. */
+export async function createStarterDepartments(db: Db, company: string) {
+  const createdAt = nowStamp();
+  const ids: Record<string, string> = {};
+  await db
+    .insert(t.departments)
+    .values(
+      DEPARTMENTS.map((d) => {
+        const id = `dep-${company.toLowerCase()}-${d.key}`;
+        ids[d.key] = id;
+        return { id, company, name: d.name, description: d.description, permissions: d.permissions, createdAt };
+      }),
+    )
+    .onConflictDoNothing();
+  return ids;
+}
+
+/** Demo only: departments for the demo companies, and two staff to show them at work. */
 export async function seedTeamIfEmpty(db: Db) {
   const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(t.departments);
   if (n > 0) return;
   const [{ roles }] = await db.select({ roles: sql<number>`count(*)::int` }).from(t.roles);
   if (roles === 0) return;
 
-  const createdAt = nowStamp();
   const ids: Record<string, string> = {};
   for (const co of COMPANIES) {
-    await db.insert(t.departments).values(
-      DEPARTMENTS.map((d) => {
-        const id = `dep-${co.id.toLowerCase()}-${d.key}`;
-        ids[`${co.id}:${d.key}`] = id;
-        return { id, company: co.id, name: d.name, description: d.description, permissions: d.permissions, createdAt };
-      }),
-    );
+    const made = await createStarterDepartments(db, co.id);
+    for (const [key, id] of Object.entries(made)) ids[`${co.id}:${key}`] = id;
   }
 
   // Care agents join the care desk; two new faces show departments at work.

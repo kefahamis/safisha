@@ -29,11 +29,14 @@ npm install
 npm run dev        # http://localhost:3000
 npm run build && npm start
 npm run typecheck
+npm run lint
+npm test           # logic, plus a fresh-deploy and a demo database run
 ```
 
-With no configuration the app runs on a local embedded database (below) with
-demo data, and payments/SMS run in simulated mode. Sign in with any account on
-the sign-in page; they all use the password `zoa12345`.
+With no configuration the app runs on a local embedded database (below) in
+**demo mode**: it is seeded with demo companies, clients and staff, and payments
+run in simulated mode. Sign in with any account listed on the sign-in page; they
+all use the password `zoa12345`.
 
 | Account | Role | Lands on |
 | --- | --- | --- |
@@ -45,11 +48,36 @@ the sign-in page; they all use the password `zoa12345`.
 | `workshop@takasafi.co.ke` | Staff · Fleet & workshop | `/company/desk` |
 | `admin@zoahub.co.ke` | Platform admin | `/admin` |
 
+### Demo mode vs. a real deployment
+
+`DEMO_DATA` decides which one you get. It defaults to on in development and
+**off in production**.
+
+| | Demo mode (`DEMO_DATA=1`) | Real deployment (`DEMO_DATA` unset or `0`) |
+| --- | --- | --- |
+| Empty database | Seeded with the demo world | Only the built-in roles, plus the first admin from `ADMIN_EMAIL`/`ADMIN_PASSWORD` |
+| Sign-in page | Lists the demo accounts and password | Lists nothing |
+| M-Pesa not connected | STK prompts and Paybill payments can be simulated | Refused: no money, no payment |
+| M-Pesa sandbox keys | Paybill simulator asks Safaricom's sandbox | Same |
+| M-Pesa production keys | Simulator refused | Simulator refused |
+
+For a test deployment on Vercel (a preview, or a demo site), set `DEMO_DATA=1`
+on that environment. Never set it on the database real clients use: the demo
+accounts share a published password.
+
+A real deployment starts empty. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` (12+
+characters) for the first deploy; that platform admin onboards companies and
+estates at **Admin → Companies & estates**, then invites each company's admin
+from **Users**.
+
 ## Database
 
 PostgreSQL through [Drizzle ORM](https://orm.drizzle.team). Schema in
-`src/server/db/schema.ts`, migrations in `drizzle/`, applied automatically on
-start; an empty database is seeded with the demo world.
+`src/server/db/schema.ts`, migrations in `drizzle/`. `npm run build` applies
+them first (`scripts/migrate.mjs`), so a bad migration fails the deploy rather
+than the first request; the app also checks on start, under a Postgres advisory
+lock so instances starting together don't race. Companies and estates live in
+the database, not in code.
 
 - **Production:** set `DATABASE_URL` to your Postgres (Neon, Supabase, RDS, your
   own server…). It is required when `NODE_ENV=production`.
@@ -260,6 +288,10 @@ so on a multi-instance deployment it is a speed bump rather than a hard limit.
   and lock after 5 attempts; responses never reveal whether an account exists.
   When SMS/email aren't connected, the code is shown on screen outside
   production only (demo convenience).
+- **Rate limits** are counted in the database, so every server instance shares
+  them: 8 wrong passwords or codes per account and 40 per IP address in 15
+  minutes, 5 codes sent per phone or email (20 per IP) an hour, and 6 wrong
+  second-step answers in 10 minutes.
 - **Audit log** at `/admin/audit` and `/company/audit`.
 
 ## How it is put together

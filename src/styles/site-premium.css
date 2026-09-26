@@ -475,3 +475,27 @@
     gap: 10px;
   }
 }
+
+/* ---------- breathing room before the footer ---------- */
+/* The closing call and the footer are both deep green; a clear band of page between them keeps them apart. */
+.s-final {
+  margin-bottom: clamp(48px, 6vw, 96px);
+}
+
+@media (min-width: 900px) {
+  /* The footer joins the stacked, rounded sheets: inset from the edges like the panels above it. */
+  .s-footer {
+    margin: 0 12px 12px;
+    border-radius: 34px;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 600px) {
+  /* On a narrow screen the halftone would sit right under the words; the glow alone is enough. */
+  .s-final {
+    background:
+      radial-gradient(420px 260px at 10% 0%, color-mix(in srgb, var(--s-lime) 18%, transparent), transparent 70%),
+      var(--s-deep);
+  }
+}

@@ -48,10 +48,11 @@ export function Field({
 
 export function Submit({ busy, children }: { busy: boolean; children: ReactNode }) {
   return (
-    <button className="signin-submit" disabled={busy}>
-      {busy && <LoaderCircle size={17} strokeWidth={2.2} className="spin" aria-hidden="true" />}
-      {children}
-      {!busy && <ArrowRight size={17} strokeWidth={2.2} aria-hidden="true" />}
+    <button className="signin-submit" disabled={busy} aria-busy={busy || undefined}>
+      <span className="signin-submit-label">{children}</span>
+      <span className="signin-submit-chip" aria-hidden="true">
+        {busy ? <LoaderCircle size={18} strokeWidth={2.4} className="spin" /> : <ArrowRight size={18} strokeWidth={2.4} />}
+      </span>
     </button>
   );
 }

@@ -43,6 +43,20 @@
       "when": 1790421950819,
       "tag": "0005_two_step",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790428453299,
+      "tag": "0006_reference_limits",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790429525997,
+      "tag": "0007_reference_backfill",
+      "breakpoints": true
     }
   ]
 }

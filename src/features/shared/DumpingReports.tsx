@@ -87,7 +87,7 @@ function ReportRow({ report: r, platform, highlight }: { report: DumpReport; pla
   // Only the company serving the location (or the platform) can act on a report.
   const canAct = platform || r.company === s.companyId;
   const toast = useToast();
-  const [company, setCompany] = useState(r.company ?? COMPANIES[0].id);
+  const [company, setCompany] = useState(r.company ?? COMPANIES[0]?.id ?? "");
 
   const set = async (status: DumpReport["status"], assign?: string) => {
     const res = await actions.updateDump(r.id, status, assign);

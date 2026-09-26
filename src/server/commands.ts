@@ -35,6 +35,7 @@ import {
 import { getDb, schema, type Db } from "./db";
 import { HttpError } from "./session";
 import { sendSms } from "./integrations/messaging";
+import { demoMode } from "./demo";
 import { settleStk, simulatePaybill, startStk } from "./payments";
 import { priceList } from "./settings";
 import { SIM_EPOCH, simDistance, visibleCompanies } from "./snapshot";
@@ -620,7 +621,7 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
     case "stk.simulate": {
       const [req] = await db.select().from(t.stkRequests).where(eq(t.stkRequests.id, cmd.request));
       if (!req) return { ok: false, error: "No such payment request." };
-      if (req.mode !== "simulated") deny("Live payments are confirmed by Safaricom, not the simulator.");
+      if (req.mode !== "simulated" || !demoMode()) deny("Live payments are confirmed by Safaricom, not the simulator.");
       if (session.ws === "client" ? session.scope.clientId !== req.client : !(await canSeeCompany(session, req.company))) {
         deny();
       }
@@ -635,6 +636,7 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
       await requireCompany(session, cmd.company);
       if (!(cmd.amount >= 1 && cmd.amount <= 150000)) return { ok: false, error: "Amount must be between KES 1 and 150,000." };
       const res = await simulatePaybill(cmd.company, { account: cmd.account, amount: cmd.amount, phone: cmd.phone });
+      if (!res.ok && !res.receipt) return { ok: false, error: res.message };
       return {
         ok: true,
         id: res.receipt,

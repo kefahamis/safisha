@@ -35,20 +35,21 @@ const HIGHLIGHTS: Highlight[] = [
   },
 ];
 
-/** Sign-in. Demo accounts are listed so each dashboard can be opened quickly. */
+/** Sign-in. In demo mode the demo accounts are listed so each dashboard can be opened quickly. */
 export function LoginForm({
   accounts,
   demoPassword,
 }: {
   accounts: DemoAccount[];
-  demoPassword: string;
+  /** Only in demo mode; a real deployment lists no accounts. */
+  demoPassword?: string;
 }) {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next");
 
   const [email, setEmail] = useState(accounts[0]?.email ?? "");
-  const [password, setPassword] = useState(demoPassword);
+  const [password, setPassword] = useState(demoPassword ?? "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -116,36 +117,40 @@ export function LoginForm({
       heroText="Clients, collectors and companies on the same live picture: every bin, every truck, every shilling."
       highlights={HIGHLIGHTS}
     >
-      <p className="hint" style={{ margin: "0 0 10px" }}>
-        Pick one to fill the form. The password for all of them is{" "}
-        <span className="mono">{demoPassword}</span>.
-      </p>
-      <div className="demo-grid">
-        {accounts.map((a) => {
-          const Icon = ROLE_ICONS[a.workspace];
-          return (
-            <button
-              type="button"
-              key={a.email}
-              className="demo-row"
-              aria-pressed={email === a.email}
-              onClick={() => {
-                setEmail(a.email);
-                setPassword(demoPassword);
-                setError("");
-              }}
-            >
-              <span className={`avatar sm ws-${a.workspace}`} aria-hidden="true">
-                <Icon size={14} strokeWidth={2.2} />
-              </span>
-              <span className="demo-text">
-                <span className="t">{a.name}</span>
-                <span className="sub">{a.role}</span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {demoPassword && accounts.length > 0 && (
+        <>
+          <p className="hint" style={{ margin: "0 0 10px" }}>
+            Pick one to fill the form. The password for all of them is{" "}
+            <span className="mono">{demoPassword}</span>.
+          </p>
+          <div className="demo-grid">
+            {accounts.map((a) => {
+              const Icon = ROLE_ICONS[a.workspace];
+              return (
+                <button
+                  type="button"
+                  key={a.email}
+                  className="demo-row"
+                  aria-pressed={email === a.email}
+                  onClick={() => {
+                    setEmail(a.email);
+                    setPassword(demoPassword ?? "");
+                    setError("");
+                  }}
+                >
+                  <span className={`avatar sm ws-${a.workspace}`} aria-hidden="true">
+                    <Icon size={14} strokeWidth={2.2} />
+                  </span>
+                  <span className="demo-text">
+                    <span className="t">{a.name}</span>
+                    <span className="sub">{a.role}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
     </SignInPage>
   );
 }

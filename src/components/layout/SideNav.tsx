@@ -150,25 +150,27 @@ export function SideNav({
           })}
         </div>
 
-        <div className="foot" title={collapsed ? t(live ? "Live payments" : "Demo mode") : undefined}>
-          <span className="foot-ico" aria-hidden="true">
-            {live ? (
-              <ShieldCheck size={16} strokeWidth={2} />
-            ) : (
-              <FlaskConical size={16} strokeWidth={2} />
-            )}
-          </span>
-          <div>
-            <b>{t(live ? "Live payments" : "Demo mode")}</b>
-            <span>
-              {t(
-                live
-                  ? "Payments are live on M-Pesa for this company."
-                  : "Seed data. M-Pesa calls are simulated; no money moves.",
+        {(live || s.integrations.demo) && (
+          <div className="foot" title={collapsed ? t(live ? "Live payments" : "Demo mode") : undefined}>
+            <span className="foot-ico" aria-hidden="true">
+              {live ? (
+                <ShieldCheck size={16} strokeWidth={2} />
+              ) : (
+                <FlaskConical size={16} strokeWidth={2} />
               )}
             </span>
+            <div>
+              <b>{t(live ? "Live payments" : "Demo mode")}</b>
+              <span>
+                {t(
+                  live
+                    ? "Payments are live on M-Pesa for this company."
+                    : "Seed data. M-Pesa calls are simulated; no money moves.",
+                )}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </nav>
   );

@@ -1,15 +1,20 @@
-// Server-only. Fills an empty database with the demo world.
+// Server-only. Fills an empty database with the demo world. Runs only in demo mode.
 import { sql } from "drizzle-orm";
-import { DEFAULT_ROLES } from "@/lib/auth/defaultRoles";
 import { stamp } from "@/lib/format";
+import { DEMO_COMPANIES, DEMO_ESTATES } from "@/lib/reference/demo";
 import { ESTATES } from "@/lib/reference/estates";
+import { applyReference } from "@/lib/reference/registry";
 import { createInitialState } from "@/lib/seed";
 import { hashPassword } from "../password";
+import { DEMO_PASSWORD } from "./demoPassword";
 import type { Db } from "./index";
 import * as t from "./schema";
 
-/** Every demo account shares this password; it is printed on the sign-in page. */
-export const DEMO_PASSWORD = "zoa12345";
+export { DEMO_PASSWORD };
+
+/** The demo estates, each tagged with the demo company that collects there. */
+const demoEstates = () =>
+  DEMO_ESTATES.map((e) => ({ ...e, company: DEMO_COMPANIES.find((c) => c.estates.includes(e.code))?.id ?? null }));
 
 const STREAMS = ["mixed", "recyclable", "organic", "residual"] as const;
 
@@ -50,10 +55,16 @@ function pickupHistory(demo: ReturnType<typeof createInitialState>) {
   return rows;
 }
 
-export async function seedIfEmpty(db: Db) {
-  const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(t.roles);
+/** Seeds the demo world into a database with no companies and no clients yet. */
+export async function seedDemoIfEmpty(db: Db) {
+  const [{ n }] = await db
+    .select({ n: sql<number>`(select count(*) from ${t.companies})::int + (select count(*) from ${t.clients})::int` })
+    .from(sql`(select 1) as one`);
   if (n > 0) return;
 
+  // The demo world is built against the demo companies and estates.
+  const estates = demoEstates();
+  applyReference({ companies: DEMO_COMPANIES, estates });
   const demo = createInitialState();
   const hash = hashPassword(DEMO_PASSWORD);
   const createdAt = "2026-09-01 09:00";
@@ -84,7 +95,8 @@ export async function seedIfEmpty(db: Db) {
   });
 
   await db.transaction(async (tx) => {
-    await tx.insert(t.roles).values(DEFAULT_ROLES.map((r) => ({ ...r, permissions: [...r.permissions] })));
+    await tx.insert(t.companies).values(DEMO_COMPANIES.map(({ estates: _e, ...c }) => ({ ...c, createdAt })));
+    await tx.insert(t.estates).values(estates.map((e) => ({ ...e, createdAt })));
 
     await tx.insert(t.users).values([
       user("u-wanjiku", "wanjiku@example.com", wanjiku.name, "client", { clientId: wanjiku.id }, wanjiku.phone),

@@ -78,6 +78,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin": LayoutDashboard,
   "/admin/clients": UsersRound,
   "/admin/map": Map,
+  "/admin/companies": Building2,
   "/admin/dumping": TriangleAlert,
   "/admin/access": ShieldCheck,
   "/admin/users": Users,

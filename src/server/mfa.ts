@@ -35,6 +35,7 @@ import { decryptSecret, encryptSecret } from "./crypto";
 import { getDb, schema } from "./db";
 import { sendEmail, sendSms } from "./integrations/messaging";
 import { signPurpose, verifyPurpose } from "./jwt";
+import { CODES_PER_TARGET, SECOND_STEP, TOO_MANY_CODES, clearLimit, spend } from "./rateLimit";
 import { HttpError } from "./session";
 import { nowStamp } from "./time";
 
@@ -207,7 +208,7 @@ export async function newRecoveryCodes(userId: string): Promise<string[]> {
   return codes;
 }
 
-async function useRecoveryCode(userId: string, code: string) {
+async function redeemRecoveryCode(userId: string, code: string) {
   const db = await getDb();
   const [row] = await db.select().from(t.users).where(eq(t.users.id, userId));
   const digest = recoveryDigest(code);
@@ -483,6 +484,7 @@ export async function sendChallengeCode(user: User, method: "sms" | "email") {
   if (!factor) throw new HttpError(400, "That method isn't set up.");
   const target = method === "sms" ? user.phone : user.email.toLowerCase();
   if (!target) throw new HttpError(400, "There's no phone number on your account.");
+  await spend([[`code:mfa:${user.id}`, CODES_PER_TARGET]], TOO_MANY_CODES);
   const code = await issueCode(`mfa-${method}`, user, method === "sms" ? normalisePhone(target) : target, { ttlMs: 10 * 60_000 });
   const name = (await platformIdentity()).name;
   const res =
@@ -492,16 +494,11 @@ export async function sendChallengeCode(user: User, method: "sms" | "email") {
   return { sentTo: factor.detail, demoCode: res.status !== "sent" && mayRevealCodes() ? code : undefined };
 }
 
-// A code space of a million needs a lid on guesses: five tries per sign-in window.
-const attempts = new Map<string, { n: number; until: number }>();
+// A code space of a million needs a lid on guesses, counted in the database so every instance shares it.
+const attemptKey = (userId: string) => `second-step:${userId}`;
 
-function countAttempt(userId: string) {
-  const now = Date.now();
-  const a = attempts.get(userId);
-  const current = a && a.until > now ? a : { n: 0, until: now + PENDING_TTL * 1000 };
-  current.n++;
-  attempts.set(userId, current);
-  if (current.n > 5) throw new HttpError(429, "Too many wrong codes. Wait a few minutes, then sign in again.");
+async function countAttempt(userId: string) {
+  await spend([[attemptKey(userId), SECOND_STEP]], "Too many wrong codes.");
 }
 
 /** Checks the second step; on success, clears the pending sign-in and remembers the device if asked. */
@@ -516,15 +513,15 @@ export async function verifyChallenge(
   let used: FactorRow | undefined;
 
   if (input.method === "recovery") {
-    countAttempt(user.id);
-    if (!(await useRecoveryCode(user.id, input.code ?? ""))) throw new HttpError(400, "That recovery code isn't valid or was already used.");
+    await countAttempt(user.id);
+    if (!(await redeemRecoveryCode(user.id, input.code ?? ""))) throw new HttpError(400, "That recovery code isn't valid or was already used.");
   } else if (input.method === "sms" || input.method === "email") {
-    countAttempt(user.id);
+    await countAttempt(user.id);
     used = factors.find((f) => f.method === input.method);
     const target = input.method === "sms" ? normalisePhone(user.phone ?? "") : user.email.toLowerCase();
     if (!used || !(await consumeCode(`mfa-${input.method}`, target, input.code ?? ""))) throw new HttpError(400, "That code is wrong or has expired.");
   } else if (input.method === "totp") {
-    countAttempt(user.id);
+    await countAttempt(user.id);
     used = factors.find((f) => f.method === "totp" && f.secret && verifyTotp(decryptSecret(f.secret) ?? "", input.code ?? ""));
     if (!used) throw new HttpError(400, "That code doesn't match. Try the newest code in your app.");
   } else if (input.method === "passkey") {
@@ -552,7 +549,7 @@ export async function verifyChallenge(
     throw new HttpError(400, "Pick a sign-in method.");
   }
 
-  attempts.delete(user.id);
+  await clearLimit(attemptKey(user.id));
   if (used) await db.update(t.userFactors).set({ lastUsedAt: nowStamp() }).where(eq(t.userFactors.id, used.id));
   const jar = await cookies();
   jar.delete(PENDING_COOKIE);

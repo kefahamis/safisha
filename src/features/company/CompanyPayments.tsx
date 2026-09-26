@@ -68,10 +68,13 @@ export function CompanyPayments() {
         </Panel>
 
         <div className="stack" style={{ gap: 18 }}>
-          <Can permission="payments.simulate">
-            {/* Remount on company switch so the prefilled account follows the selection. */}
-            <C2BSimulator key={co.id} company={co} defaultAccount={clients[1]?.id ?? ""} />
-          </Can>
+          {/* Only where the server will run it: the demo, or Daraja's sandbox. Never against production keys. */}
+          {(s.integrations.demo ? s.integrations.mpesa[co.id]?.environment !== "production" : s.integrations.mpesa[co.id]?.environment === "sandbox") && (
+            <Can permission="payments.simulate">
+              {/* Remount on company switch so the prefilled account follows the selection. */}
+              <C2BSimulator key={co.id} company={co} defaultAccount={clients[1]?.id ?? ""} />
+            </Can>
+          )}
           <SuspenseQueue items={suspense} clients={clients} />
         </div>
       </div>

@@ -18,10 +18,10 @@ import { addDelta, nairobiDay, step, type DayDelta, type TelemetryState } from "
 import type { LatLng } from "@/lib/types";
 import { hashPassword } from "../password";
 import { nowStamp, today } from "../time";
+import { DEMO_PASSWORD } from "./demoPassword";
 import type { Db } from "./index";
 import * as t from "./schema";
 
-const DEMO_PASSWORD = "zoa12345";
 const DIESEL_KES_PER_L = 172;
 const HISTORY_DAYS = 30;
 /** Full GPS tracks are kept for the most recent days only; totals and events go back further. */

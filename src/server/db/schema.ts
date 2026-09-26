@@ -545,3 +545,39 @@ export const departments = pgTable("departments", {
   permissions: jsonb("permissions").$type<string[]>().notNull().default([]),
   createdAt: text("created_at").notNull(),
 });
+
+/* ---------------- reference ---------------- */
+
+/** Licensed collection companies, onboarded by the platform admin. */
+export const companies = pgTable("companies", {
+  /** Two-letter code, the client number prefix. Fixed once clients exist. */
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  paybill: text("paybill").notNull().default(""),
+  care: text("care").notNull().default(""),
+  hours: text("hours").notNull().default(""),
+  color: text("color").notNull().default("#0E7490"),
+  createdAt: text("created_at").notNull(),
+});
+
+/** Neighbourhoods served, each licensed to at most one company. */
+export const estates = pgTable("estates", {
+  /** Three-letter code used inside client numbers, e.g. KIL. */
+  code: text("code").primaryKey(),
+  name: text("name").notNull(),
+  lat: doublePrecision("lat").notNull(),
+  lng: doublePrecision("lng").notNull(),
+  radius: integer("radius").notNull().default(1500),
+  days: jsonb("days").$type<number[]>().notNull().default([]),
+  company: text("company"),
+  createdAt: text("created_at").notNull(),
+});
+
+/* ---------------- abuse limits ---------------- */
+
+/** Counters for rate limits, shared by every server instance. */
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  hits: integer("hits").notNull().default(0),
+  resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+});

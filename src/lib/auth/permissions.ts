@@ -80,6 +80,7 @@ export const PERMISSIONS: PermissionDef[] = [
   { id: "platform.overview", group: "Platform", label: "View city overview", detail: "Cross-company KPIs and collection rates." },
   { id: "platform.clients", group: "Platform", label: "View all clients", detail: "The client database across every company." },
   { id: "platform.fleet", group: "Platform", label: "View all fleets", detail: "Every company's trucks on one map." },
+  { id: "platform.companies.manage", group: "Platform", label: "Onboard companies", detail: "Add licensed companies and estates, and set who collects where." },
 
   // Settings
   { id: "settings.company.manage", group: "Settings", label: "Company settings", detail: "M-Pesa keys, billing reminders and pickup pricing for their company." },

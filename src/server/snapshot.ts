@@ -18,6 +18,7 @@ import { companyUsersWith } from "./accessStore";
 import { brandingFor } from "./branding";
 import { checksToday, fleetAlerts } from "./fleet";
 import { getDb, schema } from "./db";
+import { demoMode } from "./demo";
 import { smsLive } from "./integrations/messaging";
 import { translateAvailable } from "./integrations/translate";
 import { liveMpesa } from "./payments";
@@ -328,6 +329,7 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
       mpesa,
       sms: (await smsLive()) ? "live" : "simulated",
       translate: await translateAvailable(),
+      demo: demoMode(),
     },
     fleet,
     agents,

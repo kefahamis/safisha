@@ -17,7 +17,7 @@ export function InviteForm({ roles, trucks }: { roles: RoleDef[]; trucks: { id: 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [roleId, setRoleId] = useState(staffRoles.find((r) => r.id === "company_agent")?.id ?? staffRoles[0]?.id ?? "");
-  const [companyId, setCompanyId] = useState(COMPANIES[0].id);
+  const [companyId, setCompanyId] = useState(COMPANIES[0]?.id ?? "");
   const [truckId, setTruckId] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string; link?: string } | null>(null);

@@ -99,6 +99,7 @@ export const DEFAULT_ROLES: RoleDef[] = [
       "platform.overview",
       "platform.clients",
       "platform.fleet",
+      "platform.companies.manage",
       "access.roles.manage",
       "access.users.manage",
       "clients.view",
