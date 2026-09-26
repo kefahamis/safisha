@@ -83,12 +83,25 @@ async function connect(): Promise<Db> {
   return drizzleLite(client, { schema }) as unknown as Db;
 }
 
+/** Which part of bringing the database up failed, for the health check. */
+export type SetupStage = "migrate" | "roles" | "admin" | "demo" | "reference";
+
+export class DbSetupError extends Error {
+  constructor(
+    readonly stage: SetupStage,
+    readonly cause: unknown,
+  ) {
+    super(`Database setup failed at ${stage}: ${cause instanceof Error ? cause.message : String(cause)}`);
+  }
+}
+
 /**
  * Applies any migrations not yet run (normally already done by the build; see
  * scripts/migrate.mjs), makes sure the built-in roles and the first admin
  * exist, and in demo mode fills whatever demo data is missing.
  */
 async function migrateAndSeed(db: Db) {
+  let stage: SetupStage = "migrate";
   const run = async () => {
     if (databaseUrl()) {
       // The build has already migrated (scripts/migrate.mjs). If the host didn't
@@ -103,11 +116,14 @@ async function migrateAndSeed(db: Db) {
       const { migrate } = await import("drizzle-orm/pglite/migrator");
       await migrate(db as unknown as Parameters<typeof migrate>[0], { migrationsFolder: MIGRATIONS });
     }
+    stage = "roles";
     const { ensureSystemRoles, seedTeamIfEmpty } = await import("./teamSeed");
     await ensureSystemRoles(db);
+    stage = "admin";
     const { bootstrapAdmin } = await import("./bootstrap");
     await bootstrapAdmin(db);
 
+    stage = "demo";
     const { demoMode } = await import("../demo");
     if (demoMode()) {
       const { seedDemoIfEmpty } = await import("./seed");
@@ -120,8 +136,13 @@ async function migrateAndSeed(db: Db) {
     }
   };
   const lock = lockers.get(db);
-  await (lock ? lock(run) : run());
-  await loadReference(db);
+  try {
+    await (lock ? lock(run) : run());
+    stage = "reference";
+    await loadReference(db);
+  } catch (err) {
+    throw err instanceof DbSetupError ? err : new DbSetupError(stage, err);
+  }
 }
 
 async function loadReference(db: Db) {
