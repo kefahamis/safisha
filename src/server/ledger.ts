@@ -3,6 +3,7 @@ import { desc, eq, inArray, like, sql } from "drizzle-orm";
 import { validateLines, type JournalEntry, type JournalLine } from "@/lib/accounting";
 import type { Session } from "@/lib/auth/types";
 import { audit } from "./audit";
+import { fleetPostings } from "./fleet";
 import { getDb, schema } from "./db";
 import { visibleCompanies } from "./snapshot";
 import { HttpError } from "./session";
@@ -82,6 +83,9 @@ export async function companyJournal(company: string): Promise<JournalEntry[]> {
       lines: [line(MPESA, p.amount, 0), line(SUSPENSE, 0, p.amount)],
     });
   }
+
+  // Fuel, workshop bills and licence renewals, from the fleet records.
+  out.push(...(await fleetPostings(company)));
 
   const reversedBy = new Map(entryRows.filter((e) => e.reverses).map((e) => [e.reverses!, e.id]));
   for (const e of entryRows) {

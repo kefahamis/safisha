@@ -22,6 +22,7 @@ export const SOURCE_LABEL: Record<EntrySource, string> = {
   billing: "Billing",
   payment: "M-Pesa receipt",
   suspense: "Unmatched receipt",
+  fleet: "Fleet",
   manual: "Manual",
 };
 
@@ -29,6 +30,7 @@ const SOURCE_TONE: Record<EntrySource, string> = {
   billing: "neutral",
   payment: "ok",
   suspense: "warn",
+  fleet: "sky",
   manual: "accent",
 };
 

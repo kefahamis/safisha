@@ -8,8 +8,8 @@ recycling tracking and USSD for clients without smartphones.
 | Role | What it covers |
 | --- | --- |
 | **Client** | Account card, balance, pay by M-Pesa, statement, live truck tracking, book bulky/extra pickups, report illegal dumping, recycling figures, care chat |
-| **Company** | Dashboard and trends, client register, fleet map, M-Pesa payments and suspense, arrears and reminders, statements, pickup requests, dumping reports, recycling, care inbox, settings, audit log |
-| **Collector** | Today's route (optimised order), proof of collection (photo, GPS, weight, waste type), on-demand jobs, GPS sharing — works offline |
+| **Company** | Dashboard and trends, client register, fleet map, fleet management, M-Pesa payments and suspense, arrears and reminders, statements, pickup requests, dumping reports, recycling, care inbox, settings, audit log |
+| **Collector** | Today's route (optimised order), proof of collection (photo, GPS, weight, waste type), on-demand jobs, GPS sharing, start-of-day vehicle check, fuel and incident reports — works offline |
 | **Admin** | City overview and trends, all clients, all fleets, dumping reports, roles and users (with invitations), platform settings, audit log |
 
 ## Running it
@@ -31,6 +31,8 @@ the sign-in page; they all use the password `zoa12345`.
 | `john.kiprop@takasafi.co.ke` | Collector | `/collector` |
 | `care@takasafi.co.ke` | Care agent | `/company` |
 | `ops@takasafi.co.ke` | Company admin | `/company` |
+| `accounts@takasafi.co.ke` | Staff · Finance & billing | `/company/desk` |
+| `workshop@takasafi.co.ke` | Staff · Fleet & workshop | `/company/desk` |
 | `admin@zoahub.co.ke` | Platform admin | `/admin` |
 
 ## Database
@@ -117,10 +119,75 @@ account; client-facing screens and navigation are translated (`src/lib/i18n.tsx`
 
 The app is installable (web app manifest). A service worker keeps the
 collector screens and app code available offline; marking stops (with proof
-photos), undo and location updates are queued in IndexedDB and sent when the
+photos), undo, location updates, vehicle checks, fuel and incident reports are
+queued in IndexedDB and sent when the
 connection returns, with a banner showing what's waiting. Signing out clears the
 page cache. Real phone GPS is opt-in per device (My location → "Use this phone's
 GPS"); otherwise trucks move along a simulated route.
+
+## Fleet management
+
+Company admins get **Fleet management** (`fleet.manage`); drivers get **My truck**
+(`fleet.inspect`). Everything runs on the collector's phone and the office — no
+tracker hardware.
+
+- **Tracking and trips.** Every GPS fix from the collector app is kept
+  (`gps_pings`) and folded into the truck's day by `lib/telemetry.ts`: distance,
+  driving and idle time, speeding, movement outside working hours, and arrivals
+  at the yard, the Dandora dumpsite and service estates (geofences in
+  `lib/fleet.ts`). Trips replay on a map with a timeline.
+- **Daily vehicle check.** A ten-item walk-round for compactors and tippers. A
+  defect opens a work order; a safety-critical one (brakes, tyres, leaks,
+  hydraulics) takes the truck off the road until the workshop closes it.
+- **Maintenance.** Service every N km or days, whichever first; work orders from
+  open to done with parts, labour and garage. Finishing a service restarts the
+  schedule.
+- **Fuel.** Fills with litres, amount, odometer and M-Pesa code. Efficiency is
+  worked out fill to fill; a fill far below the truck's expected km/L, or bigger
+  than its tank, is flagged.
+- **Compliance.** Insurance, NTSA inspection, NEMA waste transport licence and
+  county permit per truck; driving licence and good conduct per driver. Flagged
+  30 days before expiry. Incidents (accidents, breakdowns, theft, spills, fines).
+- **Drivers.** Scorecards out of 100 from speeding and idling per 100 km,
+  after-hours movement, skipped checks and incidents; trucks assigned (and
+  swapped) from the same screen.
+- **Costs.** Fuel, finished work orders and renewed papers post themselves to
+  the books (5000 Fuel, 5200 Vehicle maintenance, 5600 Licences & permits) as
+  source "Fleet", like billing does — nothing is typed twice. The overview shows
+  cost per km, cost per tonne collected and CO₂ from fuel burned.
+
+Alerts (papers, services, defects, fuel, driving, missing checks) are worked out
+from the records on demand and appear in the notification bell. Speed limit,
+idle time, working hours and the fuel threshold are per company, under the rules
+button on the fleet page.
+
+Left out on purpose: features that need hardware on the truck (OBD-II
+diagnostics, tyre pressure, dashcams, remote immobilisation, cargo sensors) and
+US-only compliance (ELD/hours of service, IFTA). The GPS pipeline takes fixes
+from anywhere, so a hardware tracker can feed `recordPing` later.
+
+## Staff & departments
+
+A company admin runs their own team under **Staff & departments**
+(`staff.manage`), without the platform admin.
+
+- **Departments** (Customer care, Finance & billing, Operations, Fleet &
+  workshop to start) each carry a set of permissions, ticked from a checklist.
+  Everyone in a department can do what it allows; a change applies on their
+  next click, because permissions are resolved on every request.
+- **Staff** are invited into a department by email (or a link to pass on when
+  email isn't connected) and hold the *Company staff* role, which carries
+  nothing itself. Per person, the admin can add a permission or take one of the
+  department's away; a removal always wins. Suspending signs them out.
+- **What can be delegated** is the company's own work only
+  (`COMPANY_ASSIGNABLE` in `lib/auth/permissions.ts`), capped at what the admin
+  holds — never platform, access-control, client or driver permissions.
+  Company admins and drivers are listed but managed elsewhere.
+- **My dashboard** (`/company/desk`) is each staff member's home: the queues
+  their permissions cover — clients waiting on care, payments to match,
+  arrears, pickups to schedule, dumping reports, fleet alerts — with links to
+  the full pages. Staff land there after signing in; company admins land on the
+  company dashboard.
 
 ## Security model
 

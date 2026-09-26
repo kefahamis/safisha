@@ -21,6 +21,18 @@ export interface UserScope {
   companyId?: string;
   clientId?: string;
   truckId?: string;
+  /** Company staff: the department whose permissions they carry. */
+  departmentId?: string;
+}
+
+/** A team inside a company. Its members carry its permissions. */
+export interface Department {
+  id: string;
+  company: string;
+  name: string;
+  description: string;
+  permissions: string[];
+  createdAt: string;
 }
 
 export interface User {
@@ -57,6 +69,8 @@ export interface SessionClaims {
 /** The resolved session handed to the app, permissions computed per request. */
 export interface Session extends SessionClaims {
   roleName: string;
+  /** The department they belong to, for company staff. */
+  department?: { id: string; name: string };
   lang: string;
   permissions: string[];
   /** Dashboards this session may open, including its home workspace. */

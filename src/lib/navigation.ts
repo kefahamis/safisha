@@ -3,10 +3,15 @@ import type { Role } from "./types";
 export interface NavItem {
   href: string;
   label: string;
-  /** Hidden unless the session holds one of these. */
+  /** Hidden unless the session holds one of these; empty means everyone in the workspace. */
   requires: string[];
   /** Sections whose badge shows the open ticket count. */
   badge?: "tickets";
+  /**
+   * A group: a parent row that folds its sections away. The parent's own href
+   * only keys it (and its icon); each child checks its own permissions.
+   */
+  children?: NavItem[];
 }
 
 export const ROLES: { role: Role; label: string }[] = [
@@ -32,12 +37,28 @@ export const NAV: Record<Role, NavItem[]> = {
   ],
   company: [
     { href: "/company", label: "Dashboard", requires: ["clients.view"] },
+    { href: "/company/desk", label: "My dashboard", requires: [] },
     { href: "/company/clients", label: "Clients", requires: ["clients.view"] },
-    { href: "/company/map", label: "Fleet map", requires: ["fleet.view"] },
-    { href: "/company/payments", label: "M-Pesa payments", requires: ["payments.view"] },
+    {
+      href: "group:fleet",
+      label: "Fleet management",
+      requires: [],
+      children: [
+        { href: "/company/fleet", label: "Overview", requires: ["fleet.manage"] },
+        { href: "/company/map", label: "Fleet map", requires: ["fleet.view"] },
+      ],
+    },
     { href: "/company/arrears", label: "Arrears & reminders", requires: ["payments.view"] },
-    { href: "/company/statements", label: "Statements", requires: ["statements.view"] },
-    { href: "/company/finance", label: "Financial reports", requires: ["finance.view"] },
+    {
+      href: "group:finance",
+      label: "Financial reports",
+      requires: [],
+      children: [
+        { href: "/company/finance", label: "Reports", requires: ["finance.view"] },
+        { href: "/company/payments", label: "M-Pesa payments", requires: ["payments.view"] },
+        { href: "/company/statements", label: "Statements", requires: ["statements.view"] },
+      ],
+    },
     { href: "/company/pickups", label: "Pickup requests", requires: ["pickups.manage"] },
     { href: "/company/dumping", label: "Dumping reports", requires: ["dumping.manage"] },
     { href: "/company/impact", label: "Recycling", requires: ["clients.view"] },
@@ -47,11 +68,21 @@ export const NAV: Record<Role, NavItem[]> = {
       requires: ["tickets.view.company"],
       badge: "tickets",
     },
+    {
+      href: "group:team",
+      label: "Staff & departments",
+      requires: [],
+      children: [
+        { href: "/company/staff", label: "Staff", requires: ["staff.manage"] },
+        { href: "/company/departments", label: "Departments", requires: ["staff.manage"] },
+      ],
+    },
     { href: "/company/settings", label: "Settings", requires: ["settings.company.manage"] },
     { href: "/company/audit", label: "Audit log", requires: ["audit.view"] },
   ],
   collector: [
     { href: "/collector", label: "Today’s route", requires: ["route.view"] },
+    { href: "/collector/vehicle", label: "My truck", requires: ["fleet.inspect"] },
     { href: "/collector/map", label: "My location", requires: ["fleet.view"] },
   ],
   admin: [
@@ -71,6 +102,9 @@ export const SIDEBAR_COOKIE = "zoa-sidebar";
 
 export const roleHome = (role: Role) => NAV[role][0].href;
 
+/** Groups flattened to their sections, for anything that needs a plain list. */
+const leaves = (items: NavItem[]): NavItem[] => items.flatMap((i) => (i.children ? leaves(i.children) : [i]));
+
 const ROLE_SET = new Set<string>(ROLES.map((r) => r.role));
 
 /** Derives the active workspace from the URL; the route is the source of truth. */
@@ -79,10 +113,23 @@ export function roleFromPath(pathname: string): Role {
   return first && ROLE_SET.has(first) ? (first as Role) : "client";
 }
 
-/** The sections this session may actually open. */
-export function navFor(role: Role, permissions: string[]): NavItem[] {
+/**
+ * The menu this session may actually open: sections it holds a permission for,
+ * and groups that still have at least one of those left.
+ */
+export function navTreeFor(role: Role, permissions: string[]): NavItem[] {
   const held = new Set(permissions);
-  return NAV[role].filter((item) => item.requires.some((p) => held.has(p)));
+  const allowed = (item: NavItem) => item.requires.length === 0 || item.requires.some((p) => held.has(p));
+  return NAV[role].flatMap((item) => {
+    if (!item.children) return allowed(item) ? [item] : [];
+    const children = item.children.filter(allowed);
+    return children.length ? [{ ...item, children }] : [];
+  });
+}
+
+/** The sections this session may open, as a flat list. */
+export function navFor(role: Role, permissions: string[]): NavItem[] {
+  return leaves(navTreeFor(role, permissions));
 }
 
 /**
@@ -90,5 +137,7 @@ export function navFor(role: Role, permissions: string[]): NavItem[] {
  * they can actually open, rather than one they'd be bounced out of.
  */
 export function landingFor(role: Role, permissions: string[]): string {
+  // Company staff start on their own work queue; whoever runs the company, on its dashboard.
+  if (role === "company" && !permissions.includes("staff.manage")) return "/company/desk";
   return navFor(role, permissions)[0]?.href ?? roleHome(role);
 }

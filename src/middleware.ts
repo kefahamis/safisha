@@ -32,12 +32,14 @@ export async function middleware(request: NextRequest) {
 
   const redirectTo = (path: string) => NextResponse.redirect(new URL(path, request.url));
 
+  // Signed in, "/" is resolved by the home page, which knows the permissions and
+  // so can send staff to their own dashboard; the token alone can't.
   if (pathname === "/login") {
-    return claims ? redirectTo(roleHome(claims.ws)) : NextResponse.next();
+    return claims ? redirectTo("/") : NextResponse.next();
   }
 
   if (pathname === "/") {
-    return redirectTo(claims ? roleHome(claims.ws) : "/login");
+    return claims ? NextResponse.next() : redirectTo("/login");
   }
 
   const required = workspaceFor(pathname);

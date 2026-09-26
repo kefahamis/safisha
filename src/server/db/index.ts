@@ -54,6 +54,12 @@ async function init(): Promise<Db> {
   const db = await connect();
   const { seedIfEmpty } = await import("./seed");
   await seedIfEmpty(db);
+  // Separate, so databases seeded before fleet management still get its demo history.
+  const { seedFleetIfEmpty } = await import("./fleetSeed");
+  await seedFleetIfEmpty(db);
+  const { ensureSystemRoles, seedTeamIfEmpty } = await import("./teamSeed");
+  await ensureSystemRoles(db);
+  await seedTeamIfEmpty(db);
   return db;
 }
 

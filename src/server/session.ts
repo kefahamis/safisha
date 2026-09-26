@@ -2,7 +2,7 @@
 import { cookies } from "next/headers";
 import { allowedWorkspaces } from "@/lib/auth/defaultRoles";
 import type { Session } from "@/lib/auth/types";
-import { effectivePermissions, findRole, findUserById } from "./accessStore";
+import { effectivePermissions, findRole, findUserById, userDepartment } from "./accessStore";
 import { SESSION_COOKIE, verifySession } from "./jwt";
 
 /**
@@ -23,6 +23,7 @@ export async function getSession(): Promise<Session | null> {
   if (!user || user.suspended) return null;
 
   const role = await findRole(user.roleId);
+  const department = await userDepartment(user);
 
   return {
     sub: user.id,
@@ -32,8 +33,9 @@ export async function getSession(): Promise<Session | null> {
     ws: role?.workspace ?? claims.ws,
     scope: user.scope,
     roleName: role?.name ?? user.roleId,
+    department: department ? { id: department.id, name: department.name } : undefined,
     lang: user.lang === "sw" ? "sw" : "en",
-    permissions: await effectivePermissions(user, role),
+    permissions: await effectivePermissions(user, role, department),
     allowed: role ? allowedWorkspaces(role) : [claims.ws],
   };
 }

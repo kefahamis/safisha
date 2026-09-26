@@ -15,6 +15,20 @@
       "when": 1790370681580,
       "tag": "0001_accounting",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790415126848,
+      "tag": "0002_fleet",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790419089898,
+      "tag": "0003_staff",
+      "breakpoints": true
     }
   ]
 }

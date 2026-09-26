@@ -65,7 +65,7 @@ export const TYPE_LABEL: Record<AccountType, string> = {
   expense: "Expenses",
 };
 
-export type EntrySource = "billing" | "payment" | "suspense" | "manual";
+export type EntrySource = "billing" | "payment" | "suspense" | "fleet" | "manual";
 
 export interface JournalLine {
   account: string;

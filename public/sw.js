@@ -13,7 +13,7 @@
 const VERSION = "zoa-v1";
 const STATIC = `${VERSION}-static`;
 const PAGES = `${VERSION}-pages`;
-const OFFLINE_PAGES = ["/collector", "/collector/map"];
+const OFFLINE_PAGES = ["/collector", "/collector/vehicle", "/collector/map"];
 
 self.addEventListener("install", () => self.skipWaiting());
 

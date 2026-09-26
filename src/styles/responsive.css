@@ -137,10 +137,15 @@
     transform: translateX(var(--drawer-w));
   }
 
-  .side a.nav-item {
+  .side a.nav-item,
+  .side button.nav-item {
     gap: 10px;
     min-height: 46px;
     padding: 8px 10px;
+  }
+
+  .side a.nav-item.sub {
+    min-height: 42px;
   }
 
   .side a.nav-item[aria-current="page"]::before {

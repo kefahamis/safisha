@@ -1,11 +1,12 @@
 "use client";
 
-import { ChevronLeft, Circle, FlaskConical, Menu, ShieldCheck, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, Circle, FlaskConical, Menu, ShieldCheck, X } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useSession } from "@/components/auth/SessionProvider";
 import { NAV_ICONS } from "@/components/ui/icons";
 import { useT } from "@/lib/i18n";
-import { navFor } from "@/lib/navigation";
+import { navTreeFor, type NavItem } from "@/lib/navigation";
 import { openTicketCount } from "@/lib/selectors";
 import type { Role } from "@/lib/types";
 import { useAppState } from "@/store/StoreProvider";
@@ -41,7 +42,17 @@ export function SideNav({
   // Demo only while every company in view still pays through the simulator.
   const live = Object.values(s.integrations.mpesa).some((m) => m.mode === "live");
 
-  const items = navFor(role, session?.permissions ?? []);
+  const tree = navTreeFor(role, session?.permissions ?? []);
+  // The icon rail has no room for nesting: there, a group's sections sit in line.
+  const items = collapsed ? tree.flatMap((i) => i.children ?? [i]) : tree;
+
+  // A group opens by itself when one of its sections is the current page.
+  const [open, setOpen] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    const active = tree.find((g) => g.children?.some((c) => c.href === pathname));
+    if (active) setOpen((o) => (o[active.href] ? o : { ...o, [active.href]: true }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
   const platform = usePlatformBrand();
   // Company surfaces wear the company's logo; otherwise the platform's identity shows.
   const branding = role === "admin" ? undefined : s.branding[s.companyId];
@@ -106,26 +117,32 @@ export function SideNav({
       <div className="nav-panel" id="nav-menu">
         <div className="nav-label">{t("Menu")}</div>
         {/* Choosing a section closes the phone menu, even when it is the current page. */}
-        <div className="nav-items" onClick={() => onMenu(false)}>
+        <div className="nav-items" onClick={(e) => (e.target as HTMLElement).closest("a") && onMenu(false)}>
           {items.map((item) => {
+            if (!item.children) return navLink(item);
             const Icon = NAV_ICONS[item.href] ?? Circle;
+            const expanded = Boolean(open[item.href]);
+            const here = item.children.some((c) => c.href === pathname);
+            const id = `nav-group-${item.href.replace(/\W+/g, "-")}`;
             return (
-              <Link
-                key={item.href}
-                className="nav-item"
-                href={item.href}
-                data-label={t(item.label)}
-                aria-current={pathname === item.href ? "page" : undefined}
-                prefetch={false}
-              >
-                <span className="nav-ico" aria-hidden="true">
-                  <Icon size={18} strokeWidth={2} />
-                </span>
-                <span className="nav-text">{t(item.label)}</span>
-                {item.badge === "tickets" && openTickets > 0 && (
-                  <span className="count">{openTickets}</span>
-                )}
-              </Link>
+              <div key={item.href} className={`nav-group${expanded ? " open" : ""}${here ? " here" : ""}`}>
+                <button
+                  type="button"
+                  className="nav-item"
+                  aria-expanded={expanded}
+                  aria-controls={id}
+                  onClick={() => setOpen((o) => ({ ...o, [item.href]: !expanded }))}
+                >
+                  <span className="nav-ico" aria-hidden="true">
+                    <Icon size={18} strokeWidth={2} />
+                  </span>
+                  <span className="nav-text">{t(item.label)}</span>
+                  <ChevronDown size={16} strokeWidth={2.2} className="nav-chev" aria-hidden="true" />
+                </button>
+                <div className="nav-sub" id={id} hidden={!expanded}>
+                  {item.children.map((child) => navLink(child, true))}
+                </div>
+              </div>
             );
           })}
         </div>
@@ -152,4 +169,26 @@ export function SideNav({
       </div>
     </nav>
   );
+
+  // A plain function rather than a component: the rail re-renders every second
+  // with the live trucks, and a component defined in here would remount each time.
+  function navLink(item: NavItem, sub = false) {
+    const Icon = NAV_ICONS[item.href] ?? Circle;
+    return (
+      <Link
+        key={item.href}
+        className={`nav-item${sub ? " sub" : ""}`}
+        href={item.href}
+        data-label={t(item.label)}
+        aria-current={pathname === item.href ? "page" : undefined}
+        prefetch={false}
+      >
+        <span className="nav-ico" aria-hidden="true">
+          <Icon size={sub ? 16 : 18} strokeWidth={2} />
+        </span>
+        <span className="nav-text">{t(item.label)}</span>
+        {item.badge === "tickets" && openTickets > 0 && <span className="count">{openTickets}</span>}
+      </Link>
+    );
+  }
 }

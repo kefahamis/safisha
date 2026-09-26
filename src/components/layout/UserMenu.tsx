@@ -101,7 +101,10 @@ export function UserMenu() {
           <div className="who">
             <b>{session.name}</b>
             <small>{session.email}</small>
-            <span className="usermenu-role">{session.roleName}</span>
+            <span className="usermenu-role">
+              {session.roleName}
+              {session.department ? ` · ${session.department.name}` : ""}
+            </span>
           </div>
         </div>
 

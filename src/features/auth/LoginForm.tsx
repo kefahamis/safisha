@@ -7,7 +7,6 @@ import { useState } from "react";
 import { PlatformIdentity } from "@/components/layout/PlatformBrand";
 import { ROLE_ICONS } from "@/components/ui/icons";
 import { SignInPage, type Highlight } from "@/components/ui/SignInPage";
-import { roleHome } from "@/lib/navigation";
 import type { Workspace } from "@/lib/auth/types";
 
 export interface DemoAccount {
@@ -69,7 +68,7 @@ export function LoginForm({
         return;
       }
       // A `next` from the gate only counts if it stays inside the app.
-      const target = next?.startsWith("/") ? next : roleHome(data.workspace as Workspace);
+      const target = next?.startsWith("/") ? next : "/";
       router.replace(target);
       router.refresh();
     } catch {

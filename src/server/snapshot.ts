@@ -15,6 +15,7 @@ import type {
   WasteStream,
 } from "@/lib/types";
 import { brandingFor } from "./branding";
+import { checksToday, fleetAlerts } from "./fleet";
 import { getDb, schema } from "./db";
 import { smsLive } from "./integrations/messaging";
 import { translateAvailable } from "./integrations/translate";
@@ -229,6 +230,18 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
   }));
 
   const companyIds = companies ?? COMPANIES.map((c) => c.id);
+
+  // Fleet: managers see their company's alerts; a driver sees their own truck's.
+  const fleet: AppData["fleet"] = { checks: {}, alerts: [] };
+  if (session.ws === "collector" && session.scope.truckId && session.scope.companyId) {
+    fleet.checks = await checksToday([session.scope.truckId]);
+    fleet.alerts = (await fleetAlerts(session.scope.companyId, session.scope.truckId)).filter(
+      (a) => a.kind !== "fuel" && a.kind !== "driving",
+    );
+  } else if (session.ws === "company" && companies?.length === 1 && session.permissions.includes("fleet.manage")) {
+    fleet.checks = await checksToday(truckRows.map((x) => x.id));
+    fleet.alerts = await fleetAlerts(companies[0]);
+  }
   const pricing: AppData["pricing"] = {};
   const mpesa: AppData["integrations"]["mpesa"] = {};
   for (const id of companyIds) {
@@ -275,6 +288,7 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
       sms: (await smsLive()) ? "live" : "simulated",
       translate: await translateAvailable(),
     },
+    fleet,
     branding: await brandingFor(companyIds),
     serverNow: now,
   };

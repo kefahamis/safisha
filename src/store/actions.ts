@@ -1,4 +1,5 @@
-import type { Command, CommandResult, StopProofInput } from "@/lib/commands";
+import type { Command, CommandResult, StopProofInput, VehiclePatch } from "@/lib/commands";
+import type { FleetSettings } from "@/lib/fleet";
 import type { AppData, ClientType, DumpReport, PickupRequestStatus, StatementPeriod, StopStatus, TicketStatus, Txn } from "@/lib/types";
 import type { AppStore } from "./appStore";
 import { enqueue, isNetworkError, list, QUEUEABLE, remove } from "./outbox";
@@ -24,6 +25,19 @@ export type ActionResult<T extends object = Record<string, unknown>> =
 /** Proof captured at a stop; the photo is a Blob so it can wait offline. */
 export interface StopProofDraft extends Omit<StopProofInput, "photo"> {
   photo?: Blob;
+}
+
+/** Fleet records a driver files from the road; each may carry one photo. */
+type FleetRecord = Extract<Command, { type: "fleet.check" | "fleet.fuel" | "fleet.incident" }>;
+
+type Distribute<T> = T extends unknown ? Omit<T, "photo"> : never;
+export type FleetRecordInput = Distribute<FleetRecord>;
+
+/** Puts an uploaded photo's id where the command carries it. */
+function withPhoto(cmd: Command, id: string): Command {
+  if (cmd.type === "route.mark") return { ...cmd, proof: { ...cmd.proof, photo: id } };
+  if (cmd.type === "fleet.check" || cmd.type === "fleet.fuel" || cmd.type === "fleet.incident") return { ...cmd, photo: id };
+  return cmd;
 }
 
 /* ---------------- transport ---------------- */
@@ -79,10 +93,7 @@ export function createActions(store: AppStore) {
   /** Sends a command; on success the store takes the fresh snapshot. */
   async function send(cmd: Command, photo?: Blob): Promise<CommandResult> {
     try {
-      let full = cmd;
-      if (photo && cmd.type === "route.mark") {
-        full = { ...cmd, proof: { ...cmd.proof, photo: await uploadPhoto(photo) } };
-      }
+      const full = photo ? withPhoto(cmd, await uploadPhoto(photo)) : cmd;
       const { result, snapshot } = await postCommand(full);
       if (snapshot) receive(snapshot);
       update((s) => {
@@ -123,6 +134,9 @@ export function createActions(store: AppStore) {
       } else if (cmd.type === "fleet.setSharing") {
         const t = s.trucks.find((x) => x.id === cmd.truck);
         if (t) t.sharing = cmd.sharing;
+      } else if (cmd.type === "fleet.check") {
+        const defects = Object.entries(cmd.items).filter(([, v]) => v === "defect").map(([k]) => k);
+        s.fleet.checks[cmd.truck] = { at: "pending sync", result: defects.length ? "defects" : "pass", defects };
       }
     });
   }
@@ -136,10 +150,7 @@ export function createActions(store: AppStore) {
       const items = await list();
       for (const item of items) {
         try {
-          let cmd = item.cmd;
-          if (item.photo && cmd.type === "route.mark") {
-            cmd = { ...cmd, proof: { ...cmd.proof, photo: await uploadPhoto(item.photo) } };
-          }
+          const cmd = item.photo ? withPhoto(item.cmd, await uploadPhoto(item.photo)) : item.cmd;
           const { snapshot } = await postCommand(cmd);
           if (snapshot) receive(snapshot);
           await remove(item.key!);
@@ -440,6 +451,25 @@ export function createActions(store: AppStore) {
       send({ type: "dump.update", id, status, company }),
 
     setLang: (lang: "en" | "sw") => send({ type: "user.lang", lang }),
+
+    /* ---- fleet management ---- */
+
+    /** A daily check, fill or incident from the road; works offline like a stop. */
+    fleetRecord: (input: FleetRecordInput, photo?: Blob | null) => send(input as Command, photo ?? undefined),
+
+    closeIncident: (id: string, cost: number) => send({ type: "fleet.incidentClose", id, cost }),
+
+    saveWorkOrder: (input: Omit<Extract<Command, { type: "fleet.workOrder" }>, "type">) =>
+      send({ type: "fleet.workOrder", ...input }),
+
+    saveDocument: (input: Omit<Extract<Command, { type: "fleet.document" }>, "type">) =>
+      send({ type: "fleet.document", ...input }),
+
+    updateVehicle: (truck: string, patch: Partial<VehiclePatch>) => send({ type: "fleet.vehicle", truck, patch }),
+
+    assignDriver: (truck: string, user: string) => send({ type: "fleet.assign", truck, user }),
+
+    saveFleetSettings: (company: string, settings: FleetSettings) => send({ type: "fleet.settings", company, settings }),
   };
 }
 

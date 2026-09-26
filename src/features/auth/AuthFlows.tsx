@@ -5,8 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { PlatformIdentity } from "@/components/layout/PlatformBrand";
-import { roleHome } from "@/lib/navigation";
-import type { Workspace } from "@/lib/auth/types";
 
 /** The centred card the account flows share. */
 function AuthCard({ title, lead, children }: { title: string; lead: ReactNode; children: ReactNode }) {
@@ -112,7 +110,7 @@ export function ForgotPassword() {
     const { ok, body } = await post("/api/auth/reset", { identifier, code, password });
     setBusy(false);
     if (!ok) return setError(body.error ?? "That didn't work.");
-    router.replace(roleHome(body.workspace as Workspace));
+    router.replace("/");
     router.refresh();
   };
 
@@ -195,7 +193,7 @@ export function PhoneSignIn() {
     const { ok, body } = await post("/api/auth/otp/verify", { phone, code });
     setBusy(false);
     if (!ok) return setError(body.error ?? "That code didn't work.");
-    router.replace(roleHome(body.workspace as Workspace));
+    router.replace("/");
     router.refresh();
   };
 
@@ -259,7 +257,7 @@ export function AcceptInvite({ email, token }: { email: string; token: string })
     const { ok, body } = await post("/api/auth/invite/accept", { email, token, password });
     setBusy(false);
     if (!ok) return setError(body.error ?? "That didn't work.");
-    router.replace(roleHome(body.workspace as Workspace));
+    router.replace("/");
     router.refresh();
   };
 

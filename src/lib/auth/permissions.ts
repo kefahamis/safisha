@@ -59,6 +59,8 @@ export const PERMISSIONS: PermissionDef[] = [
   // Fleet
   { id: "fleet.view", group: "Fleet", label: "View fleet map", detail: "See truck positions and status across the company." },
   { id: "fleet.track", group: "Fleet", label: "Track own collector", detail: "See the trucks serving their own estate." },
+  { id: "fleet.manage", group: "Fleet", label: "Manage the fleet", detail: "Vehicles, maintenance, fuel, documents, driver assignment and trip history." },
+  { id: "fleet.inspect", group: "Fleet", label: "Daily checks and fuel", detail: "Do the start-of-day vehicle check, log fuel and report incidents for their own truck." },
 
   // Collection
   { id: "route.view", group: "Collection", label: "View route sheet", detail: "Open today's stop list for the assigned truck." },
@@ -87,7 +89,43 @@ export const PERMISSIONS: PermissionDef[] = [
   // Access control
   { id: "access.roles.manage", group: "Access control", label: "Manage roles", detail: "Create roles and change which permissions they carry." },
   { id: "access.users.manage", group: "Access control", label: "Manage users", detail: "Assign roles, grant overrides, suspend accounts." },
+  { id: "staff.manage", group: "Access control", label: "Manage staff & departments", detail: "Invite the company's staff, set up departments and choose what each can do." },
 ];
+
+/**
+ * What a company may hand its own staff: its day-to-day work, never the
+ * platform's powers or anything client- or driver-facing. A company admin can
+ * give only those of these they hold themselves.
+ */
+export const COMPANY_ASSIGNABLE: string[] = [
+  "clients.view",
+  "clients.create",
+  "clients.edit",
+  "statements.view",
+  "payments.view",
+  "payments.simulate",
+  "payments.reconcile",
+  "reminders.manage",
+  "finance.view",
+  "finance.journal",
+  "fleet.view",
+  "fleet.manage",
+  "pickups.manage",
+  "dumping.manage",
+  "tickets.view.company",
+  "tickets.reply",
+  "tickets.status",
+  "tickets.translate",
+  "settings.company.manage",
+  "audit.view",
+  "staff.manage",
+];
+
+/** The assignable permissions, in catalogue groups, for a checklist. */
+export const assignableByGroup = (allowed: string[] = COMPANY_ASSIGNABLE) =>
+  permissionsByGroup()
+    .map(({ group, items }) => ({ group, items: items.filter((p) => allowed.includes(p.id)) }))
+    .filter((g) => g.items.length > 0);
 
 export const PERMISSION_IDS = PERMISSIONS.map((p) => p.id);
 

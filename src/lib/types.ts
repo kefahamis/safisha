@@ -1,4 +1,5 @@
 import type { Branding } from "./branding";
+import type { FleetAlert, Inspection } from "./fleet";
 
 export type Role = "client" | "company" | "collector" | "admin";
 
@@ -227,6 +228,12 @@ export interface AppData {
   dumpReports: DumpReport[];
   pricing: Record<string, PriceItem[]>;
   integrations: IntegrationStatus;
+  /** Today's vehicle checks and what needs attention, for fleet managers and drivers. */
+  fleet: {
+    /** truckId -> today's latest check. */
+    checks: Record<string, { at: string; result: Inspection["result"]; defects: string[] }>;
+    alerts: FleetAlert[];
+  };
   /** Logo and colours per company in view; unbranded companies are absent. */
   branding: Record<string, Branding>;
   /** Server time when this snapshot was taken (epoch ms). */
