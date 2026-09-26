@@ -2,6 +2,7 @@
 import { existsSync, mkdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { drizzle as drizzlePostgres } from "drizzle-orm/postgres-js";
+import type { Sql } from "postgres";
 import * as schema from "./schema";
 
 /*
@@ -42,6 +43,42 @@ const lockers = new WeakMap<Db, Locker>();
 /** The Postgres to use: DATABASE_URL, or the one Netlify DB (Neon) provides. */
 export const databaseUrl = () => process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL || "";
 
+/**
+ * A direct (unpooled) connection string, for what a pooler can't carry.
+ * Neon's pooler (PgBouncer, transaction mode) hands each statement to whichever
+ * server connection is free, so a session-level advisory lock taken through it
+ * can outlive its holder and block every later cold start. Netlify DB and Neon
+ * provide the direct URL separately; otherwise Neon's pooled host name, which
+ * ends in "-pooler", becomes the direct one by dropping that suffix.
+ */
+export function directUrl(url: string) {
+  // The direct URL that goes with whichever pooled one is in use.
+  const explicit = process.env.DATABASE_URL ? process.env.DATABASE_URL_UNPOOLED : process.env.NETLIFY_DATABASE_URL_UNPOOLED;
+  if (explicit) return explicit;
+  try {
+    const u = new URL(url);
+    u.hostname = u.hostname.replace(/-pooler\./, ".");
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Waits up to 20 s for the migration lock, then goes ahead without it: a lock
+ * stranded by a crashed or pooled connection must not stop the app starting.
+ * Migrations are transactional and the seeds skip what exists, so a rare
+ * overlap is safe; a permanent wait is not.
+ */
+async function takeLock(conn: Sql) {
+  for (let i = 0; i < 40; i++) {
+    const [row] = await conn<{ ok: boolean }[]>`select pg_try_advisory_lock(${MIGRATION_LOCK}) as ok`;
+    if (row?.ok) return;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  console.warn("Migration lock still held after 20 s; continuing without it.");
+}
+
 /** Serverless platforms run many small instances; each keeps a small pool. */
 const serverless = () => Boolean(process.env.VERCEL || process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME);
 
@@ -54,14 +91,15 @@ async function connect(): Promise<Db> {
     const sql = postgres(url, { max: serverless() ? 5 : 10, onnotice: () => {} });
     const db = drizzlePostgres(sql, { schema });
     lockers.set(db, async (fn) => {
-      // Session-level lock on one reserved connection; it is released if the instance dies.
-      const conn = await sql.reserve();
+      // A session-level lock on its own direct connection (never through a
+      // pooler, see directUrl); it is released if the instance dies.
+      const lock = postgres(directUrl(url), { max: 1, onnotice: () => {} });
       try {
-        await conn`select pg_advisory_lock(${MIGRATION_LOCK})`;
+        await takeLock(lock);
         await fn();
       } finally {
-        await conn`select pg_advisory_unlock(${MIGRATION_LOCK})`.catch(() => {});
-        conn.release();
+        await lock`select pg_advisory_unlock(${MIGRATION_LOCK})`.catch(() => {});
+        await lock.end({ timeout: 5 }).catch(() => {});
       }
     });
     return db;
@@ -83,12 +121,25 @@ async function connect(): Promise<Db> {
   return drizzleLite(client, { schema }) as unknown as Db;
 }
 
+/** Which part of bringing the database up failed, for the health check. */
+export type SetupStage = "migrate" | "roles" | "admin" | "demo" | "reference";
+
+export class DbSetupError extends Error {
+  constructor(
+    readonly stage: SetupStage,
+    readonly cause: unknown,
+  ) {
+    super(`Database setup failed at ${stage}: ${cause instanceof Error ? cause.message : String(cause)}`);
+  }
+}
+
 /**
  * Applies any migrations not yet run (normally already done by the build; see
  * scripts/migrate.mjs), makes sure the built-in roles and the first admin
  * exist, and in demo mode fills whatever demo data is missing.
  */
 async function migrateAndSeed(db: Db) {
+  let stage: SetupStage = "migrate";
   const run = async () => {
     if (databaseUrl()) {
       // The build has already migrated (scripts/migrate.mjs). If the host didn't
@@ -103,11 +154,14 @@ async function migrateAndSeed(db: Db) {
       const { migrate } = await import("drizzle-orm/pglite/migrator");
       await migrate(db as unknown as Parameters<typeof migrate>[0], { migrationsFolder: MIGRATIONS });
     }
+    stage = "roles";
     const { ensureSystemRoles, seedTeamIfEmpty } = await import("./teamSeed");
     await ensureSystemRoles(db);
+    stage = "admin";
     const { bootstrapAdmin } = await import("./bootstrap");
     await bootstrapAdmin(db);
 
+    stage = "demo";
     const { demoMode } = await import("../demo");
     if (demoMode()) {
       const { seedDemoIfEmpty } = await import("./seed");
@@ -120,8 +174,13 @@ async function migrateAndSeed(db: Db) {
     }
   };
   const lock = lockers.get(db);
-  await (lock ? lock(run) : run());
-  await loadReference(db);
+  try {
+    await (lock ? lock(run) : run());
+    stage = "reference";
+    await loadReference(db);
+  } catch (err) {
+    throw err instanceof DbSetupError ? err : new DbSetupError(stage, err);
+  }
 }
 
 async function loadReference(db: Db) {

@@ -1,5 +1,6 @@
 import { jwtVerify, SignJWT } from "jose";
 import type { SessionClaims, Workspace } from "@/lib/auth/types";
+import { ConfigError } from "./configError";
 
 /**
  * HS256 session tokens. `jose` is used rather than a Node-only library because
@@ -17,7 +18,9 @@ const DEV_SECRET = "zoa-dev-secret-not-for-production-use-only";
 function secretKey(): Uint8Array {
   const raw = process.env.SESSION_SECRET;
   if (!raw && process.env.NODE_ENV === "production") {
-    throw new Error("SESSION_SECRET must be set in production");
+    throw new ConfigError(
+      "The server has no SESSION_SECRET, so nobody can sign in. Set it in the site's environment variables (Functions scope) and redeploy.",
+    );
   }
   return new TextEncoder().encode(raw || DEV_SECRET);
 }

@@ -65,7 +65,10 @@ if (taken !== release && !flag("force")) {
   fail(`the backup is from migration ${taken} but this checkout is at ${release}. Check out the matching release, or pass --force.`);
 }
 
-const url = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL;
+// Directly, not through a pooler (Neon's pooled host ends in "-pooler").
+const url =
+  (process.env.DATABASE_URL ? process.env.DATABASE_URL_UNPOOLED : process.env.NETLIFY_DATABASE_URL_UNPOOLED) ||
+  (process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL || "").replace(/-pooler\./, ".");
 if (!url) fail("set DATABASE_URL to the database to restore into.");
 if (!flag("yes")) fail("this replaces everything in that database. Run again with --yes to go ahead.");
 

@@ -159,7 +159,7 @@ Environment variables:
 
 | Variable | |
 | --- | --- |
-| `DATABASE_URL` | Your Postgres (Neon). Not needed with **Netlify DB**, whose `NETLIFY_DATABASE_URL` is read automatically. |
+| `DATABASE_URL` | Your Postgres (Neon). Not needed with **Netlify DB**, whose `NETLIFY_DATABASE_URL` (and `NETLIFY_DATABASE_URL_UNPOOLED`) are read automatically. |
 | `SESSION_SECRET` | Required. 64 hex characters. |
 | `CRON_SECRET` | Required for the scheduled jobs. |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | First platform admin of a real deployment. |
