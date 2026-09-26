@@ -24,7 +24,8 @@ async function connect(): Promise<Db> {
   if (url) {
     const { default: postgres } = await import("postgres");
     const { migrate } = await import("drizzle-orm/postgres-js/migrator");
-    const sql = postgres(url, { max: 10, onnotice: () => {} });
+    // Serverless instances each hold their own pool; keep it small there.
+    const sql = postgres(url, { max: process.env.VERCEL ? 5 : 10, onnotice: () => {} });
     const db = drizzlePostgres(sql, { schema });
     await migrate(db, { migrationsFolder: MIGRATIONS });
     return db;
