@@ -5,7 +5,7 @@
  * back to the browser — the form shows only whether one is saved.
  */
 
-export type IntegrationKey = "mpesa" | "reminders" | "pricing" | "sms" | "ussd" | "email" | "ai" | "app";
+export type IntegrationKey = "mpesa" | "reminders" | "pricing" | "commission" | "sms" | "ussd" | "email" | "ai" | "app";
 
 /** "company" settings live per collection company; "platform" ones once. */
 export type IntegrationScope = "company" | "platform";
@@ -147,6 +147,24 @@ export const INTEGRATIONS: IntegrationDef[] = [
       { name: "rubble", label: "Construction rubble (per trip)", type: "number", placeholder: "3500" },
       { name: "extra", label: "Extra bag collection", type: "number", placeholder: "300" },
       { name: "event", label: "Event clean-up", type: "number", placeholder: "5000" },
+    ],
+  },
+  {
+    key: "commission",
+    scope: "platform",
+    title: "Platform commission",
+    provider: "Built in",
+    summary:
+      "The platform's share of each on-demand pickup, owed by the company once the client has paid. A company can have its own rate under Companies.",
+    testable: false,
+    fields: [
+      {
+        name: "pickupRate",
+        label: "Pickup commission (%)",
+        type: "number",
+        placeholder: "10",
+        help: "0 to 50. Applies to pickups booked after it's saved; earlier bookings keep their rate.",
+      },
     ],
   },
   {

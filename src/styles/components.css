@@ -436,6 +436,11 @@ div.with-ico {
   color: var(--muted);
 }
 
+.chip.violet {
+  background: var(--violet-soft);
+  color: var(--violet);
+}
+
 .chip > svg {
   flex: none;
   margin-left: -2px;

@@ -1,11 +1,13 @@
 // Server-only. The companies and estates on the platform: loading them, and onboarding new ones.
 import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import { MAX_PICKUP_COMMISSION } from "@/lib/commission";
 import { applyReference, currentReference, type ReferenceData } from "@/lib/reference/registry";
 import { getDb, type Db } from "./db";
 import * as t from "./db/schema";
 import { createStarterDepartments } from "./db/teamSeed";
 import { HttpError } from "./session";
+import { platformPickupCommission } from "./settings";
 import { nowStamp } from "./time";
 
 export async function readReference(db: Db): Promise<ReferenceData> {
@@ -14,7 +16,8 @@ export async function readReference(db: Db): Promise<ReferenceData> {
     db.select().from(t.estates).orderBy(asc(t.estates.name)),
   ]);
   return {
-    companies: companies.map(({ createdAt: _c, ...c }) => ({ ...c, estates: [] })),
+    // The commission rate is between the platform and the company, not for every screen.
+    companies: companies.map(({ createdAt: _c, pickupCommission: _p, ...c }) => ({ ...c, estates: [] })),
     estates: estates.map(({ createdAt: _c, ...e }) => e),
   };
 }
@@ -49,6 +52,13 @@ export const CompanyBody = z.object({
   care: phoneish,
   hours: z.string().trim().max(60),
   color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, "Pick a colour."),
+  /** Percent of paid pickups; null uses the platform default. */
+  pickupCommission: z
+    .number()
+    .min(0, "The commission can't be negative.")
+    .max(MAX_PICKUP_COMMISSION, `The commission is at most ${MAX_PICKUP_COMMISSION}%.`)
+    .nullable()
+    .optional(),
 });
 export type CompanyInput = z.infer<typeof CompanyBody>;
 
@@ -181,10 +191,23 @@ export async function referenceOverview() {
     .from(t.users)
     .where(sql`${t.users.scope} ? 'companyId'`)
     .groupBy(sql`${t.users.scope}->>'companyId'`);
+  const rates = await db.select({ id: t.companies.id, rate: t.companies.pickupCommission }).from(t.companies);
+  const owed = await db
+    .select({
+      company: t.pickupRequests.company,
+      amount: sql<number>`coalesce(sum(round(${t.pickupRequests.price} * ${t.pickupRequests.commissionRate} / 100)), 0)::int`,
+    })
+    .from(t.pickupRequests)
+    .where(eq(t.pickupRequests.paid, true))
+    .groupBy(t.pickupRequests.company);
   const ref = currentReference();
   return {
+    defaultPickupCommission: await platformPickupCommission(),
     companies: ref.companies.map((c) => ({
       ...c,
+      pickupCommission: rates.find((r) => r.id === c.id)?.rate ?? null,
+      /** Commission on every paid pickup so far, in shillings. */
+      commissionEarned: owed.find((x) => x.company === c.id)?.amount ?? 0,
       clients: clientCounts.filter((x) => x.company === c.id).reduce((a, x) => a + x.n, 0),
       trucks: truckCounts.find((x) => x.company === c.id)?.n ?? 0,
       staff: staffCounts.find((x) => x.company === c.id)?.n ?? 0,

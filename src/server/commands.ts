@@ -39,7 +39,7 @@ import { sendSms } from "./integrations/messaging";
 import { demoMode } from "./demo";
 import { nextClientSeq, nextPrefixedId } from "./ids";
 import { settleStk, simulatePaybill, startStk } from "./payments";
-import { priceList } from "./settings";
+import { pickupCommissionRate, priceList } from "./settings";
 import { SIM_EPOCH, simDistance, visibleCompanies } from "./snapshot";
 import { nowStamp, today } from "./time";
 
@@ -717,6 +717,7 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
         return { ok: false, error: "Pick a date from today onwards." };
       }
       const price = (await priceList(client.company))[kind.key];
+      const commissionRate = await pickupCommissionRate(client.company);
       const id = await nextPrefixedId(db, t.pickupRequests, "P-", 3000);
       await db.transaction(async (tx) => {
         await tx.insert(t.pickupRequests).values({
@@ -730,6 +731,7 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
           status: "Requested",
           photo: cmd.photo ?? null,
           createdAt: at,
+          commissionRate,
         });
         await tx.insert(t.txns).values({
           id: `CHG-${id}`,

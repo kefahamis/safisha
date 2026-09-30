@@ -1,3 +1,4 @@
+import { MAX_PICKUP_COMMISSION } from "@/lib/commission";
 import { integrationDef } from "@/lib/integrations";
 import { audit } from "@/server/audit";
 import { saveSetting, viewOf } from "@/server/settings";
@@ -36,6 +37,13 @@ export async function PUT(request: Request, { params }: Params) {
         } catch {
           return Response.json({ error: `${f.label} isn't a valid address.` }, { status: 400 });
         }
+      }
+    }
+
+    if (key === "commission" && config.pickupRate !== "" && config.pickupRate != null) {
+      const rate = Number(config.pickupRate);
+      if (!(rate >= 0 && rate <= MAX_PICKUP_COMMISSION)) {
+        return Response.json({ error: `The commission is between 0 and ${MAX_PICKUP_COMMISSION}%.` }, { status: 400 });
       }
     }
 

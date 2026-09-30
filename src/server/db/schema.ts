@@ -262,6 +262,9 @@ export const pickupRequests = pgTable("pickup_requests", {
   scheduledFor: text("scheduled_for"),
   photo: text("photo"),
   createdAt: text("created_at").notNull(),
+  /** The platform's percent, fixed when booked so a later rate change doesn't reprice it. */
+  commissionRate: doublePrecision("commission_rate").notNull().default(0),
+  paidAt: text("paid_at"),
 });
 
 /** Resident reports of illegal dumping. */
@@ -577,6 +580,8 @@ export const companies = pgTable("companies", {
   care: text("care").notNull().default(""),
   hours: text("hours").notNull().default(""),
   color: text("color").notNull().default("#0E7490"),
+  /** The platform's percent of paid pickups for this company; null uses the platform default. */
+  pickupCommission: doublePrecision("pickup_commission"),
   createdAt: text("created_at").notNull(),
 });
 

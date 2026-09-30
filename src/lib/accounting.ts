@@ -28,6 +28,7 @@ export const ACCOUNTS: Account[] = [
   { code: "2000", name: "Accounts payable", type: "liability", section: "Current liabilities" },
   { code: "2100", name: "Unallocated M-Pesa receipts", type: "liability", section: "Current liabilities" },
   { code: "2200", name: "Taxes payable", type: "liability", section: "Current liabilities" },
+  { code: "2300", name: "Payable to platform", type: "liability", section: "Current liabilities" },
   { code: "2500", name: "Loans", type: "liability", section: "Non-current liabilities" },
 
   { code: "3000", name: "Owner's capital", type: "equity", section: "Equity" },
@@ -45,6 +46,7 @@ export const ACCOUNTS: Account[] = [
   { code: "5300", name: "Dumpsite fees", type: "expense", section: "Operating expenses" },
   { code: "5400", name: "Rent & utilities", type: "expense", section: "Operating expenses" },
   { code: "5500", name: "M-Pesa & bank charges", type: "expense", section: "Operating expenses" },
+  { code: "5550", name: "Platform commission", type: "expense", section: "Operating expenses" },
   { code: "5600", name: "Licences & permits", type: "expense", section: "Operating expenses" },
   { code: "5700", name: "Depreciation", type: "expense", section: "Operating expenses" },
   { code: "5900", name: "Other expenses", type: "expense", section: "Operating expenses" },
@@ -65,7 +67,7 @@ export const TYPE_LABEL: Record<AccountType, string> = {
   expense: "Expenses",
 };
 
-export type EntrySource = "billing" | "payment" | "suspense" | "fleet" | "manual";
+export type EntrySource = "billing" | "payment" | "suspense" | "fleet" | "platform" | "manual";
 
 export interface JournalLine {
   account: string;

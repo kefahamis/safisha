@@ -180,6 +180,9 @@ export interface PickupRequest {
   scheduledFor?: string;
   photo?: string;
   createdAt: string;
+  /** The platform's percent, fixed at booking; only sent to company staff who see money. */
+  commissionRate?: number;
+  paidAt?: string;
 }
 
 export type DumpStatus = "New" | "Assigned" | "Cleared";

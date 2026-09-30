@@ -1,11 +1,12 @@
 "use client";
 
-import { CalendarCheck, Check, CircleCheck, ClipboardList, Image as ImageIcon, X } from "lucide-react";
+import { CalendarCheck, Check, CircleCheck, ClipboardList, Image as ImageIcon, Percent, X } from "lucide-react";
 import { useState } from "react";
 import { Chip } from "@/components/ui/Chip";
 import { Empty, PageHead, Panel } from "@/components/ui/Panel";
 import { useToast } from "@/components/ui/ToastProvider";
-import { fmtDate, kes } from "@/lib/format";
+import { commissionOf, pct } from "@/lib/commission";
+import { fmtDate, kes, stamp } from "@/lib/format";
 import { PICKUP_KINDS } from "@/lib/integrations";
 import { companyById } from "@/lib/reference/companies";
 import { estateName } from "@/lib/reference/estates";
@@ -27,11 +28,17 @@ export function CompanyPickups() {
   const list = s.pickupRequests.filter((r) => r.company === co.id);
   const open = list.filter((r) => r.status === "Requested" || r.status === "Scheduled");
   const done = list.filter((r) => r.status === "Completed" || r.status === "Cancelled");
+  // Commission falls due in the month the client pays.
+  const month = stamp(new Date(s.serverNow)).slice(0, 7);
+  const owed = list
+    .filter((r) => r.paid && r.commissionRate && (r.paidAt ?? r.createdAt).startsWith(month))
+    .reduce((sum, r) => sum + commissionOf(r.price, r.commissionRate!), 0);
 
   return (
     <>
       <PageHead title="Pickup requests" icon={ClipboardList}>
         Bulky and extra collections booked by clients in the app or by USSD. Prices are set under Settings.
+        {owed > 0 ? ` Platform commission owed on this month's paid pickups: ${kes(owed)}.` : null}
       </PageHead>
       <Panel title={`Open · ${open.length}`} icon={CalendarCheck}>
         {open.length === 0 ? (
@@ -85,6 +92,14 @@ function RequestRow({ req, trucks }: { req: PickupRequest; trucks: string[] }) {
           <span className="mono">{req.id}</span> · {client?.name} ({client ? estateName(client.estate) : req.client}) ·
           wanted {fmtDate(req.preferredDate)}
         </div>
+        {req.commissionRate ? (
+          <div className="sub with-ico">
+            <Percent size={13} strokeWidth={2.2} aria-hidden="true" />
+            {req.paid
+              ? `Platform commission ${pct(req.commissionRate)} · ${kes(commissionOf(req.price, req.commissionRate))} owed · you keep ${kes(req.price - commissionOf(req.price, req.commissionRate))}`
+              : `Platform commission ${pct(req.commissionRate)} (${kes(commissionOf(req.price, req.commissionRate))}) once the client pays`}
+          </div>
+        ) : null}
         {req.notes && <div className="sub">“{req.notes}”</div>}
         {req.photo && (
           <a className="sub with-ico" href={`/api/files/${req.photo}`} target="_blank" rel="noreferrer">
