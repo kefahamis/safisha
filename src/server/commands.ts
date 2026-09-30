@@ -347,8 +347,13 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
         if (session.ws === "client") deny();
         await requireCompany(session, ticket.company);
       }
-      const text = cmd.text.trim().slice(0, 2000);
+      let text = cmd.text.trim().slice(0, 2000);
       if (!text) return { ok: false, error: "Write a message first." };
+      // The agent's own sign-off, from their Profile.
+      if (cmd.from === "agent") {
+        const [me] = await db.select({ signature: t.users.signature }).from(t.users).where(eq(t.users.id, session.sub));
+        if (me?.signature && !text.endsWith(me.signature)) text = `${text}\n\n${me.signature}`;
+      }
 
       await db
         .insert(t.ticketMessages)

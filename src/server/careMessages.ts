@@ -36,6 +36,9 @@ export async function notifyClient(input: {
   const { client } = input;
   await sendSms({ to: client.phone, company: client.company, purpose: input.purpose, body: input.sms });
   if (!(await hasFeature(client.company, "email"))) return;
+  const db = await getDb();
+  const [prefs] = await db.select({ notify: t.clients.notify }).from(t.clients).where(eq(t.clients.id, client.id));
+  if (prefs?.notify.careEmail === false) return;
   const to = await clientEmail(client.id);
   if (!to) return;
   const replyTo = await careReplyTo();

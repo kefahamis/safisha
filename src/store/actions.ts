@@ -422,7 +422,7 @@ export function createActions(store: AppStore) {
         s.stk = {
           step: "form",
           client: c.id,
-          phone: c.phone,
+          phone: c.mpesaPhone ?? c.phone,
           amount: opts.amount ?? Math.max(bal, c.plan),
           purpose: opts.purpose ?? "account",
           mode: s.integrations.mpesa[c.company]?.mode ?? "simulated",

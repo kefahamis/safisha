@@ -18,6 +18,8 @@ export interface ArrearsRow {
   client: string;
   name: string;
   phone: string;
+  /** Where M-Pesa prompts go: the client's own M-Pesa number, else their contact number. */
+  mpesaPhone: string;
   balance: number;
   daysOverdue: number;
   /** The stage this run would send, if any. */
@@ -117,7 +119,7 @@ export async function arrears(company: string): Promise<{ rows: ArrearsRow[]; po
         }
       }
     }
-    rows.push({ client: c.id, name: c.name, phone: c.phone, balance, daysOverdue: overdue, due, sent });
+    rows.push({ client: c.id, name: c.name, phone: c.phone, mpesaPhone: c.mpesaPhone ?? c.phone, balance, daysOverdue: overdue, due, sent });
   }
   rows.sort((a, b) => b.daysOverdue - a.daysOverdue || b.balance - a.balance);
   return { rows, policy };
@@ -145,7 +147,7 @@ export async function runReminders(company: string) {
       ok = res.status !== "failed";
       detail = res.status;
     } else if (r.due === "stk") {
-      const res = await startStk({ company, client: r.client, phone: r.phone, amount: r.balance, purpose: "account" });
+      const res = await startStk({ company, client: r.client, phone: r.mpesaPhone, amount: r.balance, purpose: "account" });
       ok = res.ok;
       detail = res.ok ? `prompt ${res.mode}` : res.error;
       if (res.ok) {

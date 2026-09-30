@@ -7,6 +7,7 @@ import type { Session, User, Workspace } from "@/lib/auth/types";
 import { effectivePermissions, findRole, findUserById, userDepartment } from "./accessStore";
 import { ConfigError } from "./configError";
 import { SESSION_COOKIE, verifySession } from "./jwt";
+import { sessionAlive } from "./sessions";
 
 /**
  * Reads the session cookie and re-resolves permissions from the store on every
@@ -24,11 +25,14 @@ export async function getSession(): Promise<Session | null> {
   // The token is valid, but the account may have been suspended or deleted since.
   const user = await findUserById(claims.sub);
   if (!user || user.suspended) return null;
-  return sessionForUser(user, { ws: claims.ws, setup: claims.setup });
+  // Signed out from another device, or with "sign out everywhere". Tokens from
+  // before sessions were recorded carry no sid and last until they expire.
+  if (claims.sid && !(await sessionAlive(claims.sid, user.id))) return null;
+  return sessionForUser(user, { ws: claims.ws, setup: claims.setup, sid: claims.sid });
 }
 
 /** A user's live session: their role, department and permissions as they stand now. */
-export async function sessionForUser(user: User, token: { ws: Workspace; setup?: boolean }): Promise<Session> {
+export async function sessionForUser(user: User, token: { ws: Workspace; setup?: boolean; sid?: string }): Promise<Session> {
   const role = await findRole(user.roleId);
   const department = await userDepartment(user);
 
@@ -45,6 +49,9 @@ export async function sessionForUser(user: User, token: { ws: Workspace; setup?:
     permissions: await effectivePermissions(user, role, department),
     allowed: role ? allowedWorkspaces(role) : [token.ws],
     setupRequired: token.setup ? true : undefined,
+    sid: token.sid,
+    photo: user.photo,
+    theme: user.theme === "light" || user.theme === "dark" ? user.theme : "system",
   };
 }
 

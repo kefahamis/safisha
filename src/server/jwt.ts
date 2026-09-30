@@ -30,6 +30,8 @@ export interface TokenPayload extends SessionClaims {
   allowed: Workspace[];
   /** Signed in, but must set up two-step sign-in before doing anything else. */
   setup?: boolean;
+  /** The sessions row, so this sign-in can be ended from another device. */
+  sid?: string;
 }
 
 export async function signSession(payload: TokenPayload): Promise<string> {

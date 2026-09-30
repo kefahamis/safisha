@@ -52,6 +52,32 @@ export const users = pgTable("users", {
   emailVerifiedAt: text("email_verified_at"),
   /** One-time codes for when every other method is lost; stored as digests. */
   recoveryCodes: jsonb("recovery_codes").$type<string[]>().notNull().default([]),
+  /** Set once they've proved they receive SMS at this number. */
+  phoneVerifiedAt: text("phone_verified_at"),
+  /** Interface appearance: system | light | dark. */
+  theme: text("theme").notNull().default("system"),
+  /** A files id for their picture, shown instead of initials. */
+  photo: text("photo"),
+  /** Care agents: added under every reply they send. */
+  signature: text("signature").notNull().default(""),
+  /** Care agents: away from the desk, so not offered for new tickets. */
+  away: boolean("away").notNull().default(false),
+  /** Staff: the page they land on after signing in; null for the usual one. */
+  startPage: text("start_page"),
+});
+
+/** One row per sign-in, so people can see where they're signed in and sign devices out. */
+export const sessions = pgTable("sessions", {
+  id: text("id").primaryKey(),
+  user: text("user").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  ip: text("ip"),
+  userAgent: text("user_agent"),
+  /** How they got in: password, phone code, reset, invitation, two-step. */
+  method: text("method").notNull().default("password"),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
 });
 
 /** A second step someone has set up: SMS, email, an authenticator app or a passkey. */
@@ -103,6 +129,10 @@ export const clients = pgTable("clients", {
   lat: doublePrecision("lat").notNull(),
   lng: doublePrecision("lng").notNull(),
   lang: text("lang").notNull().default("en"),
+  /** Which messages the client wants outside the app; missing keys mean yes. */
+  notify: jsonb("notify").$type<Record<string, boolean>>().notNull().default({}),
+  /** The number M-Pesa prompts go to, when it isn't their contact number. */
+  mpesaPhone: text("mpesa_phone"),
 });
 
 /** Papers kept on file for a client (ID, permit, agreement); the bytes live in `files`. */

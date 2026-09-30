@@ -89,7 +89,8 @@ export function UserMenu() {
         onClick={() => setOpen((o) => !o)}
       >
         <span className="avatar" aria-hidden="true">
-          {initials(session.name)}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {session.photo ? <img src={`/api/files/${session.photo}`} alt="" /> : initials(session.name)}
         </span>
         <ChevronDown size={15} strokeWidth={2.4} className="usermenu-caret" aria-hidden="true" />
       </button>
@@ -97,7 +98,8 @@ export function UserMenu() {
       <div id={cardId} className="usermenu-card" hidden={!open}>
         <div className="usermenu-head">
           <span className="avatar lg" aria-hidden="true">
-            {initials(session.name)}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {session.photo ? <img src={`/api/files/${session.photo}`} alt="" /> : initials(session.name)}
           </span>
           <div className="who">
             <b>{session.name}</b>
