@@ -1,10 +1,10 @@
-// Server-only. Care messages outside the app: SMS and email out, and client replies coming back in (Premium).
+// Server-only. Care messages outside the app: SMS and email out, and client replies coming back in.
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { companyById } from "@/lib/reference/companies";
 import { getDb, schema as t, type Db } from "./db";
 import { nextPrefixedId } from "./ids";
 import { careReplyTo, sendEmail, sendSms } from "./integrations/messaging";
-import { isPremium } from "./packages";
+import { hasFeature } from "./packages";
 import { nowStamp } from "./time";
 
 /** The email on the client's own sign-in account, if they have one. */
@@ -22,8 +22,8 @@ async function clientEmail(clientId: string): Promise<string | null> {
 const subjectTag = (ticket: string) => `[${ticket}]`;
 
 /**
- * Tells a client about their ticket by SMS and email. Both are Premium: SMS
- * is held back inside sendSms, email here.
+ * Tells a client about their ticket by SMS and email, as far as the company's
+ * package allows: SMS is held back inside sendSms, email here.
  */
 export async function notifyClient(input: {
   client: { id: string; phone: string; company: string };
@@ -35,7 +35,7 @@ export async function notifyClient(input: {
 }) {
   const { client } = input;
   await sendSms({ to: client.phone, company: client.company, purpose: input.purpose, body: input.sms });
-  if (!(await isPremium(client.company))) return;
+  if (!(await hasFeature(client.company, "email"))) return;
   const to = await clientEmail(client.id);
   if (!to) return;
   const replyTo = await careReplyTo();
@@ -55,7 +55,7 @@ export type InboundResult = { ok: true; ticket: string; created: boolean } | { o
 /**
  * A message from a client by SMS or email. It joins the ticket it answers
  * (named in an email subject, else their latest open one) or starts a new
- * one. Only companies on Premium accept these.
+ * one. Only companies whose package includes replies by SMS and email accept these.
  */
 export async function receiveClientMessage(input: {
   client: { id: string; name: string; company: string };
@@ -63,7 +63,7 @@ export async function receiveClientMessage(input: {
   text: string;
   subject?: string;
 }): Promise<InboundResult> {
-  if (!(await isPremium(input.client.company))) return { ok: false, reason: "company on Basic" };
+  if (!(await hasFeature(input.client.company, "twoWay"))) return { ok: false, reason: "not in the company's package" };
   const text = input.text.trim().slice(0, 2000);
   if (!text) return { ok: false, reason: "empty message" };
 

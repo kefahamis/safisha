@@ -95,6 +95,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/admin/clients", label: "Client database", requires: ["platform.clients"] },
     { href: "/admin/map", label: "City map", requires: ["platform.fleet"] },
     { href: "/admin/companies", label: "Companies & estates", requires: ["platform.companies.manage"] },
+    { href: "/admin/packages", label: "Care packages", requires: ["platform.companies.manage"] },
     { href: "/admin/dumping", label: "Dumping reports", requires: ["dumping.manage"] },
     { href: "/admin/access", label: "Roles & permissions", requires: ["access.roles.manage"] },
     { href: "/admin/users", label: "Users", requires: ["access.users.manage"] },

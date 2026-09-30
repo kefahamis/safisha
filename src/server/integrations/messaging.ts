@@ -1,7 +1,7 @@
 // Server-only. SMS (Africa's Talking) and email (Resend), with an outbox.
-import { PREMIUM_SMS_PURPOSES } from "@/lib/packages";
+import { PACKAGE_SMS_PURPOSES } from "@/lib/packages";
 import { getDb, schema } from "../db";
-import { isPremium } from "../packages";
+import { hasFeature } from "../packages";
 import { loadSetting } from "../settings";
 
 const AT = {
@@ -39,16 +39,16 @@ export const e164 = (phone: string) => `+${phone.replace(/\D/g, "").replace(/^0/
 export async function sendSms(input: { to: string; body: string; purpose: string; company?: string | null }) {
   const db = await getDb();
 
-  // Messages to clients on a company's behalf are a Premium feature. They still
-  // land in the outbox, so a company on Basic can see what it's missing.
-  if (input.company && PREMIUM_SMS_PURPOSES.has(input.purpose) && !(await isPremium(input.company))) {
+  // Messages to clients on a company's behalf need a care package with SMS. They
+  // still land in the outbox, so the company can see what it's missing.
+  if (input.company && PACKAGE_SMS_PURPOSES.has(input.purpose) && !(await hasFeature(input.company, "sms"))) {
     await db.insert(schema.smsOutbox).values({
       company: input.company,
       to: input.to,
       body: input.body,
       purpose: input.purpose,
       status: "skipped",
-      error: "Not sent: the company is on the Basic care package.",
+      error: "Not sent: the company's care package doesn't include SMS.",
     });
     return { status: "skipped" as const, error: null };
   }

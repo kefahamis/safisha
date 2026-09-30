@@ -584,16 +584,31 @@ export const companies = pgTable("companies", {
   color: text("color").notNull().default("#0E7490"),
   /** The platform's percent of paid pickups for this company; null uses the platform default. */
   pickupCommission: doublePrecision("pickup_commission"),
-  /** Customer-care package: "basic" (the assistant) or "premium" (plus client SMS and email). */
-  carePackage: text("care_package").notNull().default("basic"),
-  /** Monthly Premium fee in shillings for this company; null uses the platform default. */
-  premiumFee: integer("premium_fee"),
-  /** When the company last moved onto Premium; months that start after it are charged. */
-  premiumSince: text("premium_since"),
+  /** The care package subscribed to (a care_packages id); null is the assistant alone. */
+  carePackage: text("care_package"),
+  /** This company's own monthly price for its package, in shillings; null uses the package's price. */
+  packagePrice: integer("premium_fee"),
+  /** When the company last changed package; months that start after it are charged. */
+  packageSince: text("premium_since"),
   createdAt: text("created_at").notNull(),
 });
 
-/** One row per company per month on Premium: what it owes the platform for that month. */
+/** Customer-care packages the platform offers companies, each a set of features at a monthly price. */
+export const carePackages = pgTable("care_packages", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  /** Shillings a month. */
+  price: integer("price").notNull(),
+  /** Feature keys: tickets, sms, email, twoWay. */
+  features: jsonb("features").$type<string[]>().notNull().default([]),
+  /** Offered to companies. A retired package keeps its subscribers but takes no new ones. */
+  active: boolean("active").notNull().default(true),
+  sort: integer("sort").notNull().default(0),
+  createdAt: text("created_at").notNull(),
+});
+
+/** One row per company per month on a package: what it owes the platform for that month. */
 export const packageCharges = pgTable(
   "package_charges",
   {

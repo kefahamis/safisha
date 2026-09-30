@@ -8,7 +8,6 @@ import { Empty, PageHead, Panel } from "@/components/ui/Panel";
 import { useToast } from "@/components/ui/ToastProvider";
 import { pct } from "@/lib/commission";
 import { kes } from "@/lib/format";
-import { CARE_PACKAGES, PACKAGE_INFO, type CarePackage } from "@/lib/packages";
 import { NAIROBI_CENTRE } from "@/lib/reference/estates";
 import type { ReferenceOverview } from "@/server/reference";
 
@@ -26,9 +25,10 @@ interface CompanyDraft {
   color: string;
   /** Percent as typed; blank uses the platform default. */
   pickupCommission: string;
-  carePackage: CarePackage;
-  /** Shillings as typed; blank uses the platform default. */
-  premiumFee: string;
+  /** A package id, or "" for none. */
+  carePackage: string;
+  /** The company's own monthly price, as typed; blank uses the package's price. */
+  packagePrice: string;
 }
 
 interface EstateDraft {
@@ -49,8 +49,8 @@ const blankCompany: CompanyDraft = {
   hours: "Mon–Sat, 7am–6pm",
   color: "#0E7490",
   pickupCommission: "",
-  carePackage: "basic",
-  premiumFee: "",
+  carePackage: "",
+  packagePrice: "",
 };
 const blankEstate = (company = ""): EstateDraft => ({
   code: "",
@@ -70,15 +70,17 @@ const toCompanyDraft = (c: CompanyRow): CompanyDraft => ({
   hours: c.hours,
   color: c.color,
   pickupCommission: c.pickupCommission === null ? "" : String(c.pickupCommission),
-  carePackage: c.carePackage,
-  premiumFee: c.premiumFee === null ? "" : String(c.premiumFee),
+  carePackage: c.carePackage ?? "",
+  packagePrice: c.packagePrice === null ? "" : String(c.packagePrice),
 });
 
 /** What the API takes: the draft with the commission as a number, or null for the default. */
-const companyBody = ({ pickupCommission, premiumFee, ...rest }: CompanyDraft) => ({
+const companyBody = ({ pickupCommission, carePackage, packagePrice, ...rest }: CompanyDraft) => ({
   ...rest,
   pickupCommission: pickupCommission.trim() === "" ? null : Number(pickupCommission),
-  premiumFee: premiumFee.trim() === "" ? null : Number(premiumFee),
+  carePackage: carePackage || null,
+  // An agreed price only means something with a package.
+  packagePrice: carePackage && packagePrice.trim() !== "" ? Number(packagePrice) : null,
 });
 const toEstateDraft = (e: EstateRow): EstateDraft => ({
   code: e.code,
@@ -141,8 +143,8 @@ export function CompaniesManager({ data }: { data: ReferenceOverview }) {
     (current &&
       ((["name", "paybill", "care", "hours", "color"] as const).some((k) => company[k] !== current[k]) ||
         companyBody(company).pickupCommission !== current.pickupCommission ||
-        companyBody(company).premiumFee !== current.premiumFee ||
-        company.carePackage !== current.carePackage));
+        companyBody(company).packagePrice !== current.packagePrice ||
+        companyBody(company).carePackage !== current.carePackage));
 
   const saveCompany = async () => {
     if (selected === "new") {
@@ -406,22 +408,31 @@ export function CompaniesManager({ data }: { data: ReferenceOverview }) {
                 </label>
                 <label className="f">
                   Care package
-                  <select value={company.carePackage} onChange={(e) => setC("carePackage", e.target.value as CarePackage)}>
-                    {CARE_PACKAGES.map((p) => (
-                      <option key={p} value={p}>
-                        {PACKAGE_INFO[p].name}
-                      </option>
-                    ))}
+                  <select value={company.carePackage} onChange={(e) => setC("carePackage", e.target.value)}>
+                    <option value="">No package (assistant only)</option>
+                    {data.packages
+                      .filter((p) => p.active || p.id === company.carePackage)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} · {kes(p.price)}
+                          {p.active ? "" : " (not offered)"}
+                        </option>
+                      ))}
                   </select>
                 </label>
                 <label className="f">
-                  Premium fee <span className="hint">(KES a month)</span>
+                  Agreed price <span className="hint">(KES a month)</span>
                   <input
                     inputMode="numeric"
                     maxLength={7}
-                    value={company.premiumFee}
-                    onChange={(e) => setC("premiumFee", e.target.value.replace(/\D/g, ""))}
-                    placeholder={`Default, ${kes(data.defaultPremiumFee)}`}
+                    value={company.packagePrice}
+                    disabled={!company.carePackage}
+                    onChange={(e) => setC("packagePrice", e.target.value.replace(/\D/g, ""))}
+                    placeholder={
+                      company.carePackage
+                        ? `Package price, ${kes(data.packages.find((p) => p.id === company.carePackage)?.price ?? 0)}`
+                        : "Pick a package first"
+                    }
                   />
                 </label>
               </div>
@@ -429,8 +440,8 @@ export function CompaniesManager({ data }: { data: ReferenceOverview }) {
                 The code starts every client number ({company.id || "TS"}-KIL-01427) and can&rsquo;t change later. New companies get Customer care, Finance,
                 Operations and Fleet departments to start with. The pickup commission is the platform&rsquo;s share of each paid on-demand
                 pickup; leave it blank for the platform default ({pct(data.defaultPickupCommission)}, set under Settings). A new rate applies
-                to pickups booked after it&rsquo;s saved. Premium adds client SMS and email to the care desk for a monthly fee; moving a
-                company onto it charges the current month, and blank uses the default fee ({kes(data.defaultPremiumFee)}).
+                to pickups booked after it&rsquo;s saved. Care packages are set up under Care packages; putting a company on one charges the
+                current month, and a blank agreed price uses the package&rsquo;s price. Company admins can also subscribe themselves.
               </p>
               <div className="row between" style={{ marginTop: 14 }}>
                 {current ? (
@@ -447,9 +458,9 @@ export function CompaniesManager({ data }: { data: ReferenceOverview }) {
                     <Chip tone="neutral" icon={Percent}>
                       {kes(current.commissionEarned)} commission on paid pickups
                     </Chip>
-                    <Chip tone={current.carePackage === "premium" ? "ok" : "neutral"} icon={MessageSquareText}>
-                      {PACKAGE_INFO[current.carePackage].name}
-                      {current.premiumEarned ? ` · ${kes(current.premiumEarned)} charged` : ""}
+                    <Chip tone={current.carePackage ? "ok" : "neutral"} icon={MessageSquareText}>
+                      {data.packages.find((p) => p.id === current.carePackage)?.name ?? "No package"}
+                      {current.packageEarned ? ` · ${kes(current.packageEarned)} charged` : ""}
                     </Chip>
                   </span>
                 ) : (

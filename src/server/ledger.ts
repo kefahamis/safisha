@@ -107,14 +107,14 @@ export async function companyJournal(company: string): Promise<JournalEntry[]> {
     });
   }
 
-  // The Premium care package, a month at a time, owed to the platform like the commission.
+  // The care package, a month at a time, owed to the platform like the commission.
   for (const c of packageRows) {
     if (c.amount <= 0) continue;
     out.push({
       id: `PKG-${c.month}`,
       date: c.chargedAt.slice(0, 10),
       source: "platform",
-      memo: `Premium care package · ${c.month}`,
+      memo: `Care package · ${c.month}`,
       lines: [line(CARE_PACKAGE, c.amount, 0), line(PLATFORM_PAYABLE, 0, c.amount)],
     });
   }

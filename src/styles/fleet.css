@@ -868,8 +868,28 @@ tr.flagged td {
 
 /* Care packages */
 .pkg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
   align-items: stretch;
   margin-bottom: 20px;
+}
+
+.panel.pkg-free {
+  margin-bottom: 20px;
+}
+
+.pkg-features.inline {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  margin-top: 10px;
+}
+
+.pkg-features li.no {
+  color: var(--muted);
+}
+
+.pkg-features li.no svg {
+  color: var(--muted);
 }
 
 .pkg-card {
@@ -915,6 +935,59 @@ tr.flagged td {
 
 .pkg-card .btn {
   align-self: flex-start;
+}
+
+button.li.pkg-row {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 12px 10px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 10px;
+  color: inherit;
+  font: inherit;
+}
+
+button.li.pkg-row:hover,
+button.li.pkg-row.active {
+  background: var(--panel2);
+}
+
+.pkg-feature-pick {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.pkg-feature-pick legend {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.pkg-feature-option {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--panel2);
+  cursor: pointer;
+}
+
+.pkg-feature-option > input {
+  margin-top: 3px;
+}
+
+.pkg-feature-option > span {
+  display: grid;
+  gap: 2px;
+  font-size: 0.88rem;
 }
 
 /* Profile */

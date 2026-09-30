@@ -27,6 +27,7 @@ import { companyUsersWith } from "./accessStore";
 import { audit } from "./audit";
 import { assistantAvailable, handOff, runCareAssistant } from "./careBot";
 import { notifyClient } from "./careMessages";
+import { hasFeature } from "./packages";
 import {
   cleanCheckItems,
   companyDrivers,
@@ -91,6 +92,13 @@ const int = (n: unknown) => (typeof n === "number" && Number.isFinite(n) ? Math.
 /** A line in a ticket's desk history. */
 async function ticketEvent(db: Db, ticket: string, actor: { sub: string; name: string }, action: string, detail: Record<string, unknown> = {}) {
   await db.insert(t.ticketEvents).values({ ticket, at: nowStamp(), actor: actor.sub, actorName: actor.name, action, detail });
+}
+
+/** The Tickets desk (priorities, assignment, notes, staff-opened tickets) comes with a care package. */
+async function requireTicketsDesk(company: string) {
+  if (!(await hasFeature(company, "tickets"))) {
+    deny("Your care package doesn't include the Tickets desk. Subscribe under Customer care › Care package.");
+  }
 }
 
 /** Someone on this company's desk: they must be able to see its tickets. */
@@ -428,6 +436,7 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
       const [ticket] = await db.select().from(t.tickets).where(eq(t.tickets.id, cmd.ticket));
       if (!ticket) return { ok: false, error: "No such ticket." };
       await requireCompany(session, ticket.company);
+      await requireTicketsDesk(ticket.company);
       const set: Partial<typeof t.tickets.$inferInsert> = {};
       const events: [string, Record<string, unknown>][] = [];
       if (cmd.priority !== undefined && cmd.priority !== ticket.priority) {
@@ -460,6 +469,7 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
       const [ticket] = await db.select().from(t.tickets).where(eq(t.tickets.id, cmd.ticket));
       if (!ticket) return { ok: false, error: "No such ticket." };
       await requireCompany(session, ticket.company);
+      await requireTicketsDesk(ticket.company);
       const text = cmd.text.trim().slice(0, 2000);
       if (!text) return { ok: false, error: "Write the note first." };
       // Stored beside the conversation but never sent to the client.
@@ -472,6 +482,7 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
       const client = await getClient(db, cmd.client);
       if (!client) return { ok: false, error: "Pick the client." };
       await requireCompany(session, client.company);
+      await requireTicketsDesk(client.company);
       const subject = cmd.subject.trim().slice(0, 80);
       const message = cmd.message.trim().slice(0, 2000);
       if (!subject || !message) return { ok: false, error: "Give the ticket a subject and describe the request." };

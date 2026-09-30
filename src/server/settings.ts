@@ -1,7 +1,6 @@
 // Server-only. Loads, saves and describes integration settings.
 import { and, eq } from "drizzle-orm";
 import { DEFAULT_PICKUP_COMMISSION, MAX_PICKUP_COMMISSION } from "@/lib/commission";
-import { DEFAULT_PREMIUM_FEE, MAX_PREMIUM_FEE } from "@/lib/packages";
 import { AUDIT_CATEGORIES } from "@/lib/auditRetention";
 import {
   DEFAULT_PRICES,
@@ -210,8 +209,6 @@ export function defaultsFor(key: IntegrationKey): Record<string, unknown> {
       return { ...DEFAULT_PRICES };
     case "commission":
       return { pickupRate: DEFAULT_PICKUP_COMMISSION };
-    case "packages":
-      return { premiumFee: DEFAULT_PREMIUM_FEE };
     case "auditRetention":
       return {
         enabled: false,
@@ -273,23 +270,3 @@ export async function platformPickupCommission(): Promise<number> {
 
 const validRate = (rate: unknown): rate is number =>
   typeof rate === "number" && rate >= 0 && rate <= MAX_PICKUP_COMMISSION;
-
-/** The monthly Premium fee for a company: its own fee if it has one, else the platform's. */
-export async function premiumFeeFor(company: string): Promise<number> {
-  const db = await getDb();
-  const [row] = await db
-    .select({ fee: schema.companies.premiumFee })
-    .from(schema.companies)
-    .where(eq(schema.companies.id, company));
-  return validFee(row?.fee) ? row!.fee! : platformPremiumFee();
-}
-
-/** The platform's default Premium fee. */
-export async function platformPremiumFee(): Promise<number> {
-  const s = await loadSetting("platform", "packages");
-  const fee = s?.config.premiumFee;
-  return validFee(fee) ? fee : DEFAULT_PREMIUM_FEE;
-}
-
-const validFee = (fee: unknown): fee is number =>
-  typeof fee === "number" && Number.isInteger(fee) && fee >= 0 && fee <= MAX_PREMIUM_FEE;

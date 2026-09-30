@@ -7,7 +7,7 @@
 
 import { AUDIT_CATEGORIES, MAX_RETENTION_DAYS, MIN_RETENTION_DAYS } from "./auditRetention";
 
-export type IntegrationKey = "mpesa" | "reminders" | "pricing" | "commission" | "packages" | "auditRetention" | "sms" | "ussd" | "email" | "ai" | "app";
+export type IntegrationKey = "mpesa" | "reminders" | "pricing" | "commission" | "auditRetention" | "sms" | "ussd" | "email" | "ai" | "app";
 
 /** "company" settings live per collection company; "platform" ones once. */
 export type IntegrationScope = "company" | "platform";
@@ -166,24 +166,6 @@ export const INTEGRATIONS: IntegrationDef[] = [
         type: "number",
         placeholder: "10",
         help: "0 to 50. Applies to pickups booked after it's saved; earlier bookings keep their rate.",
-      },
-    ],
-  },
-  {
-    key: "packages",
-    scope: "platform",
-    title: "Care packages",
-    provider: "Built in",
-    summary:
-      "Basic gives every company the care desk with the AI assistant. Premium adds client SMS and email, two-way replies and billing SMS for a monthly fee. A company can have its own fee under Companies.",
-    testable: false,
-    fields: [
-      {
-        name: "premiumFee",
-        label: "Premium fee (KES a month)",
-        type: "number",
-        placeholder: "5000",
-        help: "Charged at the start of each month, and for the current month when a company upgrades.",
       },
     ],
   },

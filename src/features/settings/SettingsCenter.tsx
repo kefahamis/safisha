@@ -10,7 +10,6 @@ import {
   Languages,
   Mail,
   MessageSquareText,
-  Package,
   Palette,
   Percent,
   PhoneCall,
@@ -39,7 +38,6 @@ const ICONS: Record<IntegrationKey, LucideIcon> = {
   reminders: Bell,
   pricing: Tags,
   commission: Percent,
-  packages: Package,
   auditRetention: ScrollText,
   sms: MessageSquareText,
   ussd: PhoneCall,
@@ -218,7 +216,6 @@ export function SettingsCenter({ platform, companyId }: { platform: boolean; com
           {card(companyData, "reminders", setCompanyData)}
           {card(companyData, "pricing", setCompanyData)}
           {card(platformData, "commission", setPlatformData)}
-          {card(platformData, "packages", setPlatformData)}
         </div>
       )}
 
