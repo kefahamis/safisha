@@ -1,11 +1,14 @@
 "use client";
 
-import { Building2, Check, MapPin, Plus, Save, Trash2, Truck, Users, UsersRound } from "lucide-react";
+import { Building2, Check, MapPin, MessageSquareText, Percent, Plus, Save, Trash2, Truck, Users, UsersRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Chip } from "@/components/ui/Chip";
 import { Empty, PageHead, Panel } from "@/components/ui/Panel";
 import { useToast } from "@/components/ui/ToastProvider";
+import { pct } from "@/lib/commission";
+import { kes } from "@/lib/format";
+import { CARE_PACKAGES, PACKAGE_INFO, type CarePackage } from "@/lib/packages";
 import { NAIROBI_CENTRE } from "@/lib/reference/estates";
 import type { ReferenceOverview } from "@/server/reference";
 
@@ -21,6 +24,11 @@ interface CompanyDraft {
   care: string;
   hours: string;
   color: string;
+  /** Percent as typed; blank uses the platform default. */
+  pickupCommission: string;
+  carePackage: CarePackage;
+  /** Shillings as typed; blank uses the platform default. */
+  premiumFee: string;
 }
 
 interface EstateDraft {
@@ -33,7 +41,17 @@ interface EstateDraft {
   days: number[];
 }
 
-const blankCompany: CompanyDraft = { id: "", name: "", paybill: "", care: "", hours: "Mon–Sat, 7am–6pm", color: "#0E7490" };
+const blankCompany: CompanyDraft = {
+  id: "",
+  name: "",
+  paybill: "",
+  care: "",
+  hours: "Mon–Sat, 7am–6pm",
+  color: "#0E7490",
+  pickupCommission: "",
+  carePackage: "basic",
+  premiumFee: "",
+};
 const blankEstate = (company = ""): EstateDraft => ({
   code: "",
   name: "",
@@ -51,6 +69,16 @@ const toCompanyDraft = (c: CompanyRow): CompanyDraft => ({
   care: c.care,
   hours: c.hours,
   color: c.color,
+  pickupCommission: c.pickupCommission === null ? "" : String(c.pickupCommission),
+  carePackage: c.carePackage,
+  premiumFee: c.premiumFee === null ? "" : String(c.premiumFee),
+});
+
+/** What the API takes: the draft with the commission as a number, or null for the default. */
+const companyBody = ({ pickupCommission, premiumFee, ...rest }: CompanyDraft) => ({
+  ...rest,
+  pickupCommission: pickupCommission.trim() === "" ? null : Number(pickupCommission),
+  premiumFee: premiumFee.trim() === "" ? null : Number(premiumFee),
 });
 const toEstateDraft = (e: EstateRow): EstateDraft => ({
   code: e.code,
@@ -111,14 +139,17 @@ export function CompaniesManager({ data }: { data: ReferenceOverview }) {
   const companyDirty =
     selected === "new" ||
     (current &&
-      (["name", "paybill", "care", "hours", "color"] as const).some((k) => company[k] !== current[k]));
+      ((["name", "paybill", "care", "hours", "color"] as const).some((k) => company[k] !== current[k]) ||
+        companyBody(company).pickupCommission !== current.pickupCommission ||
+        companyBody(company).premiumFee !== current.premiumFee ||
+        company.carePackage !== current.carePackage));
 
   const saveCompany = async () => {
     if (selected === "new") {
-      const ok = await call("/api/admin/companies", "POST", company, `${company.name} onboarded`);
+      const ok = await call("/api/admin/companies", "POST", companyBody(company), `${company.name} onboarded`);
       if (ok) setSelected(company.id.toUpperCase());
     } else if (current) {
-      const { id: _id, ...rest } = company;
+      const { id: _id, ...rest } = companyBody(company);
       await call(`/api/admin/companies/${current.id}`, "PATCH", rest, `${company.name} saved`);
     }
   };
@@ -363,10 +394,43 @@ export function CompaniesManager({ data }: { data: ReferenceOverview }) {
                   Colour
                   <input type="color" value={company.color} onChange={(e) => setC("color", e.target.value)} />
                 </label>
+                <label className="f">
+                  Pickup commission <span className="hint">(%)</span>
+                  <input
+                    inputMode="decimal"
+                    maxLength={5}
+                    value={company.pickupCommission}
+                    onChange={(e) => setC("pickupCommission", e.target.value.replace(/[^\d.]/g, ""))}
+                    placeholder={`Default, ${pct(data.defaultPickupCommission)}`}
+                  />
+                </label>
+                <label className="f">
+                  Care package
+                  <select value={company.carePackage} onChange={(e) => setC("carePackage", e.target.value as CarePackage)}>
+                    {CARE_PACKAGES.map((p) => (
+                      <option key={p} value={p}>
+                        {PACKAGE_INFO[p].name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="f">
+                  Premium fee <span className="hint">(KES a month)</span>
+                  <input
+                    inputMode="numeric"
+                    maxLength={7}
+                    value={company.premiumFee}
+                    onChange={(e) => setC("premiumFee", e.target.value.replace(/\D/g, ""))}
+                    placeholder={`Default, ${kes(data.defaultPremiumFee)}`}
+                  />
+                </label>
               </div>
               <p className="hint" style={{ marginTop: 10 }}>
                 The code starts every client number ({company.id || "TS"}-KIL-01427) and can&rsquo;t change later. New companies get Customer care, Finance,
-                Operations and Fleet departments to start with.
+                Operations and Fleet departments to start with. The pickup commission is the platform&rsquo;s share of each paid on-demand
+                pickup; leave it blank for the platform default ({pct(data.defaultPickupCommission)}, set under Settings). A new rate applies
+                to pickups booked after it&rsquo;s saved. Premium adds client SMS and email to the care desk for a monthly fee; moving a
+                company onto it charges the current month, and blank uses the default fee ({kes(data.defaultPremiumFee)}).
               </p>
               <div className="row between" style={{ marginTop: 14 }}>
                 {current ? (
@@ -379,6 +443,13 @@ export function CompaniesManager({ data }: { data: ReferenceOverview }) {
                     </Chip>
                     <Chip tone="neutral" icon={Users}>
                       {plural(current.staff, "staff account")}
+                    </Chip>
+                    <Chip tone="neutral" icon={Percent}>
+                      {kes(current.commissionEarned)} commission on paid pickups
+                    </Chip>
+                    <Chip tone={current.carePackage === "premium" ? "ok" : "neutral"} icon={MessageSquareText}>
+                      {PACKAGE_INFO[current.carePackage].name}
+                      {current.premiumEarned ? ` · ${kes(current.premiumEarned)} charged` : ""}
                     </Chip>
                   </span>
                 ) : (

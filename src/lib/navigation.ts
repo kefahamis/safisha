@@ -70,6 +70,7 @@ export const NAV: Record<Role, NavItem[]> = {
       children: [
         { href: "/company/support", label: "Chat agent", requires: ["tickets.view.company"], badge: "tickets" },
         { href: "/company/tickets", label: "Tickets", requires: ["tickets.view.company"] },
+        { href: "/company/package", label: "Care package", requires: ["settings.company.manage"] },
       ],
     },
     {

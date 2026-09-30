@@ -374,6 +374,8 @@ export function createActions(store: AppStore) {
 
     addTicketNote: (ticket: string, text: string) => send({ type: "ticket.note", ticket, text }),
 
+    handOffTicket: (ticket: string) => send({ type: "ticket.handoff", ticket }),
+
     openTicket: (input: Omit<Extract<Command, { type: "ticket.open" }>, "type">) => send({ type: "ticket.open", ...input }),
 
     sendInvoice: (invoice: string) => send({ type: "invoice.send", invoice }),

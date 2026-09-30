@@ -1,5 +1,7 @@
 // Server-only. SMS (Africa's Talking) and email (Resend), with an outbox.
+import { PREMIUM_SMS_PURPOSES } from "@/lib/packages";
 import { getDb, schema } from "../db";
+import { isPremium } from "../packages";
 import { loadSetting } from "../settings";
 
 const AT = {
@@ -36,6 +38,21 @@ export const e164 = (phone: string) => `+${phone.replace(/\D/g, "").replace(/^0/
  */
 export async function sendSms(input: { to: string; body: string; purpose: string; company?: string | null }) {
   const db = await getDb();
+
+  // Messages to clients on a company's behalf are a Premium feature. They still
+  // land in the outbox, so a company on Basic can see what it's missing.
+  if (input.company && PREMIUM_SMS_PURPOSES.has(input.purpose) && !(await isPremium(input.company))) {
+    await db.insert(schema.smsOutbox).values({
+      company: input.company,
+      to: input.to,
+      body: input.body,
+      purpose: input.purpose,
+      status: "skipped",
+      error: "Not sent: the company is on the Basic care package.",
+    });
+    return { status: "skipped" as const, error: null };
+  }
+
   const cfg = await smsConfig();
 
   let status: "sent" | "simulated" | "failed" = "simulated";
@@ -103,18 +120,32 @@ export async function testSms(cfg: { environment: string; username: string; apiK
 async function emailConfig() {
   const s = await loadSetting("platform", "email");
   if (!s || s.status !== "ok" || !s.secrets.apiKey || !s.config.from) return null;
-  return { apiKey: s.secrets.apiKey, from: String(s.config.from) };
+  return {
+    apiKey: s.secrets.apiKey,
+    from: String(s.config.from),
+    replyTo: s.config.replyTo ? String(s.config.replyTo) : undefined,
+  };
 }
+
+/** Where client replies to care emails should go, if inbound email is set up. */
+export const careReplyTo = async () => (await emailConfig())?.replyTo;
 
 export const emailLive = async () => (await emailConfig()) !== null;
 
-export async function sendEmail(input: { to: string; subject: string; text: string; html?: string }) {
+export async function sendEmail(input: { to: string; subject: string; text: string; html?: string; replyTo?: string }) {
   const cfg = await emailConfig();
   if (!cfg) return { status: "simulated" as const };
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${cfg.apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: cfg.from, to: [input.to], subject: input.subject, text: input.text, html: input.html }),
+    body: JSON.stringify({
+      from: cfg.from,
+      to: [input.to],
+      subject: input.subject,
+      text: input.text,
+      html: input.html,
+      ...(input.replyTo ? { reply_to: input.replyTo } : {}),
+    }),
     signal: AbortSignal.timeout(15_000),
   });
   if (!res.ok) {

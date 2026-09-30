@@ -8,8 +8,8 @@ import {
   FileText,
   Image as ImageIcon,
   LoaderCircle,
-  Paperclip,
   Pencil,
+  Plus,
   Trash2,
   UserPlus,
 } from "lucide-react";
@@ -17,8 +17,11 @@ import { useEffect, useRef, useState } from "react";
 import { Drawer } from "@/components/ui/Drawer";
 import { useToast } from "@/components/ui/ToastProvider";
 import {
+  BUSINESS_DOCUMENT_KINDS,
   CLIENT_DOCUMENT_KINDS,
+  isBusinessKind,
   MAX_CLIENT_DOCUMENTS,
+  missingBusinessKinds,
   type ClientDocumentKind,
 } from "@/lib/clientDocuments";
 import { KE_MOBILE } from "@/lib/clientNumber";
@@ -30,6 +33,8 @@ import { useActions } from "@/store/StoreProvider";
 
 const STEPS = ["Client", "Service", "Documents", "Review"] as const;
 const ACCEPT = "application/pdf,image/jpeg,image/png,image/webp";
+/** A business's own papers each get a row; anything else is picked from the rest. */
+const OTHER_KINDS = CLIENT_DOCUMENT_KINDS.filter((k) => !isBusinessKind(k));
 
 interface PendingDoc {
   key: number;
@@ -69,7 +74,7 @@ function AddClientDrawer({ company, onClose }: { company: Company; onClose: () =
   const [estate, setEstate] = useState(company.estates[0] ?? "");
   const [plan, setPlan] = useState(600);
   const [docs, setDocs] = useState<PendingDoc[]>([]);
-  const [docKind, setDocKind] = useState<ClientDocumentKind>(CLIENT_DOCUMENT_KINDS[0]);
+  const [otherKind, setOtherKind] = useState<ClientDocumentKind>(OTHER_KINDS[0]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const nextKey = useRef(1);
@@ -94,6 +99,10 @@ function AddClientDrawer({ company, onClose }: { company: Company; onClose: () =
     if (at === 2) {
       if (uploading) return "Wait for the uploads to finish.";
       if (docs.some((d) => d.status === "failed")) return "Remove or retry the documents that failed.";
+      if (type === "Business") {
+        const missing = missingBusinessKinds(docs.filter((d) => d.status === "done").map((d) => d.kind));
+        if (missing.length) return `A business needs its ${listOf(missing)}.`;
+      }
     }
     return "";
   };
@@ -112,7 +121,9 @@ function AddClientDrawer({ company, onClose }: { company: Company; onClose: () =
     setStep(target);
   };
 
-  const addFiles = (files: FileList | null) => {
+  const removeDoc = (key: number) => setDocs((all) => all.filter((x) => x.key !== key));
+
+  const addFiles = (files: FileList | null, kind: ClientDocumentKind) => {
     if (!files?.length) return;
     const room = MAX_CLIENT_DOCUMENTS - docs.length;
     if (room <= 0) {
@@ -123,7 +134,7 @@ function AddClientDrawer({ company, onClose }: { company: Company; onClose: () =
     for (const file of Array.from(files).slice(0, room)) {
       const key = nextKey.current++;
       const isPdf = file.type === "application/pdf";
-      const entry: PendingDoc = { key, kind: docKind, name: file.name, isPdf, size: file.size, status: "uploading" };
+      const entry: PendingDoc = { key, kind, name: file.name, isPdf, size: file.size, status: "uploading" };
       if (!isPdf && !file.type.startsWith("image/")) {
         setDocs((d) => [...d, { ...entry, status: "failed", error: "Only PDFs and photos." }]);
         continue;
@@ -204,7 +215,7 @@ function AddClientDrawer({ company, onClose }: { company: Company; onClose: () =
               </button>
             ) : (
               <button type="button" className="btn primary" onClick={() => goTo(step + 1)}>
-                {step === 2 && docs.length === 0 ? "Skip" : "Next"}
+                {step === 2 && docs.length === 0 && type !== "Business" ? "Skip" : "Next"}
                 <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
               </button>
             )}
@@ -284,65 +295,64 @@ function AddClientDrawer({ company, onClose }: { company: Company; onClose: () =
         {step === 2 && (
           <>
             <p className="hint">
-              Optional. Attach up to {MAX_CLIENT_DOCUMENTS} PDFs or photos, such as an ID, business permit or
-              signed agreement. PDFs up to 5 MB.
+              {type === "Business"
+                ? "A business needs its KRA PIN certificate, certificate of registration and CR12; other papers are optional."
+                : "Optional."}{" "}
+              PDFs or photos, up to {MAX_CLIENT_DOCUMENTS} files in all. PDFs up to 5 MB.
             </p>
-            <label className="f">
-              Document type
-              <select value={docKind} onChange={(e) => setDocKind(e.target.value as ClientDocumentKind)}>
-                {CLIENT_DOCUMENT_KINDS.map((k) => (
-                  <option key={k}>{k}</option>
+
+            {type === "Business" ? (
+              <>
+                {BUSINESS_DOCUMENT_KINDS.map((kind) => (
+                  <DocGroup
+                    key={kind}
+                    title={kind}
+                    required
+                    docs={docs.filter((d) => d.kind === kind)}
+                    full={docs.length >= MAX_CLIENT_DOCUMENTS}
+                    onAdd={(files) => addFiles(files, kind)}
+                    onRemove={removeDoc}
+                  />
                 ))}
-              </select>
-            </label>
-            {docs.length < MAX_CLIENT_DOCUMENTS ? (
-              <label className="photo-input doc-drop">
-                <Paperclip size={18} strokeWidth={2} aria-hidden="true" />
-                <span>Choose a {docKind.toLowerCase()} file</span>
-                <input
-                  type="file"
-                  accept={ACCEPT}
-                  multiple
-                  onChange={(e) => {
-                    addFiles(e.target.files);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-            ) : null}
-            {docs.length ? (
-              <ul className="doc-list">
-                {docs.map((d) => (
-                  <li key={d.key} className={d.status}>
-                    <span className="doc-ico" aria-hidden="true">
-                      {d.isPdf ? <FileText size={17} strokeWidth={2} /> : <ImageIcon size={17} strokeWidth={2} />}
-                    </span>
-                    <span className="doc-text">
-                      <strong>{d.kind}</strong>
-                      <span className="hint">
-                        {d.name} · {fileSize(d.size)}
-                        {d.status === "failed" ? ` · ${d.error}` : null}
-                      </span>
-                    </span>
-                    {d.status === "uploading" ? (
-                      <LoaderCircle size={16} strokeWidth={2.2} className="spin" aria-label="Uploading" />
-                    ) : d.status === "done" ? (
-                      <Check size={16} strokeWidth={2.4} className="doc-ok" aria-label="Uploaded" />
-                    ) : (
-                      <CircleAlert size={16} strokeWidth={2.2} className="doc-bad" aria-label="Failed" />
-                    )}
-                    <button
-                      type="button"
-                      className="btn small ghost icon-only"
-                      aria-label={`Remove ${d.name}`}
-                      onClick={() => setDocs((all) => all.filter((x) => x.key !== d.key))}
+                <DocGroup
+                  title="Other documents"
+                  docs={docs.filter((d) => !isBusinessKind(d.kind))}
+                  full={docs.length >= MAX_CLIENT_DOCUMENTS}
+                  onAdd={(files) => addFiles(files, otherKind)}
+                  onRemove={removeDoc}
+                  picker={
+                    <select
+                      aria-label="Document type"
+                      value={otherKind}
+                      onChange={(e) => setOtherKind(e.target.value as ClientDocumentKind)}
                     >
-                      <Trash2 size={15} strokeWidth={2.2} aria-hidden="true" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+                      {OTHER_KINDS.map((k) => (
+                        <option key={k}>{k}</option>
+                      ))}
+                    </select>
+                  }
+                />
+              </>
+            ) : (
+              <DocGroup
+                title="Documents"
+                docs={docs}
+                full={docs.length >= MAX_CLIENT_DOCUMENTS}
+                onAdd={(files) => addFiles(files, otherKind)}
+                onRemove={removeDoc}
+                picker={
+                  <select
+                    aria-label="Document type"
+                    value={otherKind}
+                    onChange={(e) => setOtherKind(e.target.value as ClientDocumentKind)}
+                  >
+                    {CLIENT_DOCUMENT_KINDS.map((k) => (
+                      <option key={k}>{k}</option>
+                    ))}
+                  </select>
+                }
+              />
+            )}
           </>
         )}
 
@@ -354,7 +364,7 @@ function AddClientDrawer({ company, onClose }: { company: Company; onClose: () =
             <ReviewRow label="Monthly fee" value={kes(plan)} onEdit={() => goTo(1)} />
             <ReviewRow
               label="Documents"
-              value={docs.length ? docs.map((d) => d.kind).join(", ") : "None"}
+              value={docs.length ? docSummary(docs) : "None"}
               onEdit={() => goTo(2)}
             />
           </dl>
@@ -364,6 +374,109 @@ function AddClientDrawer({ company, onClose }: { company: Company; onClose: () =
       </form>
     </Drawer>
   );
+}
+
+/**
+ * One kind of document (or a mixed "other" pile): the files added so far and a
+ * button to add another, so a multi-page paper can go up a page at a time.
+ */
+function DocGroup({
+  title,
+  docs,
+  full,
+  onAdd,
+  onRemove,
+  picker,
+  required = false,
+}: {
+  title: string;
+  docs: PendingDoc[];
+  full: boolean;
+  onAdd: (files: FileList | null) => void;
+  onRemove: (key: number) => void;
+  picker?: React.ReactNode;
+  required?: boolean;
+}) {
+  return (
+    <section className="doc-group">
+      <div className="doc-group-head">
+        <h3>
+          {title}
+          {required ? (
+            <span className="req" aria-label="required">
+              {" "}
+              *
+            </span>
+          ) : null}
+        </h3>
+        {docs.length ? (
+          <span className="hint">{docs.length === 1 ? "1 file" : `${docs.length} files`}</span>
+        ) : required ? (
+          <span className="hint">Required</span>
+        ) : null}
+      </div>
+      {docs.length ? (
+        <ul className="doc-list">
+          {docs.map((d) => (
+            <li key={d.key} className={d.status}>
+              <span className="doc-ico" aria-hidden="true">
+                {d.isPdf ? <FileText size={17} strokeWidth={2} /> : <ImageIcon size={17} strokeWidth={2} />}
+              </span>
+              <span className="doc-text">
+                <strong>{d.name}</strong>
+                <span className="hint">
+                  {picker ? `${d.kind} · ` : null}
+                  {fileSize(d.size)}
+                  {d.status === "failed" ? ` · ${d.error}` : null}
+                </span>
+              </span>
+              {d.status === "uploading" ? (
+                <LoaderCircle size={16} strokeWidth={2.2} className="spin" aria-label="Uploading" />
+              ) : d.status === "done" ? (
+                <Check size={16} strokeWidth={2.4} className="doc-ok" aria-label="Uploaded" />
+              ) : (
+                <CircleAlert size={16} strokeWidth={2.2} className="doc-bad" aria-label="Failed" />
+              )}
+              <button
+                type="button"
+                className="btn small ghost icon-only"
+                aria-label={`Remove ${d.name}`}
+                onClick={() => onRemove(d.key)}
+              >
+                <Trash2 size={15} strokeWidth={2.2} aria-hidden="true" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {full ? null : (
+        <div className="doc-add">
+          {picker}
+          <label className="btn small">
+            <Plus size={15} strokeWidth={2.2} aria-hidden="true" />
+            {docs.length ? "Add another" : "Add file"}
+            <input
+              type="file"
+              accept={ACCEPT}
+              multiple
+              hidden
+              onChange={(e) => {
+                onAdd(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** "KRA PIN certificate, CR12 ×2" */
+function docSummary(docs: PendingDoc[]) {
+  const counts = new Map<string, number>();
+  for (const d of docs) counts.set(d.kind, (counts.get(d.kind) ?? 0) + 1);
+  return [...counts].map(([kind, n]) => (n > 1 ? `${kind} ×${n}` : kind)).join(", ");
 }
 
 function ReviewRow({ label, value, onEdit }: { label: string; value: string; onEdit: () => void }) {
@@ -378,6 +491,11 @@ function ReviewRow({ label, value, onEdit }: { label: string; value: string; onE
       </dd>
     </div>
   );
+}
+
+/** "A, B and C" */
+function listOf(items: string[]) {
+  return items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}` : items[0];
 }
 
 function fileSize(bytes: number) {

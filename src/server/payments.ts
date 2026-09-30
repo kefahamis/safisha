@@ -217,8 +217,9 @@ export async function settleStk(
   if (posted && req.purpose.startsWith("pickup:")) {
     await db
       .update(pickupRequests)
-      .set({ paid: true })
-      .where(eq(pickupRequests.id, req.purpose.slice("pickup:".length)));
+      .set({ paid: true, paidAt: nowStamp() })
+      // A second payment for the same pickup doesn't move the date its commission fell due.
+      .where(and(eq(pickupRequests.id, req.purpose.slice("pickup:".length)), eq(pickupRequests.paid, false)));
   }
   if (posted) await receiptSms(db, req.client, receipt, amount);
   return updated;

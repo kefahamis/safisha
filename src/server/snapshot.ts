@@ -262,6 +262,7 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
       priority: tk.priority as Ticket["priority"],
       channel: tk.channel,
       resolvedAt: tk.resolvedAt ?? undefined,
+      bot: tk.bot || undefined,
       msgs: mine
         .filter((m) => m.from !== "note")
         .map((m) => ({
@@ -325,6 +326,9 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
     scheduledFor: r.scheduledFor ?? undefined,
     photo: r.photo ?? undefined,
     createdAt: r.createdAt,
+    // The platform's cut is between it and the company; clients and crews don't see it.
+    commissionRate: (session.ws === "company" || session.ws === "admin") && share.money ? r.commissionRate : undefined,
+    paidAt: r.paidAt ?? undefined,
   }));
 
   const dumpReports: DumpReport[] = dumpRows.map((d) => ({

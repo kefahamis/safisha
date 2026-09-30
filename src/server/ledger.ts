@@ -1,7 +1,8 @@
 // Server-only. A company's books: postings derived from billing and M-Pesa, plus manual journals.
-import { desc, eq, inArray, like, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, like, sql } from "drizzle-orm";
 import { validateLines, type JournalEntry, type JournalLine } from "@/lib/accounting";
 import type { Session } from "@/lib/auth/types";
+import { commissionOf, pct } from "@/lib/commission";
 import { audit } from "./audit";
 import { fleetPostings } from "./fleet";
 import { getDb, schema } from "./db";
@@ -16,6 +17,9 @@ const MPESA = "1000";
 const SUSPENSE = "2100";
 const COLLECTION_FEES = "4000";
 const PICKUP_FEES = "4100";
+const PLATFORM_PAYABLE = "2300";
+const PLATFORM_COMMISSION = "5550";
+const CARE_PACKAGE = "5560";
 
 const line = (account: string, debit: number, credit: number): JournalLine => ({ account, debit, credit });
 
@@ -37,10 +41,15 @@ export async function companyJournal(company: string): Promise<JournalEntry[]> {
   const clientRows = await db.select({ id: t.clients.id }).from(t.clients).where(eq(t.clients.company, company));
   const clientIds = clientRows.map((c) => c.id);
 
-  const [txnRows, suspenseRows, entryRows] = await Promise.all([
+  const [txnRows, suspenseRows, entryRows, paidPickups, packageRows] = await Promise.all([
     clientIds.length ? db.select().from(t.txns).where(inArray(t.txns.client, clientIds)) : Promise.resolve([]),
     db.select().from(t.suspense).where(eq(t.suspense.company, company)),
     db.select().from(t.journalEntries).where(eq(t.journalEntries.company, company)),
+    db
+      .select()
+      .from(t.pickupRequests)
+      .where(and(eq(t.pickupRequests.company, company), eq(t.pickupRequests.paid, true))),
+    db.select().from(t.packageCharges).where(eq(t.packageCharges.company, company)),
   ]);
   const lineRows = entryRows.length
     ? await db.select().from(t.journalLines).where(inArray(t.journalLines.entry, entryRows.map((e) => e.id)))
@@ -81,6 +90,32 @@ export async function companyJournal(company: string): Promise<JournalEntry[]> {
       memo: `Unmatched Paybill payment · ${p.payer} · ${p.reason}`,
       reference: p.account,
       lines: [line(MPESA, p.amount, 0), line(SUSPENSE, 0, p.amount)],
+    });
+  }
+
+  // The platform's cut of each paid pickup, owed until the company settles it.
+  for (const p of paidPickups) {
+    const amount = commissionOf(p.price, p.commissionRate);
+    if (amount <= 0) continue;
+    out.push({
+      id: `COM-${p.id}`,
+      date: (p.paidAt ?? p.createdAt).slice(0, 10),
+      source: "platform",
+      memo: `Platform commission · ${pct(p.commissionRate)} of pickup ${p.id}`,
+      reference: p.client,
+      lines: [line(PLATFORM_COMMISSION, amount, 0), line(PLATFORM_PAYABLE, 0, amount)],
+    });
+  }
+
+  // The Premium care package, a month at a time, owed to the platform like the commission.
+  for (const c of packageRows) {
+    if (c.amount <= 0) continue;
+    out.push({
+      id: `PKG-${c.month}`,
+      date: c.chargedAt.slice(0, 10),
+      source: "platform",
+      memo: `Premium care package · ${c.month}`,
+      lines: [line(CARE_PACKAGE, c.amount, 0), line(PLATFORM_PAYABLE, 0, c.amount)],
     });
   }
 

@@ -5,7 +5,7 @@
  * back to the browser — the form shows only whether one is saved.
  */
 
-export type IntegrationKey = "mpesa" | "reminders" | "pricing" | "sms" | "ussd" | "email" | "ai" | "app";
+export type IntegrationKey = "mpesa" | "reminders" | "pricing" | "commission" | "packages" | "sms" | "ussd" | "email" | "ai" | "app";
 
 /** "company" settings live per collection company; "platform" ones once. */
 export type IntegrationScope = "company" | "platform";
@@ -150,12 +150,48 @@ export const INTEGRATIONS: IntegrationDef[] = [
     ],
   },
   {
+    key: "commission",
+    scope: "platform",
+    title: "Platform commission",
+    provider: "Built in",
+    summary:
+      "The platform's share of each on-demand pickup, owed by the company once the client has paid. A company can have its own rate under Companies.",
+    testable: false,
+    fields: [
+      {
+        name: "pickupRate",
+        label: "Pickup commission (%)",
+        type: "number",
+        placeholder: "10",
+        help: "0 to 50. Applies to pickups booked after it's saved; earlier bookings keep their rate.",
+      },
+    ],
+  },
+  {
+    key: "packages",
+    scope: "platform",
+    title: "Care packages",
+    provider: "Built in",
+    summary:
+      "Basic gives every company the care desk with the AI assistant. Premium adds client SMS and email, two-way replies and billing SMS for a monthly fee. A company can have its own fee under Companies.",
+    testable: false,
+    fields: [
+      {
+        name: "premiumFee",
+        label: "Premium fee (KES a month)",
+        type: "number",
+        placeholder: "5000",
+        help: "Charged at the start of each month, and for the current month when a company upgrades.",
+      },
+    ],
+  },
+  {
     key: "sms",
     scope: "platform",
     title: "SMS",
     provider: "Africa's Talking",
     summary:
-      "Receipts, reminders, sign-in codes and care replies. Until configured, messages are recorded in the outbox but not sent.",
+      "Receipts, reminders, sign-in codes and care replies, and replies from clients on Premium. Until configured, messages are recorded in the outbox but not sent.",
     testable: true,
     docs: "https://account.africastalking.com",
     fields: [
@@ -204,7 +240,8 @@ export const INTEGRATIONS: IntegrationDef[] = [
     scope: "platform",
     title: "Email",
     provider: "Resend",
-    summary: "Password resets and staff invitations. Until configured, links are shown on screen.",
+    summary:
+      "Password resets, staff invitations, and care emails to clients on Premium. Until configured, links are shown on screen.",
     testable: true,
     docs: "https://resend.com",
     fields: [
@@ -215,6 +252,13 @@ export const INTEGRATIONS: IntegrationDef[] = [
         type: "email",
         required: true,
         placeholder: "Zoa Waste Hub <no-reply@zoahub.co.ke>",
+      },
+      {
+        name: "replyTo",
+        label: "Care reply-to address",
+        type: "email",
+        placeholder: "care@inbound.zoahub.co.ke",
+        help: "Optional. An address Resend receives mail for; client replies to care emails land in their ticket.",
       },
     ],
   },

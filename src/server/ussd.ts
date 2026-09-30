@@ -7,7 +7,7 @@ import { companyById } from "@/lib/reference/companies";
 import { ESTATES } from "@/lib/reference/estates";
 import { getDb, schema } from "./db";
 import { startStk } from "./payments";
-import { priceList } from "./settings";
+import { pickupCommissionRate, priceList } from "./settings";
 import { nowStamp, today } from "./time";
 
 const t = schema;
@@ -203,6 +203,7 @@ export async function ussdReply(input: { phone: string; text: string }): Promise
         price: prices[kind.key],
         status: "Requested",
         createdAt: at,
+        commissionRate: await pickupCommissionRate(client.company),
       });
       await db.insert(t.txns).values({
         id: `CHG-${id}`,

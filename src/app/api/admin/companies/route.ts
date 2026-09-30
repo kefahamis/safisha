@@ -1,4 +1,5 @@
 import { audit } from "@/server/audit";
+import { setCarePackage } from "@/server/packages";
 import { CompanyBody, createCompany, referenceOverview } from "@/server/reference";
 import { errorResponse, HttpError, requirePermission } from "@/server/session";
 
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
     const parsed = CompanyBody.safeParse(await request.json().catch(() => null));
     if (!parsed.success) throw new HttpError(400, parsed.error.issues[0]?.message ?? "Check the details.");
     const company = await createCompany(parsed.data);
+    if (parsed.data.carePackage === "premium") await setCarePackage(session, company.id, "premium");
     await audit(session, { action: "company.create", target: company.id, company: company.id, detail: { ...company } });
     return Response.json({ ok: true, company });
   } catch (err) {

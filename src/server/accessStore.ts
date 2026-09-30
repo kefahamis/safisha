@@ -155,6 +155,36 @@ export async function setUserLang(userId: string, lang: string) {
   await db.update(users).set({ lang }).where(eq(users.id, userId));
 }
 
+/** Someone's own details, from their Profile page. Email and phone must stay unique. */
+export async function setProfile(
+  userId: string,
+  input: { name: string; email: string; phone: string | null },
+): Promise<User | { error: string }> {
+  const email = input.email.trim().toLowerCase();
+  const byEmail = await findUserByEmail(email);
+  if (byEmail && byEmail.id !== userId) return { error: "Another account already uses that email." };
+  if (input.phone) {
+    const byPhone = await findUserByPhone(input.phone);
+    if (byPhone && byPhone.id !== userId) return { error: "Another account already uses that phone number." };
+  }
+
+  const db = await getDb();
+  const [before] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId));
+  if (!before) return { error: "No such user." };
+  const [u] = await db
+    .update(users)
+    .set({
+      name: input.name.trim(),
+      email,
+      phone: input.phone,
+      // A new address hasn't been proved yet.
+      ...(before.email.toLowerCase() !== email ? { emailVerifiedAt: null } : {}),
+    })
+    .where(eq(users.id, userId))
+    .returning();
+  return toUser(u);
+}
+
 export interface UserPatch {
   roleId?: string;
   grants?: string[];

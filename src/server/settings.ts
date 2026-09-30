@@ -1,5 +1,7 @@
 // Server-only. Loads, saves and describes integration settings.
 import { and, eq } from "drizzle-orm";
+import { DEFAULT_PICKUP_COMMISSION, MAX_PICKUP_COMMISSION } from "@/lib/commission";
+import { DEFAULT_PREMIUM_FEE, MAX_PREMIUM_FEE } from "@/lib/packages";
 import {
   DEFAULT_PRICES,
   DEFAULT_REMINDERS,
@@ -91,7 +93,7 @@ export async function saveSetting(
 
   // Callbacks from Safaricom and Africa's Talking carry no signature, so each
   // one is addressed with an unguessable token we can check on arrival.
-  if ((key === "mpesa" || key === "ussd") && !config.webhookToken) config.webhookToken = randomToken();
+  if ((key === "mpesa" || key === "ussd" || key === "sms" || key === "email") && !config.webhookToken) config.webhookToken = randomToken();
 
   // Changing credentials invalidates the last test.
   const status = changed.length ? "unconfigured" : (existing?.status ?? "unconfigured");
@@ -155,7 +157,13 @@ export async function callbacksFor(scope: string, key: IntegrationKey, config: R
     return [{ label: "USSD callback URL", url: `${base}/api/ussd/${token}` }];
   }
   if (key === "sms") {
-    return [{ label: "Delivery reports URL (optional)", url: `${base}/api/sms/delivery` }];
+    return [
+      { label: "Delivery reports URL (optional)", url: `${base}/api/sms/delivery` },
+      ...(token ? [{ label: "Incoming messages URL (Premium replies)", url: `${base}/api/inbound/sms/${token}` }] : []),
+    ];
+  }
+  if (key === "email" && token) {
+    return [{ label: "Inbound email webhook (Premium replies)", url: `${base}/api/inbound/email/${token}` }];
   }
   return undefined;
 }
@@ -199,6 +207,10 @@ export function defaultsFor(key: IntegrationKey): Record<string, unknown> {
       return { ...DEFAULT_REMINDERS };
     case "pricing":
       return { ...DEFAULT_PRICES };
+    case "commission":
+      return { pickupRate: DEFAULT_PICKUP_COMMISSION };
+    case "packages":
+      return { premiumFee: DEFAULT_PREMIUM_FEE };
     case "sms":
       return { environment: "sandbox" };
     case "ai":
@@ -232,3 +244,46 @@ export async function priceList(company: string): Promise<Record<string, number>
   }
   return out;
 }
+
+/**
+ * The platform's percent of a company's paid pickups: the company's own rate
+ * if it has one, else the platform default, else 10%.
+ */
+export async function pickupCommissionRate(company: string): Promise<number> {
+  const db = await getDb();
+  const [row] = await db
+    .select({ rate: schema.companies.pickupCommission })
+    .from(schema.companies)
+    .where(eq(schema.companies.id, company));
+  return validRate(row?.rate) ? row!.rate! : platformPickupCommission();
+}
+
+/** The platform's default pickup commission, for companies without their own rate. */
+export async function platformPickupCommission(): Promise<number> {
+  const s = await loadSetting("platform", "commission");
+  const rate = s?.config.pickupRate;
+  return validRate(rate) ? rate : DEFAULT_PICKUP_COMMISSION;
+}
+
+const validRate = (rate: unknown): rate is number =>
+  typeof rate === "number" && rate >= 0 && rate <= MAX_PICKUP_COMMISSION;
+
+/** The monthly Premium fee for a company: its own fee if it has one, else the platform's. */
+export async function premiumFeeFor(company: string): Promise<number> {
+  const db = await getDb();
+  const [row] = await db
+    .select({ fee: schema.companies.premiumFee })
+    .from(schema.companies)
+    .where(eq(schema.companies.id, company));
+  return validFee(row?.fee) ? row!.fee! : platformPremiumFee();
+}
+
+/** The platform's default Premium fee. */
+export async function platformPremiumFee(): Promise<number> {
+  const s = await loadSetting("platform", "packages");
+  const fee = s?.config.premiumFee;
+  return validFee(fee) ? fee : DEFAULT_PREMIUM_FEE;
+}
+
+const validFee = (fee: unknown): fee is number =>
+  typeof fee === "number" && Number.isInteger(fee) && fee >= 0 && fee <= MAX_PREMIUM_FEE;

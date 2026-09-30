@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { trialBalance, validateLines, type JournalEntry } from "@/lib/accounting";
 import { luhn, nextClientNumber, normalisePhone, parseClientNumber } from "@/lib/clientNumber";
+import { commissionOf, pct } from "@/lib/commission";
 import { invoicesFor } from "@/lib/invoices";
 import { companyById, COMPANIES, companyForEstate } from "@/lib/reference/companies";
 import { DEMO_COMPANIES, DEMO_ESTATES } from "@/lib/reference/demo";
@@ -81,6 +82,29 @@ describe("the books", () => {
     const tb = trialBalance(entries, "2026-09-30");
     expect(tb.balanced).toBe(true);
     expect(tb.debit).toBe(500);
+  });
+});
+
+describe("platform commission", () => {
+  it("takes the rate's share of a pickup, to the shilling", () => {
+    expect(commissionOf(1500, 10)).toBe(150);
+    expect(commissionOf(1250, 7.5)).toBe(94); // 93.75
+    expect(commissionOf(800, 0)).toBe(0);
+  });
+
+  it("books as a balanced expense against what's owed to the platform", () => {
+    const amount = commissionOf(3500, 10);
+    expect(
+      validateLines([
+        { account: "5550", debit: amount, credit: 0 },
+        { account: "2300", debit: 0, credit: amount },
+      ]),
+    ).toBeNull();
+  });
+
+  it("labels rates without trailing zeros", () => {
+    expect(pct(10)).toBe("10%");
+    expect(pct(7.5)).toBe("7.5%");
   });
 });
 
