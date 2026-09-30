@@ -5,7 +5,9 @@
  * back to the browser — the form shows only whether one is saved.
  */
 
-export type IntegrationKey = "mpesa" | "reminders" | "pricing" | "commission" | "packages" | "sms" | "ussd" | "email" | "ai" | "app";
+import { AUDIT_CATEGORIES, MAX_RETENTION_DAYS, MIN_RETENTION_DAYS } from "./auditRetention";
+
+export type IntegrationKey = "mpesa" | "reminders" | "pricing" | "commission" | "packages" | "auditRetention" | "sms" | "ussd" | "email" | "ai" | "app";
 
 /** "company" settings live per collection company; "platform" ones once. */
 export type IntegrationScope = "company" | "platform";
@@ -183,6 +185,25 @@ export const INTEGRATIONS: IntegrationDef[] = [
         placeholder: "5000",
         help: "Charged at the start of each month, and for the current month when a company upgrades.",
       },
+    ],
+  },
+  {
+    key: "auditRetention",
+    scope: "platform",
+    title: "Audit log retention",
+    provider: "Built in",
+    summary:
+      "How long the audit log keeps each kind of entry. When it's on, the nightly maintenance job removes entries older than these limits, for every company.",
+    testable: false,
+    fields: [
+      { name: "enabled", label: "Remove old entries automatically", type: "toggle" },
+      ...AUDIT_CATEGORIES.map((c) => ({
+        name: c.field,
+        label: `${c.label} (days)`,
+        type: "number" as const,
+        placeholder: String(c.defaultDays),
+        help: `${c.detail} ${MIN_RETENTION_DAYS} to ${MAX_RETENTION_DAYS}; blank keeps ${c.defaultDays}.`,
+      })),
     ],
   },
   {

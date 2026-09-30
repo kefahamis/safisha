@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { trialBalance, validateLines, type JournalEntry } from "@/lib/accounting";
+import { auditCategory, MAX_RETENTION_DAYS, MIN_RETENTION_DAYS, retentionPolicy } from "@/lib/auditRetention";
 import { luhn, nextClientNumber, normalisePhone, parseClientNumber } from "@/lib/clientNumber";
 import { commissionOf, pct } from "@/lib/commission";
 import { invoicesFor } from "@/lib/invoices";
@@ -173,5 +174,30 @@ describe("rate limit keys", () => {
   it("treat every spelling of a phone or email as one person", () => {
     expect(who("+254 712 345 678")).toBe(who("0712345678"));
     expect(who("  Ops@TakaSafi.co.ke ")).toBe("ops@takasafi.co.ke");
+  });
+});
+
+describe("audit log retention", () => {
+  it("files each action under the first category that claims it", () => {
+    expect(auditCategory("user.signin")).toBe("signin");
+    expect(auditCategory("user.update")).toBe("access");
+    expect(auditCategory("settings.save")).toBe("access");
+    expect(auditCategory("settings.test.pass")).toBe("system");
+    expect(auditCategory("journal.post")).toBe("money");
+    expect(auditCategory("client.create")).toBe("money");
+    expect(auditCategory("fleet.vehicle")).toBe("other");
+  });
+
+  it("is off by default and fills in defaults for blanks", () => {
+    const p = retentionPolicy({});
+    expect(p.enabled).toBe(false);
+    expect(p.days).toEqual({ signin: 90, money: 1825, access: 730, system: 30, other: 365 });
+    expect(retentionPolicy({ enabled: true, signinDays: "" }).days.signin).toBe(90);
+  });
+
+  it("never keeps entries for less than the minimum or more than the maximum", () => {
+    const p = retentionPolicy({ enabled: true, signinDays: 1, otherDays: 99999 });
+    expect(p.days.signin).toBe(MIN_RETENTION_DAYS);
+    expect(p.days.other).toBe(MAX_RETENTION_DAYS);
   });
 });

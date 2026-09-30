@@ -50,7 +50,18 @@ const ACTION: Record<string, string> = {
   "fleet.settings": "Changed fleet rules",
   "fleet.incident": "Reported incident",
   "fleet.incident.close": "Closed incident",
+  "audit.purge": "Cleaned up audit log",
+  "package.change": "Changed care package",
+  "profile.update": "Updated profile",
+  "profile.password": "Changed password",
 };
+
+/** "730 days" reads better as "2 years". */
+function period(days: number) {
+  if (days % 365 === 0) return `${days / 365} year${days === 365 ? "" : "s"}`;
+  if (days % 30 === 0 && days < 365) return `${days / 30} month${days === 30 ? "" : "s"}`;
+  return `${days} days`;
+}
 
 /** Summarises the detail object without dumping raw JSON on people. */
 function describe(detail: Record<string, unknown>): string {
@@ -64,6 +75,7 @@ export function AuditLog() {
   const [q, setQ] = useState("");
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [platformWide, setPlatformWide] = useState(false);
+  const [retention, setRetention] = useState<{ label: string; days: number }[] | null>(null);
 
   useEffect(() => {
     const t = window.setTimeout(async () => {
@@ -71,6 +83,7 @@ export function AuditLog() {
       const body = await res.json();
       setEntries(body.entries ?? []);
       setPlatformWide(Boolean(body.platformWide));
+      setRetention(body.retention ?? null);
     }, 250);
     return () => window.clearTimeout(t);
   }, [q]);
@@ -81,6 +94,12 @@ export function AuditLog() {
         Who changed settings, access, clients and payments. {platformWide ? "Every company." : "Your company only."} Key
         values are never recorded, only which fields changed.
       </PageHead>
+      {retention && (
+        <p className="hint" style={{ marginTop: -8, marginBottom: 14 }}>
+          Kept for: {retention.map((r) => `${r.label.toLowerCase()} ${period(r.days)}`).join(" · ")}. Older entries are removed
+          each night{platformWide ? "; change this under Settings › Security & audit" : ""}.
+        </p>
+      )}
       <Panel>
         <div className="row" style={{ marginBottom: 12 }}>
           <label className="search" style={{ flex: 1, minWidth: 180 }}>

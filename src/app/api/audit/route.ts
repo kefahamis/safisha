@@ -1,4 +1,6 @@
 import { and, desc, eq, ilike, or } from "drizzle-orm";
+import { AUDIT_CATEGORIES } from "@/lib/auditRetention";
+import { auditRetentionPolicy } from "@/server/auditRetention";
 import { getDb, schema } from "@/server/db";
 import { errorResponse, requirePermission } from "@/server/session";
 
@@ -28,9 +30,11 @@ export async function GET(request: Request) {
       .orderBy(desc(a.id))
       .limit(200);
 
+    const policy = await auditRetentionPolicy();
     return Response.json({
       entries: rows.map((r) => ({ ...r, at: r.at.toISOString() })),
       platformWide: !session.scope.companyId,
+      retention: policy.enabled ? AUDIT_CATEGORIES.map((c) => ({ label: c.label, days: policy.days[c.key] })) : null,
     });
   } catch (err) {
     return errorResponse(err);

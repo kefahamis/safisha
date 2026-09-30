@@ -1,4 +1,5 @@
 import { SYSTEM_ACTOR, audit } from "@/server/audit";
+import { purgeAuditLog } from "@/server/auditRetention";
 import { BackupUnavailable, runBackup } from "@/server/backup";
 import { refuseCron } from "@/server/cron";
 import { sweepLimits } from "@/server/rateLimit";
@@ -10,9 +11,10 @@ export const maxDuration = 300;
 
 /**
  * The nightly housekeeping job (netlify/functions/cron-maintenance.mts): back up the database, move any
- * photos still in the database into Blob storage, and forget old rate-limit
- * counters. Each step runs even if an earlier one fails; a failure is reported
- * (and so reaches Sentry) after the rest have had their turn.
+ * photos still in the database into Blob storage, forget old rate-limit
+ * counters, and age out audit-log entries past the retention limits. Each
+ * step runs even if an earlier one fails; a failure is reported (and so
+ * reaches Sentry) after the rest have had their turn.
  */
 export async function POST(request: Request) {
   const refused = refuseCron(request, "maintenance");
@@ -46,6 +48,8 @@ export async function POST(request: Request) {
     return { moved };
   });
   await step("rateLimits", sweepLimits);
+  // Before this run is itself logged, so the new entry is never the one removed.
+  await step("auditLog", () => purgeAuditLog());
 
   await audit(SYSTEM_ACTOR, { action: "maintenance.run", detail: result });
   if (failures.length) throw new Error(`Maintenance failed: ${failures.join(", ")}`);
