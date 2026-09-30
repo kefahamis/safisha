@@ -1,3 +1,4 @@
+import type { ClientDocumentInput } from "@/lib/clientDocuments";
 import type { Command, CommandResult, StopProofInput, VehiclePatch } from "@/lib/commands";
 import type { FleetSettings } from "@/lib/fleet";
 import type { TicketPriority } from "@/lib/tickets";
@@ -11,6 +12,7 @@ export interface NewClientInput {
   estate: string;
   type: ClientType;
   plan: number;
+  documents?: ClientDocumentInput[];
 }
 
 export interface C2BInput {
@@ -68,6 +70,19 @@ export async function uploadPhoto(blob: Blob): Promise<string> {
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok || !body.id) throw new Error(body.error ?? "Photo upload failed.");
+  return body.id as string;
+}
+
+/** Uploads a client document: photos are downsized like any other, PDFs go as they are. */
+export async function uploadDocument(file: File): Promise<string> {
+  if (file.type.startsWith("image/")) return uploadPhoto(file);
+  const res = await fetch("/api/files", {
+    method: "POST",
+    headers: { "content-type": file.type || "application/pdf" },
+    body: file,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || !body.id) throw new Error(body.error ?? "Upload failed.");
   return body.id as string;
 }
 
@@ -384,6 +399,7 @@ export function createActions(store: AppStore) {
         estate: input.estate,
         clientType: input.type,
         plan: input.plan,
+        documents: input.documents,
       });
       if (!result.ok) return result;
       update((s) => {

@@ -2,6 +2,7 @@
 
 import { CalendarCheck, FileText, House, MapPin, Phone, Store, UserRound } from "lucide-react";
 import { PeriodSelect, StatementTable } from "@/components/billing/StatementTable";
+import { ClientDocuments } from "@/components/clients/ClientDocuments";
 import { BalanceChip } from "@/components/ui/Chip";
 import { PageHead, Panel } from "@/components/ui/Panel";
 import { fmtDate } from "@/lib/format";
@@ -69,6 +70,7 @@ export function CompanyStatements() {
           </span>
         </div>
 
+        <ClientDocuments clientId={client.id} />
         <StatementTable clientId={client.id} />
       </Panel>
     </>

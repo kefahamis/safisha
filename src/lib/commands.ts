@@ -1,3 +1,4 @@
+import type { ClientDocumentInput } from "./clientDocuments";
 import type { CheckAnswer, DocSubject, FleetSettings, IncidentKind, Vehicle, WorkOrderKind, WorkOrderStatus } from "./fleet";
 import type { TicketPriority } from "./tickets";
 import type {
@@ -62,6 +63,8 @@ export type Command =
       estate: string;
       clientType: ClientType;
       plan: number;
+      /** Already uploaded through /api/files by the same user. */
+      documents?: ClientDocumentInput[];
     }
   | { type: "stk.start"; client: string; phone: string; amount: number; purpose: string }
   | { type: "stk.simulate"; request: string; approve: boolean }

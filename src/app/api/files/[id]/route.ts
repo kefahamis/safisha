@@ -24,7 +24,7 @@ export async function GET(_request: Request, { params }: Params) {
       const body = await openFile(file);
       if (!body) return new Response("Not found", { status: 404 });
       return new Response(body, {
-        headers: { "Content-Type": file.mime, "Cache-Control": "public, max-age=86400, immutable" },
+        headers: { "Content-Type": file.mime, "Cache-Control": "public, max-age=86400, immutable", "X-Content-Type-Options": "nosniff" },
       });
     }
 
@@ -44,6 +44,7 @@ export async function GET(_request: Request, { params }: Params) {
       headers: {
         "Content-Type": file.mime,
         "Cache-Control": "private, max-age=86400, immutable",
+        "X-Content-Type-Options": "nosniff",
       },
     });
   } catch (err) {
