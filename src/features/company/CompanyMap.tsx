@@ -19,7 +19,7 @@ export function CompanyMap() {
       <div className="grid g-main">
         <div>
           <CityMap companyId={co.id} />
-          <MapLegend />
+          <MapLegend companyId={co.id} />
         </div>
         <Panel title="Trucks" icon={Truck}>
           <TruckList companyId={co.id} />

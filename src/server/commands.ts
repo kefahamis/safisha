@@ -1,6 +1,7 @@
 // Server-only. Applies one command for one session, after checking it's allowed.
-import { and, eq, like } from "drizzle-orm";
+import { and, eq, inArray, like } from "drizzle-orm";
 import type { Session } from "@/lib/auth/types";
+import { CLIENT_DOCUMENT_KINDS, MAX_CLIENT_DOCUMENTS } from "@/lib/clientDocuments";
 import { luhn, normalisePhone, KE_MOBILE } from "@/lib/clientNumber";
 import type { Command, CommandResult } from "@/lib/commands";
 import { fmtDate, kes, MONTHS, pad } from "@/lib/format";
@@ -522,6 +523,24 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
       const plan = Math.max(100, Math.round(cmd.plan || 600));
       const type = cmd.clientType === "Business" ? "Business" : "Household";
 
+      // Documents must be files this user just uploaded, not someone else's.
+      const docs = Array.isArray(cmd.documents) ? cmd.documents : [];
+      if (docs.length > MAX_CLIENT_DOCUMENTS) return { ok: false, error: `Attach at most ${MAX_CLIENT_DOCUMENTS} documents.` };
+      const fileIds = docs.map((d) => String(d?.file ?? ""));
+      const uploaded = fileIds.length
+        ? await db
+            .select({ id: t.files.id, owner: t.files.owner, mime: t.files.mime, size: t.files.size })
+            .from(t.files)
+            .where(inArray(t.files.id, fileIds))
+        : [];
+      const fileById = new Map(uploaded.map((f) => [f.id, f]));
+      for (const d of docs) {
+        const f = fileById.get(String(d?.file ?? ""));
+        if (!f || f.owner !== session.sub) return { ok: false, error: "Upload the documents again." };
+        if (!(CLIENT_DOCUMENT_KINDS as readonly string[]).includes(d.kind)) return { ok: false, error: "Pick what each document is." };
+      }
+      if (new Set(fileIds).size !== fileIds.length) return { ok: false, error: "The same file is attached twice." };
+
       let id = "";
       await db.transaction(async (tx) => {
         const key = cmd.company + cmd.estate;
@@ -551,6 +570,26 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
           amount: plan,
           desc: `Collection fee · ${MONTHS[Number(month.slice(5)) - 1]} ${month.slice(0, 4)}`,
         });
+        if (docs.length) {
+          await tx.insert(t.clientDocuments).values(
+            docs.map((d) => {
+              const f = fileById.get(d.file)!;
+              return {
+                client: id,
+                company: cmd.company,
+                kind: d.kind,
+                name: String(d.name ?? "").trim().slice(0, 120) || d.kind,
+                file: d.file,
+                mime: f.mime,
+                size: f.size ?? 0,
+                uploadedAt: at,
+                uploadedBy: session.sub,
+              };
+            }),
+          );
+          // Filed under the company, so its staff can open them, not just the uploader.
+          await tx.update(t.files).set({ company: cmd.company }).where(inArray(t.files.id, fileIds));
+        }
       });
 
       const co = companyById(cmd.company);
@@ -560,7 +599,7 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
         purpose: "welcome",
         body: `Karibu ${name.split(" ")[0]}! Your ${co.name} account number is ${id}. Pay via M-Pesa Paybill ${co.paybill}, account ${id}. ${kes(plan)}/month.`,
       });
-      await audit(session, { action: "client.create", target: id, company: cmd.company, detail: { name, plan } });
+      await audit(session, { action: "client.create", target: id, company: cmd.company, detail: { name, plan, documents: docs.length } });
       return { ok: true, id, message: name };
     }
 

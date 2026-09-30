@@ -2,7 +2,7 @@
 
 import { LoaderCircle } from "lucide-react";
 import dynamic from "next/dynamic";
-import { COMPANIES } from "@/lib/reference/companies";
+import { COMPANIES, companyById } from "@/lib/reference/companies";
 import type { CityMapProps } from "./CityMapInner";
 
 /**
@@ -21,10 +21,12 @@ export const CityMap = dynamic<CityMapProps>(() => import("./CityMapInner"), {
   ),
 });
 
-export function MapLegend() {
+/** With `companyId`, the legend names only that company; without it, every company. */
+export function MapLegend({ companyId }: { companyId?: string }) {
+  const companies = companyId ? [companyById(companyId)] : COMPANIES;
   return (
     <div className="legend">
-      {COMPANIES.map((c) => (
+      {companies.map((c) => (
         <span className="co" key={c.id}>
           <span className="dot" style={{ background: c.color }} />
           {c.name}

@@ -22,10 +22,6 @@ export function CompanyClients() {
         digit lets Paybill catch mistyped account numbers.
       </PageHead>
 
-      <Can permission="clients.create">
-        <AddClientForm company={co} />
-      </Can>
-
       <Panel>
         <div className="row" style={{ marginBottom: 12 }}>
           <ClientSearch id="cl-q" />
@@ -44,6 +40,11 @@ export function CompanyClients() {
               ))}
             </select>
           </label>
+          <Can permission="clients.create">
+            <div style={{ marginLeft: "auto" }}>
+              <AddClientForm company={co} />
+            </div>
+          </Can>
         </div>
         <ClientTable clients={clientsOf(s, co.id)} />
         <p className="hint with-ico">

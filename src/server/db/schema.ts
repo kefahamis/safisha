@@ -105,6 +105,20 @@ export const clients = pgTable("clients", {
   lang: text("lang").notNull().default("en"),
 });
 
+/** Papers kept on file for a client (ID, permit, agreement); the bytes live in `files`. */
+export const clientDocuments = pgTable("client_documents", {
+  id: serial("id").primaryKey(),
+  client: text("client").notNull(),
+  company: text("company").notNull(),
+  kind: text("kind").notNull(),
+  name: text("name").notNull(),
+  file: text("file").notNull(),
+  mime: text("mime").notNull(),
+  size: integer("size").notNull(),
+  uploadedAt: text("uploaded_at").notNull(),
+  uploadedBy: text("uploaded_by").notNull(),
+});
+
 /** Next sequence number per company+estate, for issuing client numbers. */
 export const clientSeq = pgTable("client_seq", {
   key: text("key").primaryKey(),
