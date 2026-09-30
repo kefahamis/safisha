@@ -4,8 +4,9 @@ import { allowedWorkspaces } from "@/lib/auth/defaultRoles";
 import type { User } from "@/lib/auth/types";
 import { findRole, recordLogin } from "./accessStore";
 import { audit } from "./audit";
-import { SESSION_COOKIE, sessionCookieOptions, signSession } from "./jwt";
+import { SESSION_COOKIE, SESSION_TTL_SECONDS, sessionCookieOptions, signSession } from "./jwt";
 import { signInGate } from "./mfa";
+import { revokeSession, startSession } from "./sessions";
 import { nowStamp } from "./time";
 
 export type SignInResult =
@@ -17,7 +18,16 @@ export type SignInResult =
  * two-step sign-in on, a correct first step only earns the second one; the
  * session starts when that passes (`secondStepDone`).
  */
-export async function issueSession(user: User, opts: { secondStepDone?: string } = {}): Promise<SignInResult> {
+export async function issueSession(
+  user: User,
+  opts: {
+    secondStepDone?: string;
+    /** How they proved who they are, for their list of sign-ins. */
+    method?: string;
+    /** A session this one takes over from (leaving the two-step setup hold); it's ended. */
+    replaces?: string;
+  } = {},
+): Promise<SignInResult> {
   if (user.suspended) {
     return { ok: false, status: 403, error: "This account is suspended. Contact your administrator." };
   }
@@ -27,6 +37,9 @@ export async function issueSession(user: User, opts: { secondStepDone?: string }
   const gate = opts.secondStepDone ? "session" : await signInGate(user, role.workspace);
   if (gate === "challenge") return { ok: true, workspace: role.workspace, mfa: true };
 
+  const method = opts.secondStepDone && opts.secondStepDone !== "setup" ? `two-step (${opts.secondStepDone})` : (opts.method ?? "password");
+  const sid = await startSession(user.id, method, SESSION_TTL_SECONDS);
+  if (opts.replaces) await revokeSession(opts.replaces, user.id);
   const token = await signSession({
     sub: user.id,
     name: user.name,
@@ -37,6 +50,7 @@ export async function issueSession(user: User, opts: { secondStepDone?: string }
     allowed: allowedWorkspaces(role),
     // Required but not set up: in, but held on the security page until it is.
     ...(gate === "setup" ? { setup: true } : {}),
+    sid,
   });
   await recordLogin(user.id, nowStamp());
   // Clients sign in all day; the log is for staff access.

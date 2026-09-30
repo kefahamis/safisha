@@ -53,6 +53,17 @@ export interface User {
   passwordHash: string;
   createdAt: string;
   lastLoginAt?: string;
+  /** A files id for their picture. */
+  photo?: string;
+  /** system | light | dark */
+  theme?: string;
+  /** Care agents: added under their replies. */
+  signature?: string;
+  /** Care agents: away from the desk. */
+  away?: boolean;
+  /** Staff: where they land after signing in. */
+  startPage?: string;
+  phoneVerifiedAt?: string;
 }
 
 /** The signed half of the session — what the JWT carries. */
@@ -77,6 +88,10 @@ export interface Session extends SessionClaims {
   allowed: Workspace[];
   /** The platform requires two-step sign-in and this person hasn't set it up yet. */
   setupRequired?: boolean;
+  /** This sign-in's sessions row. */
+  sid?: string;
+  photo?: string;
+  theme: "system" | "light" | "dark";
 }
 
 export type PublicUser = Omit<User, "passwordHash">;

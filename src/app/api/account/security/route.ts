@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       let unlocked = false;
       if (session.setupRequired) {
         const fresh = await findUserById(user.id);
-        if (fresh) unlocked = (await issueSession(fresh, { secondStepDone: "setup" })).ok;
+        if (fresh) unlocked = (await issueSession(fresh, { secondStepDone: "setup", replaces: session.sid })).ok;
       }
       return Response.json({ ...res, unlocked, view: await securityView(user) });
     };

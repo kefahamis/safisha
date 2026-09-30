@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       return Response.json({ error: res.error }, { status: 400 });
     }
     await clearLimit(limits[0][0]);
-    const signed = await issueSession(res.user);
+    const signed = await issueSession(res.user, { method: "password reset" });
     if (!signed.ok) return Response.json({ error: signed.error }, { status: signed.status });
     return Response.json({ ok: true, workspace: signed.workspace, mfa: signed.mfa });
   } catch (err) {

@@ -30,7 +30,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const reference = await referenceForClient();
 
   return (
-    <html lang={session?.lang === "sw" ? "sw" : "en"} suppressHydrationWarning>
+    <html
+      lang={session?.lang === "sw" ? "sw" : "en"}
+      data-theme={session && session.theme !== "system" ? session.theme : undefined}
+      suppressHydrationWarning
+    >
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />

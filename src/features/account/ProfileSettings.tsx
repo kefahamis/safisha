@@ -1,33 +1,47 @@
 "use client";
 
-import { BadgeCheck, CircleAlert, Eye, EyeOff, KeyRound, LoaderCircle, Save, UserRound } from "lucide-react";
+import {
+  BadgeCheck,
+  Bell,
+  CircleAlert,
+  Database,
+  Eye,
+  EyeOff,
+  Headset,
+  KeyRound,
+  LoaderCircle,
+  MonitorSmartphone,
+  Save,
+  SlidersHorizontal,
+  UserRound,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useSession } from "@/components/auth/SessionProvider";
+import { useTabStrip } from "@/components/ui/useTabStrip";
 import { Chip } from "@/components/ui/Chip";
 import { Empty, PageHead, Panel } from "@/components/ui/Panel";
 import { useToast } from "@/components/ui/ToastProvider";
-import { fmtDate, initials } from "@/lib/format";
+import { fmtDate } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import { passwordStrength, type ProfileView } from "@/lib/profile";
+import { CareDeskSettings, ClientNotifications, PhotoPicker, Preferences, SignIns, VerifyButton, YourData } from "./ProfileSections";
+import { send } from "./send";
 
-async function send(url: string, method: string, body: Record<string, unknown>) {
-  const res = await fetch(url, {
-    method,
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const out = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(out.error ?? "That didn't work.");
-  return out;
-}
+type Tab = "details" | "password" | "preferences" | "notifications" | "desk" | "signins" | "data";
+
 
 const digits = (p: string) => p.replace(/\D/g, "").replace(/^254/, "0");
 
-/** Each person's own details, and their password. */
+/** Each person's own account: details, password, preferences, sign-ins and their data. */
 export function ProfileSettings() {
+  const { t } = useT();
   const [view, setView] = useState<ProfileView | null>(null);
   const [error, setError] = useState("");
+  const [tab, setTab] = useState<Tab>("details");
+  const tabStrip = useTabStrip<HTMLDivElement>(tab);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/account/profile", { cache: "no-store" });
@@ -49,14 +63,39 @@ export function ProfileSettings() {
     );
   }
 
+  const tabs: { id: Tab; label: string; icon: LucideIcon; show: boolean }[] = [
+    { id: "details", label: t("Your details"), icon: UserRound, show: true },
+    { id: "password", label: t("Password"), icon: KeyRound, show: true },
+    { id: "preferences", label: t("Preferences"), icon: SlidersHorizontal, show: true },
+    { id: "notifications", label: t("Notifications"), icon: Bell, show: Boolean(view.client) },
+    { id: "desk", label: "Care desk", icon: Headset, show: Boolean(view.agent) },
+    { id: "signins", label: t("Sign-ins"), icon: MonitorSmartphone, show: true },
+    { id: "data", label: t("Your data"), icon: Database, show: true },
+  ];
+
   return (
     <>
-      <PageHead title="Profile" icon={UserRound}>
-        Your name and how to reach you, and the password you sign in with.
+      <PageHead title={t("Profile")} icon={UserRound}>
+        {t("Your details, password, preferences, where you're signed in, and a copy of your data.")}
       </PageHead>
-      <div className="grid g2 profile-grid">
-        <DetailsForm view={view} onSaved={setView} />
-        <PasswordForm />
+      <div className="tabs" role="tablist" aria-label={t("Profile")} ref={tabStrip}>
+        {tabs
+          .filter((x) => x.show)
+          .map((x) => (
+            <button key={x.id} type="button" role="tab" aria-selected={tab === x.id} className="tab" onClick={() => setTab(x.id)}>
+              <x.icon size={15} strokeWidth={2.2} aria-hidden="true" />
+              {x.label}
+            </button>
+          ))}
+      </div>
+      <div className="profile-tab">
+        {tab === "details" && <DetailsForm view={view} onSaved={setView} />}
+        {tab === "password" && <PasswordForm />}
+        {tab === "preferences" && <Preferences view={view} onSaved={setView} />}
+        {tab === "notifications" && view.client && <ClientNotifications view={view} onSaved={setView} />}
+        {tab === "desk" && view.agent && <CareDeskSettings view={view} onSaved={setView} />}
+        {tab === "signins" && <SignIns />}
+        {tab === "data" && <YourData view={view} />}
       </div>
     </>
   );
@@ -114,9 +153,7 @@ function DetailsForm({ view, onSaved }: { view: ProfileView; onSaved: (v: Profil
   return (
     <Panel title="Your details" icon={UserRound}>
       <div className="profile-who">
-        <span className="avatar lg" aria-hidden="true">
-          {initials(name || view.name)}
-        </span>
+        <PhotoPicker name={name || view.name} photo={view.photo} onSaved={onSaved} />
         <div>
           <b>{view.name}</b>
           <div className="hint">
@@ -153,9 +190,20 @@ function DetailsForm({ view, onSaved }: { view: ProfileView; onSaved: (v: Profil
           />
           {view.emailCodesOn && <LockedHint what="email codes" />}
         </label>
+        {!view.emailVerified && !emailChanged && (
+          <VerifyButton channel="email" onVerified={() => onSaved({ ...view, emailVerified: true })} />
+        )}
 
         <label className="f">
-          Mobile number <span className="hint">(for SMS sign-in codes and password resets)</span>
+          <span className="row" style={{ gap: 8 }}>
+            Mobile number
+            {view.phoneVerified && !phoneChanged && view.phone && (
+              <Chip tone="ok" icon={BadgeCheck}>
+                Verified
+              </Chip>
+            )}
+          </span>
+          <span className="hint">For SMS sign-in codes and password resets.</span>
           <input
             type="tel"
             inputMode="tel"
@@ -168,6 +216,9 @@ function DetailsForm({ view, onSaved }: { view: ProfileView; onSaved: (v: Profil
           />
           {view.smsCodesOn && <LockedHint what="SMS codes" />}
         </label>
+        {view.phone && !view.phoneVerified && !phoneChanged && (
+          <VerifyButton channel="phone" onVerified={() => onSaved({ ...view, phoneVerified: true })} />
+        )}
 
         {needsPassword && (
           <label className="f">
@@ -199,6 +250,7 @@ function PasswordForm() {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [signOutOthers, setSignOutOthers] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -212,11 +264,11 @@ function PasswordForm() {
     setBusy(true);
     setError("");
     try {
-      await send("/api/account/password", "POST", { currentPassword: current, newPassword: next });
+      const out = await send("/api/account/password", "POST", { currentPassword: current, newPassword: next, signOutOthers });
       setCurrent("");
       setNext("");
       setConfirm("");
-      toast("Password changed.");
+      toast(out.signedOut ? `Password changed. ${out.signedOut} other device${out.signedOut === 1 ? " was" : "s were"} signed out.` : "Password changed.");
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -258,9 +310,11 @@ function PasswordForm() {
           {busy ? <LoaderCircle size={15} strokeWidth={2.2} className="spin" aria-hidden="true" /> : <KeyRound size={15} strokeWidth={2.2} aria-hidden="true" />}
           Change password
         </button>
-        <p className="hint">
-          You stay signed in here. Other devices stay signed in until their session runs out, within 8 hours.
-        </p>
+        <label className="check-row">
+          <input type="checkbox" checked={signOutOthers} onChange={(e) => setSignOutOthers(e.target.checked)} />
+          Sign out my other devices
+        </label>
+        <p className="hint">You stay signed in here.</p>
       </form>
     </Panel>
   );

@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "That code is wrong or has expired." }, { status: 400 });
     }
     await clearLimit(limits[0][0]);
-    const signed = await issueSession(user);
+    const signed = await issueSession(user, { method: "phone code" });
     if (!signed.ok) return Response.json({ error: signed.error }, { status: signed.status });
     return Response.json({ ok: true, workspace: signed.workspace, mfa: signed.mfa });
   } catch (err) {

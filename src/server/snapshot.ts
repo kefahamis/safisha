@@ -212,6 +212,7 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
     type: c.type as Client["type"],
     plan: share.money ? c.plan : 0,
     phone: share.contact ? c.phone : "",
+    mpesaPhone: share.contact ? (c.mpesaPhone ?? undefined) : undefined,
     joined: c.joined,
     lat: c.lat,
     lng: c.lng,

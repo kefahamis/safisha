@@ -1,5 +1,7 @@
 // Server-only. SMS (Africa's Talking) and email (Resend), with an outbox.
+import { sql } from "drizzle-orm";
 import { PACKAGE_SMS_PURPOSES } from "@/lib/packages";
+import { noticeFor } from "@/lib/profile";
 import { getDb, schema } from "../db";
 import { hasFeature } from "../packages";
 import { loadSetting } from "../settings";
@@ -51,6 +53,28 @@ export async function sendSms(input: { to: string; body: string; purpose: string
       error: "Not sent: the company's care package doesn't include SMS.",
     });
     return { status: "skipped" as const, error: null };
+  }
+
+  // A client can turn off billing, collection or care SMS on their Profile.
+  const notice = noticeFor(input.purpose);
+  if (input.company && notice) {
+    const digits = input.to.replace(/\D/g, "").replace(/^254/, "0");
+    const [client] = await db
+      .select({ notify: schema.clients.notify })
+      .from(schema.clients)
+      .where(sql`${schema.clients.company} = ${input.company} and regexp_replace(${schema.clients.phone}, '\\D', '', 'g') = ${digits}`)
+      .limit(1);
+    if (client?.notify[notice] === false) {
+      await db.insert(schema.smsOutbox).values({
+        company: input.company,
+        to: input.to,
+        body: input.body,
+        purpose: input.purpose,
+        status: "skipped",
+        error: "Not sent: the client turned these messages off.",
+      });
+      return { status: "skipped" as const, error: null };
+    }
   }
 
   const cfg = await smsConfig();

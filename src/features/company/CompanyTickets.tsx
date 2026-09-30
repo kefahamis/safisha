@@ -41,9 +41,12 @@ import {
   type TicketChannel,
   type TicketPriority,
 } from "@/lib/tickets";
-import type { Ticket, TicketStatus } from "@/lib/types";
+import type { CareAgent, Ticket, TicketStatus } from "@/lib/types";
 import { useActions, useAppState } from "@/store/StoreProvider";
 import { FormSheet } from "../fleet/FleetForms";
+/** People at their desk first; anyone marked away on their Profile after them. */
+const agentsByAvailability = (agents: CareAgent[]) => [...agents].sort((a, b) => Number(Boolean(a.away)) - Number(Boolean(b.away)));
+
 
 type View = "open" | "mine" | "unassigned" | "overdue" | "resolved" | "all";
 
@@ -352,9 +355,10 @@ function TicketDetail({ ticket, now, onBack }: { ticket: Ticket; now: string; on
                 Owner
                 <select value={ticket.assignee ?? ""} disabled={!mayChange} onChange={(e) => update({ assignee: e.target.value || null })}>
                   <option value="">Unassigned</option>
-                  {s.agents.map((a) => (
+                  {agentsByAvailability(s.agents).map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name}
+                      {a.away ? " (away)" : ""}
                     </option>
                   ))}
                 </select>
@@ -579,9 +583,10 @@ function NewTicket({ onClose, onOpened }: { onClose: () => void; onOpened: (id: 
           Owner
           <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
             <option value="">Unassigned</option>
-            {s.agents.map((a) => (
+            {agentsByAvailability(s.agents).map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
+                {a.away ? " (away)" : ""}
               </option>
             ))}
           </select>

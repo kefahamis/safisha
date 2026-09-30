@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     { ...SYSTEM_ACTOR, sub: res.user.id, name: res.user.name },
     { action: "user.invite.accept", target: res.user.id, company: res.user.scope.companyId ?? null },
   );
-  const signed = await issueSession(res.user);
+  const signed = await issueSession(res.user, { method: "invitation" });
   if (!signed.ok) return Response.json({ error: signed.error }, { status: signed.status });
   return Response.json({ ok: true, workspace: signed.workspace, mfa: signed.mfa });
 }

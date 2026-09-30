@@ -31,6 +31,12 @@ const toUser = (u: typeof users.$inferSelect): User => ({
   lang: u.lang,
   createdAt: u.createdAt,
   lastLoginAt: u.lastLoginAt ?? undefined,
+  photo: u.photo ?? undefined,
+  theme: u.theme,
+  signature: u.signature,
+  away: u.away,
+  startPage: u.startPage ?? undefined,
+  phoneVerifiedAt: u.phoneVerifiedAt ?? undefined,
 });
 
 /* ---------------- roles ---------------- */
@@ -169,7 +175,7 @@ export async function setProfile(
   }
 
   const db = await getDb();
-  const [before] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId));
+  const [before] = await db.select({ email: users.email, phone: users.phone }).from(users).where(eq(users.id, userId));
   if (!before) return { error: "No such user." };
   const [u] = await db
     .update(users)
@@ -177,8 +183,9 @@ export async function setProfile(
       name: input.name.trim(),
       email,
       phone: input.phone,
-      // A new address hasn't been proved yet.
+      // A new address or number hasn't been proved yet.
       ...(before.email.toLowerCase() !== email ? { emailVerifiedAt: null } : {}),
+      ...((before.phone ?? null) !== input.phone ? { phoneVerifiedAt: null } : {}),
     })
     .where(eq(users.id, userId))
     .returning();
@@ -256,21 +263,21 @@ export async function userDepartment(user: Pick<User, "scope">): Promise<Departm
 }
 
 /** A company's active users who hold a permission, by role, department and overrides. */
-export async function companyUsersWith(company: string, permission: string): Promise<{ id: string; name: string }[]> {
+export async function companyUsersWith(company: string, permission: string): Promise<{ id: string; name: string; away?: boolean }[]> {
   const db = await getDb();
   const [userRows, roleRows, deptRows] = await Promise.all([
     db.select().from(users).where(sql`${users.scope}->>'companyId' = ${company}`),
     db.select().from(roles),
     db.select().from(departments).where(eq(departments.company, company)),
   ]);
-  const out: { id: string; name: string }[] = [];
+  const out: { id: string; name: string; away?: boolean }[] = [];
   for (const row of userRows) {
     if (row.suspended) continue;
     const u = toUser(row);
     const role = roleRows.find((r) => r.id === u.roleId);
     const dept = deptRows.find((d) => d.id === u.scope.departmentId);
     const perms = await effectivePermissions(u, role ? toRole(role) : undefined, dept ? { ...dept, permissions: [...dept.permissions] } : null);
-    if (perms.includes(permission)) out.push({ id: u.id, name: u.name });
+    if (perms.includes(permission)) out.push({ id: u.id, name: u.name, ...(u.away ? { away: true } : {}) });
   }
   return out.sort((a, b) => a.name.localeCompare(b.name));
 }

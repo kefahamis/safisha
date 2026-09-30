@@ -47,6 +47,8 @@ export interface Client {
   type: ClientType;
   plan: number;
   phone: string;
+  /** Where M-Pesa prompts go, when the client set one different from their contact number. */
+  mpesaPhone?: string;
   joined: string;
   /** The collection point — a gate, near the estate centroid. */
   lat: number;
@@ -140,6 +142,8 @@ export interface TicketEvent {
 export interface CareAgent {
   id: string;
   name: string;
+  /** Marked away on their Profile: still assignable, but listed last. */
+  away?: boolean;
 }
 
 export type WasteStream = "mixed" | "recyclable" | "organic" | "residual";

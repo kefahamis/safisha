@@ -1,7 +1,6 @@
 import { z } from "zod";
-import type { User } from "@/lib/auth/types";
 import { KE_MOBILE, normalisePhone } from "@/lib/clientNumber";
-import type { ProfileView } from "@/lib/profile";
+import { profileView } from "@/server/account";
 import { findUserById, setProfile } from "@/server/accessStore";
 import { audit } from "@/server/audit";
 import { securityView } from "@/server/mfa";
@@ -13,20 +12,6 @@ import { errorResponse, HttpError, requireSession } from "@/server/session";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-async function view(user: User): Promise<ProfileView> {
-  const sec = await securityView(user);
-  return {
-    name: user.name,
-    email: user.email,
-    phone: user.phone ?? "",
-    emailVerified: sec.emailVerified,
-    emailCodesOn: sec.factors.some((f) => f.method === "email"),
-    smsCodesOn: sec.factors.some((f) => f.method === "sms"),
-    createdAt: user.createdAt,
-    lastLoginAt: user.lastLoginAt,
-  };
-}
-
 async function me() {
   const session = await requireSession();
   const user = await findUserById(session.sub);
@@ -37,8 +22,8 @@ async function me() {
 /** Your own name, email and phone. */
 export async function GET() {
   try {
-    const { user } = await me();
-    return Response.json(await view(user), { headers: { "Cache-Control": "no-store" } });
+    const { session, user } = await me();
+    return Response.json(await profileView(session, user), { headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     return errorResponse(err);
   }
@@ -94,7 +79,7 @@ export async function PATCH(request: Request) {
     if (changed.length) {
       await audit(session, { action: "profile.update", target: saved.email, detail: { changed } });
     }
-    return Response.json({ ok: true, view: await view(saved) });
+    return Response.json({ ok: true, view: await profileView(session, saved) });
   } catch (err) {
     return errorResponse(err);
   }
