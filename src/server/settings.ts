@@ -2,6 +2,7 @@
 import { and, eq } from "drizzle-orm";
 import { DEFAULT_PICKUP_COMMISSION, MAX_PICKUP_COMMISSION } from "@/lib/commission";
 import { DEFAULT_PREMIUM_FEE, MAX_PREMIUM_FEE } from "@/lib/packages";
+import { AUDIT_CATEGORIES } from "@/lib/auditRetention";
 import {
   DEFAULT_PRICES,
   DEFAULT_REMINDERS,
@@ -211,6 +212,11 @@ export function defaultsFor(key: IntegrationKey): Record<string, unknown> {
       return { pickupRate: DEFAULT_PICKUP_COMMISSION };
     case "packages":
       return { premiumFee: DEFAULT_PREMIUM_FEE };
+    case "auditRetention":
+      return {
+        enabled: false,
+        ...Object.fromEntries(AUDIT_CATEGORIES.map((c) => [c.field, c.defaultDays])),
+      };
     case "sms":
       return { environment: "sandbox" };
     case "ai":

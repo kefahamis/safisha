@@ -15,6 +15,7 @@ import {
   Percent,
   PhoneCall,
   RefreshCw,
+  ScrollText,
   Settings,
   ShieldCheck,
   Smartphone,
@@ -28,6 +29,7 @@ import type { IntegrationKey, IntegrationView } from "@/lib/integrations";
 import { COMPANIES, companyById } from "@/lib/reference/companies";
 import { PLATFORM } from "@/lib/branding";
 import { BrandingSettings } from "./BrandingSettings";
+import { AuditPurge } from "./AuditPurge";
 import { SecurityPolicyPanel } from "./SecurityPolicy";
 import { IntegrationCard } from "./IntegrationCard";
 import { UssdTester } from "./UssdTester";
@@ -38,6 +40,7 @@ const ICONS: Record<IntegrationKey, LucideIcon> = {
   pricing: Tags,
   commission: Percent,
   packages: Package,
+  auditRetention: ScrollText,
   sms: MessageSquareText,
   ussd: PhoneCall,
   email: Mail,
@@ -121,7 +124,7 @@ export function SettingsCenter({ platform, companyId }: { platform: boolean; com
     { id: "messaging", label: "SMS, USSD & email", icon: MessageSquareText, platformOnly: true },
     { id: "translation", label: "Translation", icon: Languages, platformOnly: true },
     { id: "system", label: "Public address", icon: Globe, platformOnly: true },
-    { id: "security", label: "Sign-in security", icon: ShieldCheck, platformOnly: true },
+    { id: "security", label: "Security & audit", icon: ShieldCheck, platformOnly: true },
     { id: "activity", label: "Activity", icon: Inbox },
   ];
 
@@ -235,7 +238,19 @@ export function SettingsCenter({ platform, companyId }: { platform: boolean; com
         <div className="settings-grid">{card(platformData, "app", setPlatformData)}</div>
       )}
 
-      {platform && tab === "security" && <SecurityPolicyPanel />}
+      {platform && tab === "security" && (
+        <>
+          <SecurityPolicyPanel />
+          <div className="settings-grid" style={{ marginTop: 20 }}>
+            {card(
+              platformData,
+              "auditRetention",
+              setPlatformData,
+              <AuditPurge key={platformData?.integrations.find((i) => i.key === "auditRetention")?.updatedAt ?? "new"} />,
+            )}
+          </div>
+        </>
+      )}
 
       {companyData && tab === "activity" && <Outbox scope={platform ? "platform" : company} />}
     </>

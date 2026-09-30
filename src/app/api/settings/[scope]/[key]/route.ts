@@ -1,6 +1,7 @@
 import { MAX_PICKUP_COMMISSION } from "@/lib/commission";
 import { integrationDef } from "@/lib/integrations";
 import { MAX_PREMIUM_FEE } from "@/lib/packages";
+import { AUDIT_CATEGORIES, MAX_RETENTION_DAYS, MIN_RETENTION_DAYS } from "@/lib/auditRetention";
 import { audit } from "@/server/audit";
 import { saveSetting, viewOf } from "@/server/settings";
 import { asKey, requireSettingsScope } from "@/server/settingsAccess";
@@ -52,6 +53,20 @@ export async function PUT(request: Request, { params }: Params) {
       const fee = Number(config.premiumFee);
       if (!(Number.isInteger(fee) && fee >= 0 && fee <= MAX_PREMIUM_FEE)) {
         return Response.json({ error: "The Premium fee is a whole number of shillings." }, { status: 400 });
+      }
+    }
+
+    if (key === "auditRetention") {
+      for (const c of AUDIT_CATEGORIES) {
+        const raw = config[c.field];
+        if (raw === "" || raw == null) continue;
+        const days = Number(raw);
+        if (!(Number.isInteger(days) && days >= MIN_RETENTION_DAYS && days <= MAX_RETENTION_DAYS)) {
+          return Response.json(
+            { error: `${c.label}: keep entries for ${MIN_RETENTION_DAYS} to ${MAX_RETENTION_DAYS} days.` },
+            { status: 400 },
+          );
+        }
       }
     }
 
