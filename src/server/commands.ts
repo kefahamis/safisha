@@ -1,7 +1,7 @@
 // Server-only. Applies one command for one session, after checking it's allowed.
 import { and, eq, inArray, like } from "drizzle-orm";
 import type { Session } from "@/lib/auth/types";
-import { CLIENT_DOCUMENT_KINDS, MAX_CLIENT_DOCUMENTS } from "@/lib/clientDocuments";
+import { CLIENT_DOCUMENT_KINDS, MAX_CLIENT_DOCUMENTS, missingBusinessKinds } from "@/lib/clientDocuments";
 import { luhn, normalisePhone, KE_MOBILE } from "@/lib/clientNumber";
 import type { Command, CommandResult } from "@/lib/commands";
 import { fmtDate, kes, MONTHS, pad } from "@/lib/format";
@@ -540,6 +540,10 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
         if (!(CLIENT_DOCUMENT_KINDS as readonly string[]).includes(d.kind)) return { ok: false, error: "Pick what each document is." };
       }
       if (new Set(fileIds).size !== fileIds.length) return { ok: false, error: "The same file is attached twice." };
+      if (type === "Business") {
+        const missing = missingBusinessKinds(docs.map((d) => d.kind));
+        if (missing.length) return { ok: false, error: `Attach the business's ${missing.join(", ")}.` };
+      }
 
       let id = "";
       await db.transaction(async (tx) => {

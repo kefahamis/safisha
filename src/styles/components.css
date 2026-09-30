@@ -2106,3 +2106,44 @@ details.panel > summary {
     animation: none;
   }
 }
+
+/* A kind of client document and the files added under it. */
+.doc-group {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.doc-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.doc-group-head h3 {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.doc-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.doc-add select {
+  flex: 1;
+  min-width: 160px;
+}
+
+.doc-add label.btn {
+  cursor: pointer;
+}
+
+.req {
+  color: var(--bad);
+}
