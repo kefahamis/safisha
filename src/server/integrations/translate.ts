@@ -40,7 +40,7 @@ In "glossary", list the slang or idioms from the original message that a reader 
 Glossary:
 ${glossaryForPrompt()}`;
 
-async function aiConfig() {
+export async function aiConfig() {
   const s = await loadSetting("platform", "ai");
   if (!s || s.status !== "ok" || !s.secrets.apiKey) return null;
   return { apiKey: s.secrets.apiKey, model: String(s.config.model || "claude-opus-5") };

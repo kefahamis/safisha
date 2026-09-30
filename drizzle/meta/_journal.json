@@ -78,6 +78,13 @@
       "when": 1790761439942,
       "tag": "0010_pickup_commission",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790763962562,
+      "tag": "0011_care_packages",
+      "breakpoints": true
     }
   ]
 }

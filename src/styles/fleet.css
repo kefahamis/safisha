@@ -866,6 +866,57 @@ tr.flagged td {
   margin-top: 8px;
 }
 
+/* Care packages */
+.pkg-grid {
+  align-items: stretch;
+  margin-bottom: 20px;
+}
+
+.pkg-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pkg-card.current {
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 55%, transparent), var(--shadow);
+}
+
+.pkg-name {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.pkg-price b {
+  font-size: 1.4rem;
+}
+
+.pkg-features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  flex: 1;
+  font-size: 0.88rem;
+}
+
+.pkg-features li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.pkg-features svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--ok);
+}
+
+.pkg-card .btn {
+  align-self: flex-start;
+}
+
 /* Profile */
 .profile-grid {
   align-items: start;

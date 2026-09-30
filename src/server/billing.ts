@@ -4,6 +4,7 @@ import { group, kes, MONTHS } from "@/lib/format";
 import { COMPANIES, companyById } from "@/lib/reference/companies";
 import { getDb, schema } from "./db";
 import { sendSms } from "./integrations/messaging";
+import { chargePremiumMonth } from "./packages";
 import { startStk } from "./payments";
 import { reminderPolicy } from "./settings";
 import { nowStamp, thisMonth, today } from "./time";
@@ -179,6 +180,8 @@ export async function runReminders(company: string) {
 /** The scheduled job: this month's charges, then reminders where turned on. */
 export async function runBillingCycle() {
   const charges = await raiseMonthlyCharges();
+  // What each company on Premium owes the platform for this month.
+  const premium = await chargePremiumMonth();
   const reminders: Record<string, number> = {};
   for (const co of COMPANIES) {
     const policy = await reminderPolicy(co.id);
@@ -186,7 +189,7 @@ export async function runBillingCycle() {
     const res = await runReminders(co.id);
     reminders[co.id] = res.sent.filter((s) => s.ok).length;
   }
-  return { charges, reminders };
+  return { charges, premium, reminders };
 }
 
 export const stageLabel: Record<Stage, string> = {

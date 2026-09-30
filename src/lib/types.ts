@@ -86,7 +86,7 @@ export interface Txn {
 }
 
 export type TicketStatus = "Open" | "Pending" | "Resolved";
-export type TicketAuthor = "client" | "agent" | "sys";
+export type TicketAuthor = "client" | "agent" | "bot" | "sys";
 
 export interface TicketMessage {
   id?: number;
@@ -114,6 +114,8 @@ export interface Ticket {
   assignee?: string;
   assigneeName?: string;
   resolvedAt?: string;
+  /** The care assistant is answering until it hands over or a person replies. */
+  bot?: boolean;
   /** Desk only: notes the client never sees, and what happened to the ticket. */
   notes?: TicketNote[];
   events?: TicketEvent[];

@@ -47,6 +47,7 @@ export const ACCOUNTS: Account[] = [
   { code: "5400", name: "Rent & utilities", type: "expense", section: "Operating expenses" },
   { code: "5500", name: "M-Pesa & bank charges", type: "expense", section: "Operating expenses" },
   { code: "5550", name: "Platform commission", type: "expense", section: "Operating expenses" },
+  { code: "5560", name: "Care package", type: "expense", section: "Operating expenses" },
   { code: "5600", name: "Licences & permits", type: "expense", section: "Operating expenses" },
   { code: "5700", name: "Depreciation", type: "expense", section: "Operating expenses" },
   { code: "5900", name: "Other expenses", type: "expense", section: "Operating expenses" },

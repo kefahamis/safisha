@@ -166,6 +166,8 @@ export const tickets = pgTable("tickets", {
   /** The staff member handling it. */
   assignee: text("assignee"),
   resolvedAt: text("resolved_at"),
+  /** The care assistant answers until it hands over or a person replies. */
+  bot: boolean("bot").notNull().default(false),
 });
 
 /** What happened to a ticket on the desk: assignment, priority, status. Clients never see these. */
@@ -182,7 +184,7 @@ export const ticketEvents = pgTable("ticket_events", {
 export const ticketMessages = pgTable("ticket_messages", {
   id: serial("id").primaryKey(),
   ticket: text("ticket").notNull(),
-  from: text("from").notNull(), // client | agent | sys | note (desk only)
+  from: text("from").notNull(), // client | agent | bot | sys | note (desk only)
   /** The staff member who wrote an agent reply or a note. */
   author: text("author"),
   text: text("text").notNull(),
@@ -375,7 +377,7 @@ export const smsOutbox = pgTable("sms_outbox", {
   to: text("to").notNull(),
   body: text("body").notNull(),
   purpose: text("purpose").notNull(),
-  status: text("status").notNull(), // sent | simulated | failed
+  status: text("status").notNull(), // sent | simulated | failed | skipped (not on the package)
   providerId: text("provider_id"),
   error: text("error"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -582,8 +584,27 @@ export const companies = pgTable("companies", {
   color: text("color").notNull().default("#0E7490"),
   /** The platform's percent of paid pickups for this company; null uses the platform default. */
   pickupCommission: doublePrecision("pickup_commission"),
+  /** Customer-care package: "basic" (the assistant) or "premium" (plus client SMS and email). */
+  carePackage: text("care_package").notNull().default("basic"),
+  /** Monthly Premium fee in shillings for this company; null uses the platform default. */
+  premiumFee: integer("premium_fee"),
+  /** When the company last moved onto Premium; months that start after it are charged. */
+  premiumSince: text("premium_since"),
   createdAt: text("created_at").notNull(),
 });
+
+/** One row per company per month on Premium: what it owes the platform for that month. */
+export const packageCharges = pgTable(
+  "package_charges",
+  {
+    company: text("company").notNull(),
+    /** "YYYY-MM" */
+    month: text("month").notNull(),
+    amount: integer("amount").notNull(),
+    chargedAt: text("charged_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.company, t.month] })],
+);
 
 /** Neighbourhoods served, each licensed to at most one company. */
 export const estates = pgTable("estates", {

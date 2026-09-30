@@ -19,6 +19,7 @@ const COLLECTION_FEES = "4000";
 const PICKUP_FEES = "4100";
 const PLATFORM_PAYABLE = "2300";
 const PLATFORM_COMMISSION = "5550";
+const CARE_PACKAGE = "5560";
 
 const line = (account: string, debit: number, credit: number): JournalLine => ({ account, debit, credit });
 
@@ -40,7 +41,7 @@ export async function companyJournal(company: string): Promise<JournalEntry[]> {
   const clientRows = await db.select({ id: t.clients.id }).from(t.clients).where(eq(t.clients.company, company));
   const clientIds = clientRows.map((c) => c.id);
 
-  const [txnRows, suspenseRows, entryRows, paidPickups] = await Promise.all([
+  const [txnRows, suspenseRows, entryRows, paidPickups, packageRows] = await Promise.all([
     clientIds.length ? db.select().from(t.txns).where(inArray(t.txns.client, clientIds)) : Promise.resolve([]),
     db.select().from(t.suspense).where(eq(t.suspense.company, company)),
     db.select().from(t.journalEntries).where(eq(t.journalEntries.company, company)),
@@ -48,6 +49,7 @@ export async function companyJournal(company: string): Promise<JournalEntry[]> {
       .select()
       .from(t.pickupRequests)
       .where(and(eq(t.pickupRequests.company, company), eq(t.pickupRequests.paid, true))),
+    db.select().from(t.packageCharges).where(eq(t.packageCharges.company, company)),
   ]);
   const lineRows = entryRows.length
     ? await db.select().from(t.journalLines).where(inArray(t.journalLines.entry, entryRows.map((e) => e.id)))
@@ -102,6 +104,18 @@ export async function companyJournal(company: string): Promise<JournalEntry[]> {
       memo: `Platform commission · ${pct(p.commissionRate)} of pickup ${p.id}`,
       reference: p.client,
       lines: [line(PLATFORM_COMMISSION, amount, 0), line(PLATFORM_PAYABLE, 0, amount)],
+    });
+  }
+
+  // The Premium care package, a month at a time, owed to the platform like the commission.
+  for (const c of packageRows) {
+    if (c.amount <= 0) continue;
+    out.push({
+      id: `PKG-${c.month}`,
+      date: c.chargedAt.slice(0, 10),
+      source: "platform",
+      memo: `Premium care package · ${c.month}`,
+      lines: [line(CARE_PACKAGE, c.amount, 0), line(PLATFORM_PAYABLE, 0, c.amount)],
     });
   }
 

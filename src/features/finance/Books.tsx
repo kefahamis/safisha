@@ -23,7 +23,7 @@ export const SOURCE_LABEL: Record<EntrySource, string> = {
   payment: "M-Pesa receipt",
   suspense: "Unmatched receipt",
   fleet: "Fleet",
-  platform: "Platform commission",
+  platform: "Platform fees",
   manual: "Manual",
 };
 

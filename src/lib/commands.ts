@@ -44,6 +44,8 @@ export type Command =
       cat?: string;
     }
   | { type: "ticket.note"; ticket: string; text: string }
+  /** Stop the assistant and put the ticket in front of people. */
+  | { type: "ticket.handoff"; ticket: string }
   | {
       type: "ticket.open";
       client: string;

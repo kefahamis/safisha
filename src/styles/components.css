@@ -1564,6 +1564,21 @@ details.panel > summary {
   border-bottom-left-radius: 6px;
 }
 
+.chat-msg.them.bot {
+  background: color-mix(in srgb, var(--accent-soft) 70%, var(--panel2));
+}
+
+.chat-bot-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
 .chat-msg.me {
   align-self: flex-end;
   background: var(--ink);

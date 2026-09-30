@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Lock, MessageCircleDashed, RefreshCw, Sparkles, Tag } from "lucide-react";
+import { ArrowUp, Bot, Headset, Lock, MessageCircleDashed, RefreshCw, Sparkles, Tag } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/auth/SessionProvider";
 import { StatusChip } from "@/components/ui/Chip";
@@ -178,6 +178,16 @@ export function CareChat({
   };
 
   const [sending, setSending] = useState(false);
+  const [handingOff, setHandingOff] = useState(false);
+
+  /** The client asks for a person, or an agent takes over, before replying. */
+  const handOff = async () => {
+    if (!ticket || handingOff) return;
+    setHandingOff(true);
+    const result = await actions.handOffTicket(ticket.id);
+    setHandingOff(false);
+    toast(result.ok ? (result.message ?? t("Passed to the care team.")) : result.error);
+  };
 
   const send = async () => {
     // Sending mid-animation opens the typed text as the person's own draft.
@@ -305,7 +315,7 @@ export function CareChat({
                 </div>
               ) : (
                 <div className={`chat-row ${m.from === me ? "me" : "them"}`} key={i}>
-                  <div className={`chat-msg ${m.from === me ? "me" : "them"}`}>
+                  <div className={`chat-msg ${m.from === me ? "me" : "them"}${m.from === "bot" ? " bot" : ""}`}>
                     {m.text}
                     {m.photo && (
                       <a
@@ -325,9 +335,11 @@ export function CareChat({
                     <div className="meta">
                       {m.from === me
                         ? t("You")
-                        : m.from === "agent"
-                          ? `${company.name} care`
-                          : client.name}{" "}
+                        : m.from === "bot"
+                          ? t("Care assistant")
+                          : m.from === "agent"
+                            ? `${company.name} care`
+                            : client.name}{" "}
                       · {fmtDate(m.at)}
                     </div>
                   </div>
@@ -347,6 +359,20 @@ export function CareChat({
       )}
 
       <div className="chat-composer-wrap">
+        {ticket?.bot && ticket.status !== "Resolved" && (
+          <div className="chat-bot-bar">
+            <span className="with-ico">
+              <Bot size={14} strokeWidth={2.2} aria-hidden="true" />
+              {me === "client" ? t("Our assistant is answering.") : "The assistant is answering this client."}
+            </span>
+            {(me === "client" || can("tickets.reply")) && (
+              <button type="button" className="btn small ghost" onClick={handOff} disabled={handingOff}>
+                <Headset size={14} strokeWidth={2.2} aria-hidden="true" />
+                {me === "client" ? t("Talk to a person") : "Take over"}
+              </button>
+            )}
+          </div>
+        )}
         {mayWrite ? (
           <form
             className="chat-composer"

@@ -2,10 +2,12 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { MAX_PICKUP_COMMISSION } from "@/lib/commission";
+import { MAX_PREMIUM_FEE } from "@/lib/packages";
 import { applyReference, currentReference, type ReferenceData } from "@/lib/reference/registry";
 import { getDb, type Db } from "./db";
 import * as t from "./db/schema";
 import { createStarterDepartments } from "./db/teamSeed";
+import { packageOverview } from "./packages";
 import { HttpError } from "./session";
 import { platformPickupCommission } from "./settings";
 import { nowStamp } from "./time";
@@ -17,7 +19,9 @@ export async function readReference(db: Db): Promise<ReferenceData> {
   ]);
   return {
     // The commission rate is between the platform and the company, not for every screen.
-    companies: companies.map(({ createdAt: _c, pickupCommission: _p, ...c }) => ({ ...c, estates: [] })),
+    companies: companies.map(
+      ({ createdAt: _c, pickupCommission: _p, carePackage: _k, premiumFee: _f, premiumSince: _s, ...c }) => ({ ...c, estates: [] }),
+    ),
     estates: estates.map(({ createdAt: _c, ...e }) => e),
   };
 }
@@ -59,6 +63,16 @@ export const CompanyBody = z.object({
     .max(MAX_PICKUP_COMMISSION, `The commission is at most ${MAX_PICKUP_COMMISSION}%.`)
     .nullable()
     .optional(),
+  /** Monthly Premium fee in shillings; null uses the platform default. */
+  premiumFee: z
+    .number()
+    .int("The Premium fee is a whole number of shillings.")
+    .min(0, "The Premium fee can't be negative.")
+    .max(MAX_PREMIUM_FEE, "That Premium fee is too high.")
+    .nullable()
+    .optional(),
+  /** Changed through setCarePackage, which charges for the month; not written directly. */
+  carePackage: z.enum(["basic", "premium"]).optional(),
 });
 export type CompanyInput = z.infer<typeof CompanyBody>;
 
@@ -97,7 +111,8 @@ export async function createCompany(input: CompanyInput) {
     if (taken) throw new HttpError(409, `Paybill ${input.paybill} already belongs to ${taken.name}.`);
   }
   await db.transaction(async (tx) => {
-    await tx.insert(t.companies).values({ ...input, createdAt: nowStamp() });
+    const { carePackage: _pkg, ...values } = input;
+    await tx.insert(t.companies).values({ ...values, createdAt: nowStamp() });
     await createStarterDepartments(tx as unknown as Db, input.id);
   });
   return refreshed(db, input);
@@ -111,7 +126,8 @@ export async function updateCompany(id: string, input: Omit<CompanyInput, "id">)
     const [taken] = await db.select().from(t.companies).where(eq(t.companies.paybill, input.paybill));
     if (taken && taken.id !== id) throw new HttpError(409, `Paybill ${input.paybill} already belongs to ${taken.name}.`);
   }
-  await db.update(t.companies).set(input).where(eq(t.companies.id, id));
+  const { carePackage: _pkg, ...values } = input;
+  await db.update(t.companies).set(values).where(eq(t.companies.id, id));
   return refreshed(db, { ...row, ...input });
 }
 
@@ -200,11 +216,14 @@ export async function referenceOverview() {
     .from(t.pickupRequests)
     .where(eq(t.pickupRequests.paid, true))
     .groupBy(t.pickupRequests.company);
+  const packages = await packageOverview();
   const ref = currentReference();
   return {
     defaultPickupCommission: await platformPickupCommission(),
+    defaultPremiumFee: packages.defaultPremiumFee,
     companies: ref.companies.map((c) => ({
       ...c,
+      ...(packages.companies.find((p) => p.id === c.id) ?? { carePackage: "basic" as const, premiumFee: null, premiumEarned: 0 }),
       pickupCommission: rates.find((r) => r.id === c.id)?.rate ?? null,
       /** Commission on every paid pickup so far, in shillings. */
       commissionEarned: owed.find((x) => x.company === c.id)?.amount ?? 0,

@@ -262,6 +262,7 @@ export async function buildSnapshot(session: Session): Promise<AppData> {
       priority: tk.priority as Ticket["priority"],
       channel: tk.channel,
       resolvedAt: tk.resolvedAt ?? undefined,
+      bot: tk.bot || undefined,
       msgs: mine
         .filter((m) => m.from !== "note")
         .map((m) => ({

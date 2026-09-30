@@ -1,5 +1,6 @@
 // Server-only. Applies one command for one session, after checking it's allowed.
 import { and, eq, inArray, like } from "drizzle-orm";
+import { after } from "next/server";
 import type { Session } from "@/lib/auth/types";
 import { CLIENT_DOCUMENT_KINDS, MAX_CLIENT_DOCUMENTS, missingBusinessKinds } from "@/lib/clientDocuments";
 import { luhn, normalisePhone, KE_MOBILE } from "@/lib/clientNumber";
@@ -24,6 +25,8 @@ import { optimiseRoute, tourLength } from "@/lib/routeOpt";
 import type { Truck } from "@/lib/types";
 import { companyUsersWith } from "./accessStore";
 import { audit } from "./audit";
+import { assistantAvailable, handOff, runCareAssistant } from "./careBot";
+import { notifyClient } from "./careMessages";
 import {
   cleanCheckItems,
   companyDrivers,
@@ -294,6 +297,8 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
       const message = cmd.message.trim().slice(0, 2000);
       if (!subject || !message) return { ok: false, error: "Write a message first." };
       const cat = cmd.cat.slice(0, 40);
+      // The assistant answers first when the platform has AI set up.
+      const bot = await assistantAvailable();
       let id = "";
       await db.transaction(async (tx) => {
         id = await nextTicketId(tx as unknown as Db);
@@ -305,18 +310,22 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
           subject,
           status: "Open",
           createdAt: at,
+          bot,
         });
         await tx.insert(t.ticketMessages).values([
           { ticket: id, from: "client", text: message, at },
           {
             ticket: id,
             from: "sys",
-            text: `Ticket ${id} created. ${companyById(client.company).name} usually replies within 2 hours.`,
+            text: bot
+              ? `Ticket ${id} created. Our assistant will answer now; ask for a person any time.`
+              : `Ticket ${id} created. ${companyById(client.company).name} usually replies within 2 hours.`,
             at,
           },
         ]);
       });
       await ticketEvent(db, id, { sub: session.sub, name: client.name }, "created", { channel: "app" });
+      if (bot) after(() => runCareAssistant(id));
       return { ok: true, id };
     }
 
@@ -336,6 +345,12 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
       await db
         .insert(t.ticketMessages)
         .values({ ticket: ticket.id, from: cmd.from, text, at, author: cmd.from === "agent" ? session.name : null });
+      // A person replying takes the conversation over from the assistant.
+      if (cmd.from === "agent" && ticket.bot) {
+        await db.update(t.tickets).set({ bot: false }).where(eq(t.tickets.id, ticket.id));
+        await ticketEvent(db, ticket.id, session, "takeover");
+      }
+      if (cmd.from === "client" && ticket.bot) after(() => runCareAssistant(ticket.id));
       if (cmd.from === "agent" && !ticket.assignee && session.permissions.includes("tickets.view.company")) {
         await db.update(t.tickets).set({ assignee: session.sub }).where(eq(t.tickets.id, ticket.id));
         await ticketEvent(db, ticket.id, session, "assign", { to: session.name, auto: true });
@@ -356,15 +371,35 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
       if (cmd.from === "agent") {
         const client = await getClient(db, ticket.client);
         if (client) {
-          await sendSms({
-            to: client.phone,
-            company: client.company,
+          await notifyClient({
+            client,
+            ticket: ticket.id,
+            subject: ticket.subject,
             purpose: "care-reply",
-            body: `${companyById(client.company).name} care (${ticket.id}): ${text.slice(0, 120)}${text.length > 120 ? "…" : ""}`,
+            sms: `${companyById(client.company).name} care (${ticket.id}): ${text.slice(0, 120)}${text.length > 120 ? "…" : ""}`,
+            email: `${session.name} replied on ${ticket.id}:\n\n${text}`,
           });
         }
       }
       return { ok: true };
+    }
+
+    case "ticket.handoff": {
+      const [ticket] = await db.select().from(t.tickets).where(eq(t.tickets.id, cmd.ticket));
+      if (!ticket) return { ok: false, error: "No such conversation." };
+      if (session.ws === "client") {
+        if (session.scope.clientId !== ticket.client) deny();
+      } else {
+        need(session, "tickets.reply");
+        await requireCompany(session, ticket.company);
+      }
+      if (!ticket.bot) return { ok: true };
+      await handOff(ticket.id, session.ws === "client" ? "The client asked to talk to a person." : "");
+      if (session.ws !== "client") await ticketEvent(db, ticket.id, session, "takeover");
+      return {
+        ok: true,
+        message: session.ws === "client" ? "A person from the care team will reply here." : "You've taken over from the assistant.",
+      };
     }
 
     case "ticket.status": {
@@ -467,11 +502,13 @@ async function apply(session: Session, cmd: Command): Promise<CommandResult> {
       });
       await ticketEvent(db, id, session, "created", { channel: cmd.channel, priority: cmd.priority });
       if (agent) await ticketEvent(db, id, session, "assign", { to: agent.name });
-      await sendSms({
-        to: client.phone,
-        company: client.company,
+      await notifyClient({
+        client,
+        ticket: id,
+        subject,
         purpose: "care-ticket",
-        body: `${companyById(client.company).name}: we've logged your request as ${id} ("${subject}"). Reply in the app or call ${companyById(client.company).care}.`,
+        sms: `${companyById(client.company).name}: we've logged your request as ${id} ("${subject}"). Reply in the app or call ${companyById(client.company).care}.`,
+        email: `We've logged your request as ${id}:\n\n${message}`,
       });
       return { ok: true, id, message: `${id} opened for ${client.name}.` };
     }

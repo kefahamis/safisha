@@ -17,7 +17,7 @@ export const PRIORITIES: { key: TicketPriority; label: string; hours: number }[]
 
 export const priorityLabel = (p: string) => PRIORITIES.find((x) => x.key === p)?.label ?? p;
 
-export type TicketChannel = "app" | "phone" | "ussd" | "walk_in" | "crew" | "email";
+export type TicketChannel = "app" | "phone" | "ussd" | "walk_in" | "crew" | "email" | "sms";
 
 export const CHANNELS: { key: TicketChannel; label: string }[] = [
   { key: "app", label: "App" },
@@ -26,6 +26,7 @@ export const CHANNELS: { key: TicketChannel; label: string }[] = [
   { key: "walk_in", label: "Walk-in" },
   { key: "crew", label: "Collection crew" },
   { key: "email", label: "Email" },
+  { key: "sms", label: "SMS" },
 ];
 
 export const channelLabel = (c: string) => CHANNELS.find((x) => x.key === c)?.label ?? c;

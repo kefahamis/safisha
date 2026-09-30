@@ -1,5 +1,6 @@
 import { MAX_PICKUP_COMMISSION } from "@/lib/commission";
 import { integrationDef } from "@/lib/integrations";
+import { MAX_PREMIUM_FEE } from "@/lib/packages";
 import { audit } from "@/server/audit";
 import { saveSetting, viewOf } from "@/server/settings";
 import { asKey, requireSettingsScope } from "@/server/settingsAccess";
@@ -44,6 +45,13 @@ export async function PUT(request: Request, { params }: Params) {
       const rate = Number(config.pickupRate);
       if (!(rate >= 0 && rate <= MAX_PICKUP_COMMISSION)) {
         return Response.json({ error: `The commission is between 0 and ${MAX_PICKUP_COMMISSION}%.` }, { status: 400 });
+      }
+    }
+
+    if (key === "packages" && config.premiumFee !== "" && config.premiumFee != null) {
+      const fee = Number(config.premiumFee);
+      if (!(Number.isInteger(fee) && fee >= 0 && fee <= MAX_PREMIUM_FEE)) {
+        return Response.json({ error: "The Premium fee is a whole number of shillings." }, { status: 400 });
       }
     }
 

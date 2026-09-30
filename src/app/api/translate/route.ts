@@ -28,7 +28,10 @@ export async function POST(request: Request) {
 
     const id = Number(body.messageId);
     const [msg] = await db.select().from(schema.ticketMessages).where(eq(schema.ticketMessages.id, id));
-    if (!msg) return Response.json({ error: "No such message." }, { status: 404 });
+    // Desk notes (including the assistant's hand-over notes) never reach clients.
+    if (!msg || (session.ws === "client" && msg.from === "note")) {
+      return Response.json({ error: "No such message." }, { status: 404 });
+    }
     const [ticket] = await db.select().from(schema.tickets).where(eq(schema.tickets.id, msg.ticket));
     const companies = await visibleCompanies(session);
     const allowed =
@@ -47,7 +50,7 @@ export async function POST(request: Request) {
     const context = prior
       .filter((p) => p.from !== "sys")
       .slice(-3)
-      .map((p) => `${p.from === "agent" ? "Care desk" : "Client"}: ${p.text}`);
+      .map((p) => `${p.from === "agent" ? "Care desk" : p.from === "bot" ? "Care assistant" : "Client"}: ${p.text}`);
 
     const translation = await translate(msg.text, target, context);
     if (translation.source === "ai") {
