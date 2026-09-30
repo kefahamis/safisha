@@ -85,6 +85,13 @@
       "when": 1790763962562,
       "tag": "0011_care_packages",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790769605004,
+      "tag": "0012_package_catalogue",
+      "breakpoints": true
     }
   ]
 }

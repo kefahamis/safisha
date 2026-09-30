@@ -1,5 +1,5 @@
 import { audit } from "@/server/audit";
-import { setCarePackage } from "@/server/packages";
+import { setCompanyPackage } from "@/server/packages";
 import { CompanyBody, deleteCompany, updateCompany } from "@/server/reference";
 import { errorResponse, HttpError, requirePermission } from "@/server/session";
 
@@ -15,8 +15,10 @@ export async function PATCH(request: Request, { params }: Params) {
     const parsed = CompanyBody.omit({ id: true }).safeParse(await request.json().catch(() => null));
     if (!parsed.success) throw new HttpError(400, parsed.error.issues[0]?.message ?? "Check the details.");
     const company = await updateCompany(id, parsed.data);
-    // Moving onto Premium charges this month, the same as when the company upgrades itself.
-    if (parsed.data.carePackage) await setCarePackage(session, id, parsed.data.carePackage);
+    // Moving onto a package charges this month, the same as when the company subscribes itself.
+    if (parsed.data.carePackage !== undefined) {
+      await setCompanyPackage(session, id, parsed.data.carePackage, { asPlatform: true, price: parsed.data.packagePrice ?? null });
+    }
     await audit(session, { action: "company.update", target: id, company: id, detail: { ...parsed.data } });
     return Response.json({ ok: true, company });
   } catch (err) {
