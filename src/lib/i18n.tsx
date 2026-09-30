@@ -23,6 +23,7 @@ const SW: Record<string, string> = {
   "Fleet management": "Usimamizi wa magari",
   "My dashboard": "Dashibodi yangu",
   Security: "Usalama",
+  Profile: "Wasifu",
   "Chat agent": "Mazungumzo na wateja",
   Tickets: "Tiketi",
   Invoices: "Ankara",
