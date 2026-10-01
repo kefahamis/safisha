@@ -313,8 +313,10 @@
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 
-.bs-preset:hover {
-  border-color: var(--muted);
+@media (hover: hover) and (pointer: fine) {
+  .bs-preset:hover {
+    border-color: var(--muted);
+  }
 }
 
 .bs-preset[aria-pressed="true"] {
@@ -338,8 +340,10 @@
   transition: transform 0.15s;
 }
 
-.bs-dot:hover {
-  transform: scale(1.08);
+@media (hover: hover) and (pointer: fine) {
+  .bs-dot:hover {
+    transform: scale(1.08);
+  }
 }
 
 .bs-dot[aria-pressed="true"] {

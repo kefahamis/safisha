@@ -60,12 +60,20 @@
     transition: color 0.15s, opacity 0.15s, transform 0.15s, box-shadow 0.15s;
   }
 
-  .side-toggle:hover,
   .side-toggle:focus-visible {
     color: var(--ink);
     opacity: 1;
     transform: scale(1.08);
     box-shadow: var(--shadow);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .side-toggle:hover {
+      color: var(--ink);
+      opacity: 1;
+      transform: scale(1.08);
+      box-shadow: var(--shadow);
+    }
   }
 
   .side-toggle svg {
@@ -82,15 +90,13 @@
     white-space: nowrap;
   }
 
-  .brand-full,
-  .side .foot {
+  .brand-full {
     overflow: clip;
     overflow-clip-margin: 12px;
   }
 
   .brand-full b,
-  .brand-full small,
-  .side .foot > div {
+  .brand-full small {
     white-space: nowrap;
   }
 
@@ -122,6 +128,11 @@
 
   .app[data-sidebar="collapsed"] .nav-label {
     visibility: hidden;
+  }
+
+  /* The icon rail keeps the divider but drops the Tools label. */
+  .app[data-sidebar="collapsed"] .nav-tools .nav-label {
+    display: none;
   }
 
   .app[data-sidebar="collapsed"] .side a.nav-item {
@@ -171,20 +182,18 @@
     transition: opacity 0.12s, transform 0.12s;
   }
 
-  .app[data-sidebar="collapsed"] .side a.nav-item:hover::after,
   .app[data-sidebar="collapsed"] .side a.nav-item:focus-visible::after {
     opacity: 1;
     transform: translate(0, -50%);
   }
 
-  .app[data-sidebar="collapsed"] .side .foot {
-    justify-content: center;
-    padding: 12px 0;
+  @media (hover: hover) and (pointer: fine) {
+    .app[data-sidebar="collapsed"] .side a.nav-item:hover::after {
+      opacity: 1;
+      transform: translate(0, -50%);
+    }
   }
 
-  .app[data-sidebar="collapsed"] .side .foot > div {
-    display: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

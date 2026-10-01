@@ -30,6 +30,47 @@ textarea {
   color: inherit;
 }
 
+/*
+ * iOS zooms into any field under 16px and doesn't zoom back out. On touch
+ * screens every text field is 16px; the !important beats the compact sizes
+ * set on form labels and the chat composer, which stay as they are on desktop.
+ */
+@media (pointer: coarse) {
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* The browser's grey tap flash fights the app's own press states. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Hidden until a keyboard user tabs to it: the first stop on every page. */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: var(--r-pill);
+  background: var(--panel);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: var(--shadow);
+  transform: translateY(-160%);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
+main:focus {
+  outline: none;
+}
+
 h1,
 h2,
 h3 {
@@ -81,6 +122,8 @@ h3 {
   grid-template-columns: 248px minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   min-height: 100vh;
+  /* Phones: the visible height, not the one behind the collapsing URL bar. */
+  min-height: 100dvh;
 }
 
 .side {
@@ -144,6 +187,10 @@ main {
   grid-column: 2;
   grid-row: 2;
   padding: 26px 28px 60px;
+  /* In landscape on notched phones, keep content and controls off the cut-outs and home bar. */
+  padding-left: max(28px, env(safe-area-inset-left));
+  padding-right: max(28px, env(safe-area-inset-right));
+  padding-bottom: max(60px, calc(24px + env(safe-area-inset-bottom)));
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -219,7 +266,8 @@ main > *:nth-child(n + 4) {
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--rail-ink);
-  opacity: 0.55;
+  /* Quiet but legible: 0.8 keeps the label above 4.5:1 on the rail in both themes. */
+  opacity: 0.8;
   padding: 0 14px;
   margin-bottom: -12px;
 }
@@ -268,9 +316,11 @@ main > *:nth-child(n + 4) {
   min-width: 0;
 }
 
-.side a.nav-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--rail-ink-strong);
+@media (hover: hover) and (pointer: fine) {
+  .side a.nav-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--rail-ink-strong);
+  }
 }
 
 /* A group: a button row that folds its sections away beneath it. */
@@ -298,9 +348,11 @@ main > *:nth-child(n + 4) {
   transition: background 0.15s, color 0.15s;
 }
 
-.side button.nav-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--rail-ink-strong);
+@media (hover: hover) and (pointer: fine) {
+  .side button.nav-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--rail-ink-strong);
+  }
 }
 
 .side button.nav-item:focus-visible,
@@ -403,37 +455,20 @@ main > *:nth-child(n + 4) {
   padding: 0 6px;
 }
 
-.side .foot {
-  margin-top: auto;
-  padding: 14px;
-  font-size: 0.74rem;
-  line-height: 1.5;
-  color: var(--rail-ink);
-  background: var(--rail-panel);
-  border-radius: 14px;
+/* Settings and the audit log close the rail, under their own label. */
+.nav-tools {
   display: flex;
-  gap: 11px;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--rail-ink) 14%, transparent);
 }
 
-.side .foot b {
-  display: block;
-  color: var(--rail-ink-strong);
-  font-size: 0.8rem;
-  font-weight: 650;
-  margin-bottom: 1px;
+.nav-tools .nav-label {
+  margin-bottom: 0;
 }
 
-.foot-ico {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  display: grid;
-  place-items: center;
-  flex: none;
-  background: color-mix(in srgb, var(--vis) 16%, transparent);
-  color: var(--vis);
-}
 
 /* ---------- top bar ---------- */
 .roles {
@@ -462,8 +497,10 @@ main > *:nth-child(n + 4) {
   transition: background 0.15s, color 0.15s;
 }
 
-.roles a:hover {
-  color: var(--ink);
+@media (hover: hover) and (pointer: fine) {
+  .roles a:hover {
+    color: var(--ink);
+  }
 }
 
 .roles a[aria-selected="true"] {
@@ -532,9 +569,14 @@ main > *:nth-child(n + 4) {
   transition: background 0.15s ease;
 }
 
-.usermenu-trigger:hover,
 .usermenu[data-open] .usermenu-trigger {
   background: var(--panel2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .usermenu-trigger:hover {
+    background: var(--panel2);
+  }
 }
 
 .usermenu-trigger:focus-visible {
@@ -670,8 +712,10 @@ main > *:nth-child(n + 4) {
   transition: background 0.15s ease;
 }
 
-.usermenu-signout:hover:not(:disabled) {
-  background: var(--bad-soft);
+@media (hover: hover) and (pointer: fine) {
+  .usermenu-signout:hover:not(:disabled) {
+    background: var(--bad-soft);
+  }
 }
 
 .usermenu-signout:disabled {
@@ -698,10 +742,16 @@ main > *:nth-child(n + 4) {
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.notif-trigger:hover,
 .notif[data-open] .notif-trigger {
   background: var(--panel2);
   color: var(--ink);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .notif-trigger:hover {
+    background: var(--panel2);
+    color: var(--ink);
+  }
 }
 
 .notif-trigger:focus-visible {
@@ -772,8 +822,10 @@ main > *:nth-child(n + 4) {
   cursor: pointer;
 }
 
-.notif-markall:hover {
-  background: var(--accent-soft);
+@media (hover: hover) and (pointer: fine) {
+  .notif-markall:hover {
+    background: var(--accent-soft);
+  }
 }
 
 .notif-list {
@@ -795,16 +847,20 @@ main > *:nth-child(n + 4) {
   transition: background 0.15s ease;
 }
 
-.notif-item:hover {
-  background: var(--panel2);
+@media (hover: hover) and (pointer: fine) {
+  .notif-item:hover {
+    background: var(--panel2);
+  }
 }
 
 .notif-item[data-unread] {
   background: color-mix(in srgb, var(--accent-soft) 45%, transparent);
 }
 
-.notif-item[data-unread]:hover {
-  background: var(--accent-soft);
+@media (hover: hover) and (pointer: fine) {
+  .notif-item[data-unread]:hover {
+    background: var(--accent-soft);
+  }
 }
 
 /* Unread dot, top right of the row. */

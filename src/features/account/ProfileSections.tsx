@@ -268,6 +268,34 @@ export function Preferences({ view, onSaved }: { view: ProfileView; onSaved: Sav
             </div>
           </div>
 
+          {view.onboardingHidden && (
+            <div className="pref-row">
+              <div>
+                <b>{t("Getting started")}</b>
+                <div className="hint">{t("The checklist on your dashboard is hidden.")}</div>
+              </div>
+              <button
+                type="button"
+                className="btn small"
+                disabled={busy !== null}
+                onClick={async () => {
+                  setBusy("onboarding");
+                  try {
+                    await send("/api/account/onboarding", "POST", { hidden: false });
+                    onSaved({ ...view, onboardingHidden: false });
+                    toast(t("It's back on your dashboard."));
+                  } catch (e) {
+                    toast((e as Error).message);
+                  } finally {
+                    setBusy(null);
+                  }
+                }}
+              >
+                {t("Show it again")}
+              </button>
+            </div>
+          )}
+
           {view.startOptions && (
             <label className="f">
               Start page <span className="hint">(where you land after signing in)</span>

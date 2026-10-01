@@ -64,6 +64,8 @@ export const users = pgTable("users", {
   away: boolean("away").notNull().default(false),
   /** Staff: the page they land on after signing in; null for the usual one. */
   startPage: text("start_page"),
+  /** The getting-started checklist: hidden by them, and when. */
+  onboarding: jsonb("onboarding").$type<{ hiddenAt?: string }>().notNull().default({}),
 });
 
 /** One row per sign-in, so people can see where they're signed in and sign devices out. */

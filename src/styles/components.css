@@ -74,9 +74,11 @@ h2.with-ico > svg {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.kpi:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow), 0 18px 36px -18px rgba(6, 41, 41, 0.25);
+@media (hover: hover) and (pointer: fine) {
+  .kpi:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow), 0 18px 36px -18px rgba(6, 41, 41, 0.25);
+  }
 }
 
 .kpi-top {
@@ -198,9 +200,11 @@ h2.with-ico > svg {
   transform: translateY(1px);
 }
 
-.btn:hover {
-  background: var(--panel2);
-  border-color: var(--line);
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover {
+    background: var(--panel2);
+    border-color: var(--line);
+  }
 }
 
 .btn.primary {
@@ -210,9 +214,11 @@ h2.with-ico > svg {
   box-shadow: var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
-.btn.primary:hover {
-  background: var(--accent-grad);
-  filter: brightness(1.08);
+@media (hover: hover) and (pointer: fine) {
+  .btn.primary:hover {
+    background: var(--accent-grad);
+    filter: brightness(1.08);
+  }
 }
 
 .btn.small {
@@ -225,8 +231,10 @@ h2.with-ico > svg {
   border-color: transparent;
 }
 
-.btn.ghost:hover {
-  background: var(--panel2);
+@media (hover: hover) and (pointer: fine) {
+  .btn.ghost:hover {
+    background: var(--panel2);
+  }
 }
 
 /* Square-ish button carrying only a glyph; always paired with aria-label. */
@@ -279,10 +287,12 @@ textarea:focus {
   outline: none;
 }
 
-input:hover:not(:focus),
+@media (hover: hover) and (pointer: fine) {
+  input:hover:not(:focus),
 select:hover:not(:focus),
 textarea:hover:not(:focus) {
-  border-color: var(--line);
+    border-color: var(--line);
+  }
 }
 
 /* One chevron for every select, drawn in the muted ink so it suits both themes. */
@@ -508,8 +518,10 @@ div.with-ico {
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.pager-btn:hover:not(:disabled):not([aria-current]) {
-  background: var(--panel2);
+@media (hover: hover) and (pointer: fine) {
+  .pager-btn:hover:not(:disabled):not([aria-current]) {
+    background: var(--panel2);
+  }
 }
 
 .pager-btn[aria-current="page"] {
@@ -601,12 +613,16 @@ tbody tr {
   transition: background 0.12s;
 }
 
-tbody tr.click:hover {
-  background: var(--panel2);
+@media (hover: hover) and (pointer: fine) {
+  tbody tr.click:hover {
+    background: var(--panel2);
+  }
 }
 
-tbody tr.click:hover td:first-child {
-  box-shadow: inset 3px 0 0 var(--accent);
+@media (hover: hover) and (pointer: fine) {
+  tbody tr.click:hover td:first-child {
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
 }
 
 tr.open td {
@@ -649,9 +665,11 @@ tr.open td {
   color: #fff;
 }
 
-.idcard .btn:hover {
-  background: rgba(255, 255, 255, 0.22);
-  border-color: rgba(255, 255, 255, 0.3);
+@media (hover: hover) and (pointer: fine) {
+  .idcard .btn:hover {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
 }
 
 .idcard .idnum {
@@ -756,8 +774,10 @@ tr.open td {
   transition: box-shadow 0.15s;
 }
 
-.tickets .tk:hover {
-  box-shadow: var(--shadow);
+@media (hover: hover) and (pointer: fine) {
+  .tickets .tk:hover {
+    box-shadow: var(--shadow);
+  }
 }
 
 .tickets .tk[aria-current="true"] {
@@ -868,6 +888,7 @@ tr.open td {
   border-radius: 20px;
   width: min(460px, 100%);
   max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   overflow-y: auto;
   padding: 24px;
   box-shadow: var(--shadow-pop);
@@ -1399,8 +1420,10 @@ details.panel > summary {
     animation: none;
   }
 
-  .kpi:hover {
-    transform: none;
+  @media (hover: hover) and (pointer: fine) {
+    .kpi:hover {
+      transform: none;
+    }
   }
 }
 
@@ -1465,8 +1488,10 @@ details.panel > summary {
   transition: color 0.15s, transform 0.12s;
 }
 
-.chat-round:hover {
-  color: var(--ink);
+@media (hover: hover) and (pointer: fine) {
+  .chat-round:hover {
+    color: var(--ink);
+  }
 }
 
 .chat-round:active {
@@ -1613,8 +1638,7 @@ details.panel > summary {
 
 /* Undo the global field chrome: the composer box is the field. */
 .chat-composer .chat-field,
-.chat-composer .chat-field:focus,
-.chat-composer .chat-field:hover {
+.chat-composer .chat-field:focus {
   display: block;
   width: 100%;
   min-height: 40px;
@@ -1628,6 +1652,23 @@ details.panel > summary {
   line-height: 1.45;
   color: var(--ink);
   outline: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .chat-composer .chat-field:hover {
+    display: block;
+    width: 100%;
+    min-height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    resize: none;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--ink);
+    outline: none;
+  }
 }
 
 .chat-field::placeholder,
@@ -1737,12 +1778,16 @@ details.panel > summary {
   transition: transform 0.2s;
 }
 
-.chat-send:hover:not(:disabled) {
-  transform: scale(1.08);
+@media (hover: hover) and (pointer: fine) {
+  .chat-send:hover:not(:disabled) {
+    transform: scale(1.08);
+  }
 }
 
-.chat-send:hover:not(:disabled) > svg {
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .chat-send:hover:not(:disabled) > svg {
+    transform: translateY(-1px);
+  }
 }
 
 .chat-send:active:not(:disabled) {
@@ -1860,10 +1905,12 @@ details.panel > summary {
   transform: translateX(calc(var(--toggle-w) - var(--toggle-thumb) - 5px - 2 * var(--toggle-pad)));
 }
 
-.toggle:hover:not(:disabled) .toggle-thumb {
-  box-shadow:
+@media (hover: hover) and (pointer: fine) {
+  .toggle:hover:not(:disabled) .toggle-thumb {
+    box-shadow:
     0 1px 2px rgba(3, 28, 28, 0.25),
     0 4px 12px -2px rgba(3, 28, 28, 0.35);
+  }
 }
 
 .toggle:focus-visible {
@@ -2073,8 +2120,10 @@ details.panel > summary {
   text-decoration: none;
 }
 
-.doc-list a.doc-text:hover strong {
-  color: var(--accent);
+@media (hover: hover) and (pointer: fine) {
+  .doc-list a.doc-text:hover strong {
+    color: var(--accent);
+  }
 }
 
 .doc-ok {

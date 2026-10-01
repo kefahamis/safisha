@@ -10,6 +10,7 @@ import { PageHead } from "@/components/ui/Panel";
 import { companyById } from "@/lib/reference/companies";
 import { truckById } from "@/lib/selectors";
 import { useAppState } from "@/store/StoreProvider";
+import { GettingStarted } from "@/components/onboarding/GettingStarted";
 
 export function CollectorRoute() {
   const s = useAppState();
@@ -26,6 +27,7 @@ export function CollectorRoute() {
       <PageHead title="Today’s route" icon={Route} actions={<ShareToggle truck={truck} />}>
         <span className="mono">{truck.id}</span> · {truck.driver} · {co.name}
       </PageHead>
+      <GettingStarted />
 
       {truck.status === "offline" && (
         <div className="banner">

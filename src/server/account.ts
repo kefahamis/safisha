@@ -38,6 +38,9 @@ export async function profileView(session: Session, user: User): Promise<Profile
     photo: user.photo,
     lang: user.lang === "sw" ? "sw" : "en",
     theme: THEMES.includes(user.theme as Theme) ? (user.theme as Theme) : "system",
+    onboardingHidden: Boolean(
+      (await db.select({ o: t.users.onboarding }).from(t.users).where(eq(t.users.id, user.id)))[0]?.o.hiddenAt,
+    ),
   };
   const options = startOptions(session);
   if (options.length) {

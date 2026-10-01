@@ -5,13 +5,14 @@ import { getSession } from "@/server/session";
 
 export const metadata: Metadata = { title: "Settings" };
 
-export default async function Page() {
+export default async function Page({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const session = await getSession();
   if (!session?.permissions.includes("settings.company.manage")) return <NoAccess permission="settings.company.manage" />;
   return (
     <SettingsCenter
       platform={session.permissions.includes("settings.platform.manage")}
       companyId={session.scope.companyId}
+      initialTab={(await searchParams).tab}
     />
   );
 }

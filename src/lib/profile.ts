@@ -32,6 +32,8 @@ export interface ProfileView {
   photo?: string;
   lang: "en" | "sw";
   theme: Theme;
+  /** They hid the getting-started checklist. */
+  onboardingHidden: boolean;
   /** Staff: where they land after signing in, and the pages they could choose. */
   startPage?: string;
   startOptions?: { href: string; label: string }[];

@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useT } from "@/lib/i18n";
 import { roleFromPath, SIDEBAR_COOKIE } from "@/lib/navigation";
 import { StkModal } from "@/components/mpesa/StkModal";
 import { useAppState, useFleetTicker, useLiveSync } from "@/store/StoreProvider";
@@ -17,15 +18,19 @@ import { UserMenu } from "./UserMenu";
 const isTyping = (el: EventTarget | null) =>
   el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
 
+/** Screens that draw trucks moving live; everywhere else the clock only needs to move by the minute. */
+const LIVE_FLEET = /^\/(admin\/map|company\/map|client\/track|collector(\/map)?)$/;
+
 /** Dark rail, top bar and page slot. The active role comes from the URL. */
 export function AppShell({ children, sidebarCollapsed = false }: { children: ReactNode; sidebarCollapsed?: boolean }) {
   const pathname = usePathname();
   const role = roleFromPath(pathname);
   const s = useAppState();
+  const { t } = useT();
   const [collapsed, setCollapsed] = useState(sidebarCollapsed);
   // The phone menu; it only exists below the rail breakpoint.
   const [menuOpen, setMenuOpen] = useState(false);
-  useFleetTicker();
+  useFleetTicker(LIVE_FLEET.test(pathname));
   useLiveSync();
 
   const toggleSidebar = useCallback(() => {
@@ -63,6 +68,9 @@ export function AppShell({ children, sidebarCollapsed = false }: { children: Rea
     <>
       {/* The platform layer comes from the root layout; this adds the company's on top. */}
       <BrandTheme branding={role === "admin" ? undefined : s.branding[s.companyId]} />
+      <a className="skip-link" href="#main">
+        {t("Skip to content")}
+      </a>
       <div className="app" data-sidebar={collapsed ? "collapsed" : "expanded"} data-menu={menuOpen ? "open" : undefined}>
         <SideNav
           role={role}
@@ -82,7 +90,9 @@ export function AppShell({ children, sidebarCollapsed = false }: { children: Rea
             <UserMenu />
           </div>
         </header>
-        <main>{children}</main>
+        <main id="main" tabIndex={-1}>
+          {children}
+        </main>
       </div>
       <StkModal />
       <OfflineSupport />

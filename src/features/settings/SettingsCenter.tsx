@@ -51,6 +51,15 @@ interface ScopeData {
   platform: { publicBaseUrl: string | null; sms: string; email: string; ai: string };
 }
 
+const TABS = ["payments", "billing", "branding", "platform-brand", "messaging", "translation", "system", "security", "activity"] as const;
+
+/** Tabs only the platform admin sees; a link to one from anyone else opens the first tab instead. */
+const PLATFORM_TABS = new Set<string>(["platform-brand", "messaging", "translation", "system", "security"]);
+
+/** The tab a ?tab= link asks for, if it exists and this person can open it. */
+const startTab = (asked: string | undefined, platform: boolean): Tab =>
+  asked && (TABS as readonly string[]).includes(asked) && (platform || !PLATFORM_TABS.has(asked)) ? (asked as Tab) : "payments";
+
 type Tab =
   | "payments"
   | "branding"
@@ -67,9 +76,18 @@ type Tab =
  * their own M-Pesa, reminders and prices; the platform admin manages SMS, USSD,
  * email, translation and the public address — and any company's settings.
  */
-export function SettingsCenter({ platform, companyId }: { platform: boolean; companyId?: string }) {
+export function SettingsCenter({
+  platform,
+  companyId,
+  initialTab,
+}: {
+  platform: boolean;
+  companyId?: string;
+  /** From ?tab= in the address, so a link can open the right section. */
+  initialTab?: string;
+}) {
   const [company, setCompany] = useState(companyId ?? COMPANIES[0]?.id ?? "");
-  const [tab, setTab] = useState<Tab>("payments");
+  const [tab, setTab] = useState<Tab>(() => startTab(initialTab, platform));
   const tabStrip = useTabStrip<HTMLDivElement>(tab);
   const [companyData, setCompanyData] = useState<ScopeData | null>(null);
   const [platformData, setPlatformData] = useState<ScopeData | null>(null);

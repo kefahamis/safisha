@@ -21,6 +21,11 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // The phone header is the rail, so the browser bar continues it.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#093c3d" },
+    { media: "(prefers-color-scheme: dark)", color: "#041415" },
+  ],
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {

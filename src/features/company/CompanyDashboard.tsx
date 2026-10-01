@@ -39,6 +39,7 @@ import {
   trucksOf,
 } from "@/lib/selectors";
 import { useAppState } from "@/store/StoreProvider";
+import { GettingStarted } from "@/components/onboarding/GettingStarted";
 
 export function CompanyDashboard() {
   const s = useAppState();
@@ -83,6 +84,7 @@ export function CompanyDashboard() {
         Paybill <span className="mono">{co.paybill}</span> · Serving{" "}
         {co.estates.map(estateName).join(", ")}
       </PageHead>
+      <GettingStarted />
 
       <div className="kpis">
         <Kpi

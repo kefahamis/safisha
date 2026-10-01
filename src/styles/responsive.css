@@ -45,6 +45,10 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px 12px 10px 16px;
+    /* Clear of the notch and rounded corners, which the app draws under. */
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
     gap: 12px;
   }
 
@@ -122,10 +126,6 @@
     gap: 4px;
   }
 
-  .side .foot {
-    margin-top: auto;
-  }
-
   /* The page moves with the drawer. */
   .top,
   main {
@@ -180,6 +180,8 @@
     grid-row: 2;
     position: static;
     padding: 10px 16px;
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
     gap: 10px 12px;
     justify-content: flex-start;
   }
@@ -188,6 +190,9 @@
     grid-column: 1;
     grid-row: 3;
     padding: 18px 14px 48px;
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+    padding-bottom: max(48px, calc(24px + env(safe-area-inset-bottom)));
     gap: 16px;
   }
 

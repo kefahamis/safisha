@@ -337,12 +337,12 @@ export function createActions(store: AppStore) {
 
     /* ---- live fleet ---- */
 
-    /** One second of simulated driving, so trucks move smoothly between syncs. */
-    tick() {
+    /** `seconds` of simulated driving, so trucks move smoothly between syncs. */
+    tick(seconds = 1) {
       update((s) => {
-        s.elapsedMs += 1000;
+        s.elapsedMs += seconds * 1000;
         for (const t of s.trucks) {
-          if (t.status !== "offline" && t.sharing) t.d += t.speed;
+          if (t.status !== "offline" && t.sharing) t.d += t.speed * seconds;
         }
       });
     },

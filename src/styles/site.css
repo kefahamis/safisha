@@ -133,13 +133,17 @@
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.s-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 30px -12px color-mix(in srgb, var(--s-lime) 90%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .s-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 30px -12px color-mix(in srgb, var(--s-lime) 90%, transparent);
+  }
 }
 
-.s-btn:hover .s-btn-chip {
-  transform: rotate(45deg);
+@media (hover: hover) and (pointer: fine) {
+  .s-btn:hover .s-btn-chip {
+    transform: rotate(45deg);
+  }
 }
 
 .s-btn:focus-visible {
@@ -266,9 +270,11 @@
     color 0.15s ease;
 }
 
-.s-links a:hover {
-  background: var(--s-cream);
-  color: var(--accent);
+@media (hover: hover) and (pointer: fine) {
+  .s-links a:hover {
+    background: var(--s-cream);
+    color: var(--accent);
+  }
 }
 
 .s-links-cta,
@@ -724,12 +730,14 @@
     background 0.25s ease;
 }
 
-.s-card:hover {
-  transform: translateY(-4px);
-  background: color-mix(in srgb, var(--s-card) 90%, var(--s-lime));
-  box-shadow:
+@media (hover: hover) and (pointer: fine) {
+  .s-card:hover {
+    transform: translateY(-4px);
+    background: color-mix(in srgb, var(--s-card) 90%, var(--s-lime));
+    box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--s-lime) 40%, transparent),
     0 30px 50px -30px rgba(0, 0, 0, 0.7);
+  }
 }
 
 .s-card-go {
@@ -746,8 +754,10 @@
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.s-card:hover .s-card-go {
-  transform: rotate(45deg);
+@media (hover: hover) and (pointer: fine) {
+  .s-card:hover .s-card-go {
+    transform: rotate(45deg);
+  }
 }
 
 .s-card-icon {
@@ -900,8 +910,10 @@
     transform 0.15s ease;
 }
 
-.s-chip:hover {
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .s-chip:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .s-chip[aria-checked="true"] {
@@ -1072,9 +1084,11 @@
     box-shadow 0.25s ease;
 }
 
-.s-co:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 24px 40px -30px rgba(3, 28, 28, 0.45);
+@media (hover: hover) and (pointer: fine) {
+  .s-co:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 24px 40px -30px rgba(3, 28, 28, 0.45);
+  }
 }
 
 .s-co-head {
@@ -1223,8 +1237,10 @@
   text-decoration: none;
 }
 
-.s-footer a:hover {
-  color: var(--s-lime);
+@media (hover: hover) and (pointer: fine) {
+  .s-footer a:hover {
+    color: var(--s-lime);
+  }
 }
 
 .s-footer-base {
@@ -1433,9 +1449,11 @@
   color: var(--s-lime-ink);
 }
 
-.s-links a.s-btn:hover {
-  background: var(--accent-grad);
-  color: var(--s-lime-ink);
+@media (hover: hover) and (pointer: fine) {
+  .s-links a.s-btn:hover {
+    background: var(--accent-grad);
+    color: var(--s-lime-ink);
+  }
 }
 
 /* Anchored sections land below the floating bar. */
@@ -1469,10 +1487,16 @@ html:has(.site) {
 }
 
 .s-btn,
-.s-links a.s-btn,
-.s-links a.s-btn:hover {
+.s-links a.s-btn {
   background: var(--s-btn-fill);
   color: #fff;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .s-links a.s-btn:hover {
+    background: var(--s-btn-fill);
+    color: #fff;
+  }
 }
 
 .s-btn.ghost {
@@ -1516,10 +1540,15 @@ html:has(.site) {
   }
 
   :root:not([data-theme="light"]) .site .s-eyebrow:not(.light),
-  :root:not([data-theme="light"]) .site .s-links a:hover,
   :root:not([data-theme="light"]) .site .s-co a,
   :root:not([data-theme="light"]) .site .s-impact-stats > div {
     color: color-mix(in srgb, var(--accent) 50%, #000);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    :root:not([data-theme="light"]) .site .s-links a:hover {
+      color: color-mix(in srgb, var(--accent) 50%, #000);
+    }
   }
 }
 
@@ -1528,10 +1557,15 @@ html:has(.site) {
 }
 
 :root[data-theme="dark"] .site .s-eyebrow:not(.light),
-:root[data-theme="dark"] .site .s-links a:hover,
 :root[data-theme="dark"] .site .s-co a,
 :root[data-theme="dark"] .site .s-impact-stats > div {
   color: color-mix(in srgb, var(--accent) 50%, #000);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :root[data-theme="dark"] .site .s-links a:hover {
+    color: color-mix(in srgb, var(--accent) 50%, #000);
+  }
 }
 
 /* ---------- back to top ---------- */
@@ -1575,12 +1609,16 @@ html:has(.site) {
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.s-top:hover {
-  box-shadow: 0 18px 36px -12px rgba(3, 28, 28, 0.65);
+@media (hover: hover) and (pointer: fine) {
+  .s-top:hover {
+    box-shadow: 0 18px 36px -12px rgba(3, 28, 28, 0.65);
+  }
 }
 
-.s-top:hover > svg:not(.s-top-ring) {
-  transform: translateY(-3px);
+@media (hover: hover) and (pointer: fine) {
+  .s-top:hover > svg:not(.s-top-ring) {
+    transform: translateY(-3px);
+  }
 }
 
 .s-top:focus-visible {
