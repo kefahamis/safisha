@@ -23,8 +23,10 @@
   text-decoration: none;
 }
 
-.panel-link:hover {
-  text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+  .panel-link:hover {
+    text-decoration: underline;
+  }
 }
 
 /* ---------- segmented control ---------- */
@@ -86,8 +88,10 @@
   position: relative;
 }
 
-.tab:hover {
-  color: var(--ink);
+@media (hover: hover) and (pointer: fine) {
+  .tab:hover {
+    color: var(--ink);
+  }
 }
 
 .tab[aria-selected="true"] {
@@ -577,8 +581,10 @@
   cursor: pointer;
 }
 
-.msg-tool:hover {
-  color: var(--ink);
+@media (hover: hover) and (pointer: fine) {
+  .msg-tool:hover {
+    color: var(--ink);
+  }
 }
 
 .msg-tool.sheng {
@@ -743,9 +749,11 @@
   transition: border-color 0.15s, color 0.15s;
 }
 
-.photo-input:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+@media (hover: hover) and (pointer: fine) {
+  .photo-input:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
 }
 
 .photo-input input {
@@ -846,9 +854,11 @@
   text-decoration: none;
 }
 
-.signin-links a:hover,
+@media (hover: hover) and (pointer: fine) {
+  .signin-links a:hover,
 .signin-back:hover {
-  text-decoration: underline;
+    text-decoration: underline;
+  }
 }
 
 .authflow {
@@ -968,10 +978,12 @@
   cursor: pointer;
 }
 
-.linklike:hover {
-  color: var(--accent);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+@media (hover: hover) and (pointer: fine) {
+  .linklike:hover {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
 }
 
 .fin-controls {
@@ -1150,10 +1162,12 @@
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 
-.fin-template:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
+@media (hover: hover) and (pointer: fine) {
+  .fin-template:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
 }
 
 .fin-form-top {

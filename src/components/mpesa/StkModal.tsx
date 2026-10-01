@@ -17,7 +17,7 @@ import {
   Smartphone,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BalanceChip } from "@/components/ui/Chip";
 import { fmtDate, group } from "@/lib/format";
 import { companyById } from "@/lib/reference/companies";
@@ -44,6 +44,24 @@ export function StkModal() {
     return () => window.removeEventListener("keydown", onKey);
   }, [stk, actions]);
 
+  // A real dialog for keyboards and screen readers: focus moves in, the page
+  // behind goes inert, and focus returns to whatever opened it on close.
+  const open = Boolean(stk);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const opener = document.activeElement as HTMLElement | null;
+    const page = document.querySelector<HTMLElement>(".app");
+    page?.setAttribute("inert", "");
+    sheetRef.current
+      ?.querySelector<HTMLElement>("input, select, textarea, button:not([disabled]), [href], [tabindex]:not([tabindex='-1'])")
+      ?.focus();
+    return () => {
+      page?.removeAttribute("inert");
+      opener?.focus?.();
+    };
+  }, [open]);
+
   if (!stk) return null;
 
   const client = clientById(s, stk.client);
@@ -57,7 +75,7 @@ export function StkModal() {
         if (e.target === e.currentTarget) actions.closeStk();
       }}
     >
-      <div className="sheet" role="dialog" aria-modal="true" aria-label={t("Pay with M-Pesa")}>
+      <div className="sheet" role="dialog" aria-modal="true" aria-label={t("Pay with M-Pesa")} ref={sheetRef}>
         {stk.step === "form" && <StkForm />}
 
         {stk.step === "phone" && (

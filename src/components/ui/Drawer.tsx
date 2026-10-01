@@ -36,8 +36,11 @@ export function Drawer({
     };
   }, [onClose]);
 
+  // Focus moves into the drawer, and back to whatever opened it when it closes.
   useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
     panel.current?.querySelector<HTMLElement>(".drawer-body :is(input, select, textarea, button)")?.focus();
+    return () => opener?.focus?.();
   }, []);
 
   return (

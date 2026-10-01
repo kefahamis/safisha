@@ -58,3 +58,43 @@ describe("the demo world", () => {
     expect(res.receipt).toMatch(/^U[A-Z0-9]{9}$/);
   });
 });
+
+describe("getting started", () => {
+  const view = async (userId: string) => {
+    const { findUserById } = await import("@/server/accessStore");
+    const { sessionForUser } = await import("@/server/session");
+    const { onboardingView } = await import("@/server/onboarding");
+    const user = (await findUserById(userId))!;
+    const role = (await (await import("@/server/accessStore")).findRole(user.roleId))!;
+    const session = await sessionForUser(user, { ws: role.workspace });
+    return { user, session, view: await onboardingView(session, user) };
+  };
+
+  it("gives each kind of account its own steps", async () => {
+    const keys = async (id: string) => (await view(id)).view.steps.map((s) => s.key);
+    expect(await keys("u-platform")).toEqual(expect.arrayContaining(["sms", "email", "ai", "company", "package"]));
+    expect(await keys("u-kw-admin")).toEqual(expect.arrayContaining(["mpesa", "client", "staff", "branding", "package"]));
+    expect(await keys("u-ts-agent")).toEqual(expect.arrayContaining(["photo", "verifyEmail", "signature"]));
+    expect(await keys("u-kiprop")).toEqual(expect.arrayContaining(["photo", "verifyPhone", "check"]));
+    expect(await keys("u-grace")).toEqual(expect.arrayContaining(["verifyPhone", "verifyEmail", "pay"]));
+  });
+
+  it("ticks steps off from what's actually been done", async () => {
+    const { view: admin } = await view("u-kw-admin");
+    // The demo world already has Kijani's clients and staff.
+    expect(admin.steps.find((s) => s.key === "client")?.done).toBe(true);
+    expect(admin.steps.find((s) => s.key === "staff")?.done).toBe(true);
+    const { view: platform } = await view("u-platform");
+    expect(platform.steps.find((s) => s.key === "company")?.done).toBe(true);
+    // Every step links somewhere the person can go.
+    for (const s of [...admin.steps, ...platform.steps]) expect(s.href.startsWith("/")).toBe(true);
+  });
+
+  it("can be hidden and brought back", async () => {
+    const { setOnboardingHidden } = await import("@/server/onboarding");
+    await setOnboardingHidden("u-grace", true);
+    expect((await view("u-grace")).view.hidden).toBe(true);
+    await setOnboardingHidden("u-grace", false);
+    expect((await view("u-grace")).view.hidden).toBe(false);
+  });
+});

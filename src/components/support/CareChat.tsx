@@ -307,7 +307,7 @@ export function CareChat({
         </div>
       ) : (
         ticket && (
-          <div className="chat-thread" ref={threadRef}>
+          <div className="chat-thread" ref={threadRef} role="log" aria-live="polite" aria-label={t("Conversation")}>
             {ticket.msgs.map((m, i) =>
               m.from === "sys" ? (
                 <div className="chat-sys" key={i}>

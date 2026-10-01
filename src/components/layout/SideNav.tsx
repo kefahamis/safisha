@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronLeft, Circle, FlaskConical, Menu, ShieldCheck, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, Circle, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "@/components/auth/SessionProvider";
@@ -15,8 +15,11 @@ import { brandTokens, companyTagline, DEFAULT_RAIL, resolveColours } from "@/lib
 import { BrandMini, CompanyLogo } from "./CompanyBrand";
 import { PlatformIdentity, usePlatformBrand } from "./PlatformBrand";
 
+/** Sections that live at the foot of the rail rather than in the main list. */
+const BOTTOM = /\/(settings|audit)$/;
+
 /**
- * The dark rail: brand, the sections this session may open, and a footnote.
+ * The dark rail: brand, the sections this session may open, and the tools at its foot.
  * Collapsed, it keeps only the icons; labels move into tooltips. On phones it
  * becomes a slim header whose menu button slides the sections in from the left
  * as a drawer, pushing the page aside.
@@ -39,12 +42,13 @@ export function SideNav({
   const s = useAppState();
   const { session } = useSession();
   const { t } = useT();
-  // Demo only while every company in view still pays through the simulator.
-  const live = Object.values(s.integrations.mpesa).some((m) => m.mode === "live");
 
   const tree = navTreeFor(role, session?.permissions ?? []);
   // The icon rail has no room for nesting: there, a group's sections sit in line.
-  const items = collapsed ? tree.flatMap((i) => i.children ?? [i]) : tree;
+  const all = collapsed ? tree.flatMap((i) => i.children ?? [i]) : tree;
+  // Settings and the audit log are housekeeping: they close the rail, under a Tools label.
+  const items = all.filter((i) => !BOTTOM.test(i.href));
+  const bottom = all.filter((i) => BOTTOM.test(i.href));
 
   // A group opens by itself when one of its sections is the current page.
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -150,24 +154,18 @@ export function SideNav({
           })}
         </div>
 
-        {(live || s.integrations.demo) && (
-          <div className="foot" title={collapsed ? t(live ? "Live payments" : "Demo mode") : undefined}>
-            <span className="foot-ico" aria-hidden="true">
-              {live ? (
-                <ShieldCheck size={16} strokeWidth={2} />
-              ) : (
-                <FlaskConical size={16} strokeWidth={2} />
-              )}
-            </span>
-            <div>
-              <b>{t(live ? "Live payments" : "Demo mode")}</b>
-              <span>
-                {t(
-                  live
-                    ? "Payments are live on M-Pesa for this company."
-                    : "Seed data. M-Pesa calls are simulated; no money moves.",
-                )}
-              </span>
+        {bottom.length > 0 && (
+          <div className="nav-tools">
+            <div className="nav-label" id="nav-tools-label">
+              {t("Tools")}
+            </div>
+            <div
+              className="nav-items"
+              role="group"
+              aria-labelledby="nav-tools-label"
+              onClick={(e) => (e.target as HTMLElement).closest("a") && onMenu(false)}
+            >
+              {bottom.map((item) => navLink(item))}
             </div>
           </div>
         )}

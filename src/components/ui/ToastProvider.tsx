@@ -28,8 +28,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={toast}>
       {children}
+      {/* Always rendered, so screen readers announce each new message reliably. */}
+      <div className="sr-only" role="status" aria-live="polite">
+        {message ?? ""}
+      </div>
       {message !== null && (
-        <div className="toast" role="status" key={message}>
+        <div className="toast" aria-hidden="true" key={message}>
           <BellRing size={16} strokeWidth={2.2} aria-hidden="true" />
           {message}
         </div>

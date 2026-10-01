@@ -79,13 +79,18 @@ export function useActions(): AppActions {
   return useMemo(() => createActions(store), [store]);
 }
 
-/** Advances the clock and every sharing truck once a second. */
-export function useFleetTicker() {
+/**
+ * Advances the clock and every sharing truck. Once a second on screens that
+ * draw trucks moving; elsewhere once a minute, which is all "today" and
+ * greetings need, so the rest of the app isn't re-rendered every second.
+ */
+export function useFleetTicker(live = true) {
   const actions = useActions();
   useEffect(() => {
-    const id = window.setInterval(() => actions.tick(), 1000);
+    const seconds = live ? 1 : 60;
+    const id = window.setInterval(() => actions.tick(seconds), seconds * 1000);
     return () => window.clearInterval(id);
-  }, [actions]);
+  }, [actions, live]);
 }
 
 /**

@@ -24,6 +24,7 @@ import { fmtDate, kes } from "@/lib/format";
 import { PICKUP_KINDS } from "@/lib/integrations";
 import { balance, clientById, clientsOf, currentMonth, monthSum } from "@/lib/selectors";
 import { useAppState } from "@/store/StoreProvider";
+import { GettingStarted } from "@/components/onboarding/GettingStarted";
 
 interface Queue {
   key: string;
@@ -166,6 +167,7 @@ export function StaffDesk() {
         {session?.department ? `${session.department.name} · ` : ""}
         Here&rsquo;s what&rsquo;s waiting for you today.
       </PageHead>
+      <GettingStarted />
 
       {queues.length > 0 && (
         <div className="kpis">

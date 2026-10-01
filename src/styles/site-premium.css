@@ -132,8 +132,10 @@
   pointer-events: none;
 }
 
-.s-btn:hover::before {
-  transform: translateX(120%);
+@media (hover: hover) and (pointer: fine) {
+  .s-btn:hover::before {
+    transform: translateX(120%);
+  }
 }
 
 .s-btn > * {
@@ -160,8 +162,10 @@
   animation: s-marquee 48s linear infinite;
 }
 
-.s-ticker:hover .s-ticker-track {
-  animation-play-state: paused;
+@media (hover: hover) and (pointer: fine) {
+  .s-ticker:hover .s-ticker-track {
+    animation-play-state: paused;
+  }
 }
 
 .s-ticker-set {
@@ -189,8 +193,10 @@
   letter-spacing: -0.01em;
 }
 
-.s-ticker-set span:hover {
-  color: var(--s-deep);
+@media (hover: hover) and (pointer: fine) {
+  .s-ticker-set span:hover {
+    color: var(--s-deep);
+  }
 }
 
 .s-ticker-set svg {
@@ -212,8 +218,10 @@
   transition: transform 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.s-about-photo:hover img {
-  transform: scale(1.025);
+@media (hover: hover) and (pointer: fine) {
+  .s-about-photo:hover img {
+    transform: scale(1.025);
+  }
 }
 
 .s-about-photo::before {
@@ -291,13 +299,17 @@
   pointer-events: none;
 }
 
-.s-card:hover {
-  background: var(--s-card);
+@media (hover: hover) and (pointer: fine) {
+  .s-card:hover {
+    background: var(--s-card);
+  }
 }
 
-.s-card:hover::before,
+@media (hover: hover) and (pointer: fine) {
+  .s-card:hover::before,
 .s-card:hover::after {
-  opacity: 1;
+    opacity: 1;
+  }
 }
 
 .s-card-icon {
@@ -316,9 +328,11 @@
     box-shadow 0.35s ease;
 }
 
-.s-steps li:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 30px 50px -32px rgba(3, 28, 28, 0.45);
+@media (hover: hover) and (pointer: fine) {
+  .s-steps li:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 30px 50px -32px rgba(3, 28, 28, 0.45);
+  }
 }
 
 .s-step-n {
@@ -341,8 +355,10 @@
   transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.s-mosaic img:hover {
-  transform: scale(1.03);
+@media (hover: hover) and (pointer: fine) {
+  .s-mosaic img:hover {
+    transform: scale(1.03);
+  }
 }
 
 .s-co {

@@ -28,6 +28,7 @@ import { COMPANIES } from "@/lib/reference/companies";
 import { ESTATES, estateName } from "@/lib/reference/estates";
 import { currentMonth, monthSum, openTicketCount, outstandingFor, previousMonth } from "@/lib/selectors";
 import { useActions, useAppState } from "@/store/StoreProvider";
+import { GettingStarted } from "@/components/onboarding/GettingStarted";
 
 export function AdminOverview() {
   const s = useAppState();
@@ -57,6 +58,7 @@ export function AdminOverview() {
       <PageHead title="City overview" icon={Globe2}>
         All licensed collection companies on the platform · {monthLabelLong(month)}.
       </PageHead>
+      <GettingStarted />
 
       <div className="kpis">
         <Kpi

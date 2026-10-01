@@ -17,7 +17,8 @@
   --panel: #ffffff;
   --panel2: #eef4f1;
   --ink: #0f1f1b;
-  --muted: #667a73;
+  /* Secondary text: AA on white (5.3:1), the canvas (4.8:1), panel2 (4.7:1) and accent-soft (4.6:1). */
+  --muted: #5c7069;
   --line: #e0ebe6;
 
   /* dark sidebar rail */
@@ -27,7 +28,8 @@
   --rail-ink-strong: #ffffff;
 
   /* primary */
-  --accent: #12924f;
+  /* Text and icons: AA on white (5.2:1), the canvas (4.8:1) and panel2 (4.7:1). */
+  --accent: #0e7d44;
   --accent-soft: #dcf5e6;
   --accent-ink: #04291f;
   --accent-2: #0c6955;

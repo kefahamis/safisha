@@ -36,6 +36,7 @@ import {
   txFor,
 } from "@/lib/selectors";
 import { useActions, useAppState } from "@/store/StoreProvider";
+import { GettingStarted } from "@/components/onboarding/GettingStarted";
 
 export function ClientHome() {
   const s = useAppState();
@@ -57,6 +58,7 @@ export function ClientHome() {
       <PageHead title={t("Karibu, {name}", { name: client.name.split(" ")[0] })} icon={Wallet}>
         {t("Your collection account with {company}.", { company: company.name })}
       </PageHead>
+      <GettingStarted />
 
       <div className="grid g-main">
         <div className="stack" style={{ gap: 18 }}>

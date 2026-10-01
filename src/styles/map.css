@@ -43,8 +43,10 @@
   line-height: 30px;
 }
 
-.mapwrap .leaflet-control-zoom a:hover {
-  background: var(--panel2);
+@media (hover: hover) and (pointer: fine) {
+  .mapwrap .leaflet-control-zoom a:hover {
+    background: var(--panel2);
+  }
 }
 
 .mapwrap .leaflet-bar {
